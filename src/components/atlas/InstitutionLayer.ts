@@ -1,18 +1,18 @@
 import type { FeatureCollection, Point } from 'geojson';
 import type maplibregl from 'maplibre-gl';
 import type { Institution, MetricObservation } from '../../domain/models';
-import { researchActivityColor } from './visualScale';
+import { metricValueColor } from './visualScale';
 
 export interface InstitutionFeatureProperties {
   institutionId: string;
   name: string;
   city: string;
-  score: number;
+  metricValue: number;
 }
 
 export interface InstitutionNodeDisplayConfig {
   maxNodes: number;
-  minimumActivity: number;
+  minimumMetricValue: number;
 }
 
 /**
@@ -21,7 +21,7 @@ export interface InstitutionNodeDisplayConfig {
  */
 export const institutionNodeDisplayConfig: InstitutionNodeDisplayConfig = {
   maxNodes: 12,
-  minimumActivity: 1,
+  minimumMetricValue: 1,
 };
 
 export const institutionPulseDurationMs = 2_600;
@@ -67,14 +67,14 @@ export function selectMajorInstitutionsForMap(
       return Boolean(
         institution.location &&
           observation &&
-          observation.value >= config.minimumActivity,
+          observation.value >= config.minimumMetricValue,
       );
     })
     .sort((left, right) => {
-      const scoreDifference =
+      const valueDifference =
         (observationsByInstitution.get(right.id)?.value ?? 0) -
         (observationsByInstitution.get(left.id)?.value ?? 0);
-      return scoreDifference || left.name.localeCompare(right.name);
+      return valueDifference || left.name.localeCompare(right.name);
     })
     .slice(0, maxNodes);
 }
@@ -82,7 +82,7 @@ export function selectMajorInstitutionsForMap(
 export const institutionRadius: maplibregl.ExpressionSpecification = [
   'interpolate',
   ['linear'],
-  ['get', 'score'],
+  ['get', 'metricValue'],
   0,
   4,
   50,
@@ -91,12 +91,13 @@ export const institutionRadius: maplibregl.ExpressionSpecification = [
   14,
 ];
 
-export const institutionColor = researchActivityColor;
+export const institutionColor = metricValueColor;
+export const institutionPulseColor = institutionColor;
 
 export const institutionHeatmapWeight: maplibregl.ExpressionSpecification = [
   'interpolate',
   ['linear'],
-  ['get', 'score'],
+  ['get', 'metricValue'],
   0,
   0.15,
   100,
@@ -161,7 +162,7 @@ export function buildInstitutionFeatureCollection(
             institutionId: institution.id,
             name: institution.name,
             city: institution.city,
-            score: observation.value,
+            metricValue: observation.value,
           },
         },
       ];

@@ -2,7 +2,9 @@ import type {
   Affiliation,
   Authorship,
   Country,
+  ExternalResource,
   HistoricalEvent,
+  IdentityResolution,
   Institution,
   MetricObservation,
   Paper,
@@ -24,7 +26,11 @@ interface InstitutionViewProps {
   papers: Paper[];
   authorships: Authorship[];
   historicalEvents: HistoricalEvent[];
-  activityObservations: MetricObservation[];
+  metricObservations: MetricObservation[];
+  metricLabel: string;
+  isPilotDataset: boolean;
+  externalResources: ExternalResource[];
+  identityResolutions: IdentityResolution[];
   selectedGroupId: string | null;
   onGroupSelect: (groupId: string) => void;
   onResearcherSelect: (researcherId: string) => void;
@@ -43,7 +49,11 @@ export function InstitutionView({
   papers,
   authorships,
   historicalEvents,
-  activityObservations,
+  metricObservations,
+  metricLabel,
+  isPilotDataset,
+  externalResources,
+  identityResolutions,
   selectedGroupId,
   onGroupSelect,
   onResearcherSelect,
@@ -114,8 +124,10 @@ export function InstitutionView({
         <button className="entity-back" type="button" onClick={onBackToCountry}>
           ← Back to {explorationCountry.name}
         </button>
-        <p className="section-kicker">Institution ecosystem · demo</p>
-        <h2>{institution.name}</h2>
+        <p className="section-kicker">
+          Institution ecosystem · {isPilotDataset ? 'INSPIRE-HEP pilot' : 'demo'}
+        </p>
+        <h2>{institution.canonicalName ?? institution.name}</h2>
         <p>
           {institution.city}, {locationCountry.name}
         </p>
@@ -129,7 +141,76 @@ export function InstitutionView({
       </header>
 
       <div className="entity-view-scroll">
-        <InstitutionActivityHistory observations={activityObservations} />
+        <section className="entity-section canonical-identity-card">
+          <div className="entity-section-heading">
+            <div>
+              <p className="section-kicker">Canonical identity</p>
+              <h3>{institution.canonicalName ?? institution.name}</h3>
+            </div>
+            <span>
+              {institution.identityConfidence !== undefined
+                ? `${Math.round(institution.identityConfidence * 100)}% identity confidence`
+                : 'Identity confidence unavailable'}
+            </span>
+          </div>
+          {(institution.aliases?.length ?? 0) > 0 && (
+            <p className="identity-aliases">
+              <strong>Aliases</strong> {institution.aliases?.join(' · ')}
+            </p>
+          )}
+          {(institution.historicalNames?.length ?? 0) > 0 && (
+            <p className="identity-aliases">
+              <strong>Historical names</strong>{' '}
+              {institution.historicalNames?.join(' · ')}
+            </p>
+          )}
+          {(institution.externalIds?.length ?? 0) > 0 && (
+            <div className="identity-identifiers" aria-label="Institution identifiers">
+              {institution.externalIds?.map((identifier) => (
+                <span key={`${identifier.scheme}-${identifier.value}`}>
+                  {identifier.scheme}: {identifier.value}
+                </span>
+              ))}
+            </div>
+          )}
+          <small className="identity-resolution-note">
+            {identityResolutions.length} source record
+            {identityResolutions.length === 1 ? '' : 's'} resolved to this
+            canonical institution. Identity confidence describes matching
+            evidence, not scientific quality.
+          </small>
+        </section>
+
+        {externalResources.length > 0 && (
+          <section className="entity-section">
+            <div className="entity-section-heading">
+              <div>
+                <p className="section-kicker">External resources</p>
+                <h3>Verified profile references</h3>
+              </div>
+              <span>Separate resource layer</span>
+            </div>
+            <div className="external-link-list">
+              {externalResources.map((resource) => (
+                <a
+                  key={resource.id}
+                  href={resource.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span>{resource.label}</span>
+                  <i aria-hidden="true">↗</i>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <InstitutionActivityHistory
+          observations={metricObservations}
+          metricLabel={metricLabel}
+          isPilotDataset={isPilotDataset}
+        />
 
         <section className="entity-section">
           <div className="entity-section-heading">
@@ -137,7 +218,9 @@ export function InstitutionView({
               <p className="section-kicker">Research groups</p>
               <h3>Community structure</h3>
             </div>
-            <span>{groups.length} demo groups</span>
+            <span>
+              {groups.length} {isPilotDataset ? 'resolved' : 'demo'} groups
+            </span>
           </div>
           {groups.length > 0 ? (
             <div className="group-selector">
@@ -154,7 +237,10 @@ export function InstitutionView({
               ))}
             </div>
           ) : (
-            <p className="muted-copy">No demo research groups are connected.</p>
+            <p className="muted-copy">
+              No {isPilotDataset ? 'resolved' : 'demo'} research groups are
+              connected.
+            </p>
           )}
         </section>
 
@@ -190,7 +276,8 @@ export function InstitutionView({
             </div>
           ) : (
             <p className="muted-copy">
-              No affiliated demo researcher is connected to this group and scope.
+              No affiliated {isPilotDataset ? 'pilot' : 'demo'} researcher is
+              connected to this group and scope.
             </p>
           )}
         </section>
@@ -222,7 +309,9 @@ export function InstitutionView({
           <div className="entity-section-heading">
             <div>
               <p className="section-kicker">Representative papers</p>
-              <h3>Demo publication connections</h3>
+              <h3>
+                {isPilotDataset ? 'Pilot' : 'Demo'} publication connections
+              </h3>
             </div>
             <span>Incomplete sample</span>
           </div>
@@ -232,7 +321,7 @@ export function InstitutionView({
                 <li key={paper.id}>
                   <div>
                     <time>{paper.year}</time>
-                    <span>synthetic</span>
+                    <span>{isPilotDataset ? 'INSPIRE-HEP' : 'synthetic'}</span>
                   </div>
                   <strong>{paper.title}</strong>
                   <p>{authorsByPaperId.get(paper.id)?.join(', ')}</p>
@@ -240,13 +329,17 @@ export function InstitutionView({
               ))}
             </ol>
           ) : (
-            <p className="muted-copy">No representative demo papers for this scope.</p>
+            <p className="muted-copy">
+              No representative {isPilotDataset ? 'pilot' : 'demo'} papers for
+              this scope.
+            </p>
           )}
         </section>
 
         <p className="entity-disclaimer">
-          All people, groups, papers, events, and activity values shown here are
-          synthetic interface data. Ordering does not express scientific value.
+          {isPilotDataset
+            ? 'This bounded INSPIRE-HEP pilot is incomplete and selection-biased. Ordering does not express scientific value.'
+            : 'All people, groups, papers, events, and metric values shown here are synthetic interface data. Ordering does not express scientific value.'}
         </p>
       </div>
     </aside>

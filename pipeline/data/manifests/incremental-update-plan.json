@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0.0",
+  "mode": "append-versioned-snapshot",
+  "plannedAt": "2026-08-24T12:32:45.000Z",
+  "baseSnapshotId": "inspire-hep-2026-08-24t12-25-25-401z",
+  "baseSourceVersion": "inspire-hep-snapshot:2026-08-24T12:25:25.401Z",
+  "plannedSnapshotId": "inspire-hep-2026-08-24t12-32-45-000z",
+  "targetRawPath": "data/raw/snapshots/inspire-hep-2026-08-24t12-32-45-000z.json",
+  "queryPlan": [
+    {
+      "entityType": "literature",
+      "year": 2025,
+      "query": "primarch:hep-th and de:2025",
+      "reason": "refresh mutable source records inside the configured overlap window"
+    },
+    {
+      "entityType": "literature",
+      "year": 2026,
+      "query": "primarch:hep-th and de:2026",
+      "reason": "refresh mutable source records inside the configured overlap window"
+    }
+  ],
+  "institutionPlan": "Fetch only institution references not already captured or whose upstream revision changed.",
+  "safety": {
+    "modifiesBaseSnapshot": false,
+    "requiresExplicitIngestion": true,
+    "schedulerConfigured": false,
+    "cloudServiceConfigured": false
+  },
+  "nextSteps": [
+    "Ingest the query plan into a new raw snapshot path.",
+    "Merge by authoritative source identifiers into a new snapshot object.",
+    "Append the new snapshot entry to the manifest.",
+    "Reprocess the new snapshot into an isolated version directory.",
+    "Promote it only after validation; retain every previous snapshot."
+  ]
+}

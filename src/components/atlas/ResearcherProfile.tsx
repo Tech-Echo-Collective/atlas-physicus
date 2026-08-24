@@ -1,7 +1,9 @@
 import type {
   Affiliation,
   Authorship,
+  ExternalResource,
   HistoricalEvent,
+  IdentityResolution,
   Institution,
   Paper,
   Researcher,
@@ -11,32 +13,35 @@ import type {
 
 interface ResearcherProfileProps {
   researcher: Researcher;
-  affiliation: Affiliation | null;
+  affiliationHistory: Affiliation[];
   institution: Institution;
+  institutions: Institution[];
   group: ResearchGroup | null;
   fields: ResearchField[];
   papers: Paper[];
   authorships: Authorship[];
   historicalEvents: HistoricalEvent[];
+  externalResources: ExternalResource[];
+  identityResolutions: IdentityResolution[];
+  collaborators: Researcher[];
+  isPilotDataset: boolean;
   onBackToInstitution: () => void;
 }
 
-const linkLabels = {
-  institutionalHomepage: 'Institutional homepage',
-  personalWebsite: 'Personal website',
-  arxiv: 'arXiv profile',
-  github: 'GitHub',
-} as const;
-
 export function ResearcherProfile({
   researcher,
-  affiliation,
+  affiliationHistory,
   institution,
+  institutions,
   group,
   fields,
   papers,
   authorships,
   historicalEvents,
+  externalResources,
+  identityResolutions,
+  collaborators,
+  isPilotDataset,
   onBackToInstitution,
 }: ResearcherProfileProps) {
   const researcherPaperIds = new Set(
@@ -51,9 +56,10 @@ export function ResearcherProfile({
     .filter((event) => event.relatedResearcherIds.includes(researcher.id))
     .sort((left, right) => left.year - right.year);
   const fieldsById = new Map(fields.map((field) => [field.id, field]));
-  const externalLinks = Object.entries(researcher.externalLinks ?? {}) as Array<
-    [keyof typeof linkLabels, string]
-  >;
+  const institutionsById = new Map(
+    institutions.map((candidate) => [candidate.id, candidate]),
+  );
+  const canonicalName = researcher.canonicalName ?? researcher.name;
 
   return (
     <aside className="entity-view researcher-profile" aria-live="polite">
@@ -65,28 +71,86 @@ export function ResearcherProfile({
         >
           ← Back to Institution
         </button>
-        <p className="section-kicker">Researcher profile · synthetic demo</p>
+        <p className="section-kicker">
+          Researcher profile · {isPilotDataset ? 'INSPIRE-HEP pilot' : 'synthetic demo'}
+        </p>
         <div className="researcher-identity">
           <span className="researcher-avatar researcher-avatar--large" aria-hidden="true">
-            {researcher.name
+            {canonicalName
               .split(' ')
               .map((part) => part[0])
               .join('')}
           </span>
           <div>
-            <h2>{researcher.name}</h2>
+            <h2>{canonicalName}</h2>
             <p>{institution.name}</p>
           </div>
         </div>
       </header>
 
       <div className="entity-view-scroll">
+        <section className="entity-section canonical-identity-card">
+          <div className="entity-section-heading">
+            <div>
+              <p className="section-kicker">Canonical identity</p>
+              <h3>{canonicalName}</h3>
+            </div>
+            <span>
+              {researcher.identityConfidence !== undefined
+                ? `${Math.round(researcher.identityConfidence * 100)}% identity confidence`
+                : 'Identity confidence unavailable'}
+            </span>
+          </div>
+          {(researcher.aliases?.length ?? 0) > 0 && (
+            <p className="identity-aliases">
+              <strong>Name variants</strong> {researcher.aliases?.join(' · ')}
+            </p>
+          )}
+          {(researcher.externalIds?.length ?? 0) > 0 && (
+            <div className="identity-identifiers" aria-label="Researcher identifiers">
+              {researcher.externalIds?.map((identifier) => (
+                <span key={`${identifier.scheme}-${identifier.value}`}>
+                  {identifier.scheme}: {identifier.value}
+                </span>
+              ))}
+            </div>
+          )}
+          <small className="identity-resolution-note">
+            {identityResolutions.length} source record
+            {identityResolutions.length === 1 ? '' : 's'} resolved to this
+            researcher. Identity confidence describes matching evidence, not
+            scientific quality.
+          </small>
+        </section>
+
         <section className="entity-section profile-affiliation">
-          <p className="section-kicker">Affiliation</p>
+          <p className="section-kicker">Affiliation history</p>
           <h3>{group?.name ?? institution.name}</h3>
-          <p>{institution.name}</p>
-          {affiliation?.startYear && (
-            <small>Demo affiliation from {affiliation.startYear}</small>
+          {affiliationHistory.length > 0 ? (
+            <ol className="affiliation-history-list">
+              {affiliationHistory.map((historyEntry) => (
+                <li key={historyEntry.id}>
+                  <strong>
+                    {institutionsById.get(historyEntry.institutionId)?.name ??
+                      historyEntry.institutionId}
+                  </strong>
+                  <span>
+                    {historyEntry.startDate ?? historyEntry.startYear ?? 'Start unknown'}
+                    {' → '}
+                    {historyEntry.endDate ?? historyEntry.endYear ?? 'present / unknown'}
+                  </span>
+                  <small>
+                    {Math.round(
+                      (historyEntry.confidence ??
+                        historyEntry.provenance.confidence ??
+                        0) * 100,
+                    )}% relationship confidence · {historyEntry.source ?? historyEntry.provenance.source}
+                  </small>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="muted-copy">No resolved affiliation history.</p>
           )}
         </section>
 
@@ -106,19 +170,24 @@ export function ResearcherProfile({
           </div>
         </section>
 
-        {externalLinks.length > 0 && (
+        {externalResources.length > 0 && (
           <section className="entity-section">
             <div className="entity-section-heading">
               <div>
                 <p className="section-kicker">External links</p>
                 <h3>Available references</h3>
               </div>
-              <span>Demo metadata</span>
+              <span>{isPilotDataset ? 'Pilot metadata' : 'Demo metadata'}</span>
             </div>
             <div className="external-link-list">
-              {externalLinks.map(([key, href]) => (
-                <a key={key} href={href} target="_blank" rel="noreferrer">
-                  <span>{linkLabels[key]}</span>
+              {externalResources.map((resource) => (
+                <a
+                  key={resource.id}
+                  href={resource.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span>{resource.label}</span>
                   <i aria-hidden="true">↗</i>
                 </a>
               ))}
@@ -129,8 +198,34 @@ export function ResearcherProfile({
         <section className="entity-section">
           <div className="entity-section-heading">
             <div>
+              <p className="section-kicker">Collaboration graph</p>
+              <h3>Connected co-authors</h3>
+            </div>
+            <span>Relationship view · not ranked</span>
+          </div>
+          {collaborators.length > 0 ? (
+            <ul className="field-entity-list">
+              {collaborators.slice(0, 12).map((collaborator) => (
+                <li key={collaborator.id}>
+                  <strong>{collaborator.canonicalName ?? collaborator.name}</strong>
+                  <span>{collaborator.fieldIds.join(' · ')}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted-copy">
+              No collaborator relationship is present in this dataset.
+            </p>
+          )}
+        </section>
+
+        <section className="entity-section">
+          <div className="entity-section-heading">
+            <div>
               <p className="section-kicker">Paper connections</p>
-              <h3>Representative demo records</h3>
+              <h3>
+                Representative {isPilotDataset ? 'pilot' : 'demo'} records
+              </h3>
             </div>
             <span>Not a performance list</span>
           </div>
@@ -140,7 +235,7 @@ export function ResearcherProfile({
                 <li key={paper.id}>
                   <div>
                     <time>{paper.year}</time>
-                    <span>synthetic</span>
+                    <span>{isPilotDataset ? 'INSPIRE-HEP' : 'synthetic'}</span>
                   </div>
                   <strong>{paper.title}</strong>
                   <p>{paper.summary}</p>
@@ -148,7 +243,10 @@ export function ResearcherProfile({
               ))}
             </ol>
           ) : (
-            <p className="muted-copy">No representative demo papers are connected.</p>
+            <p className="muted-copy">
+              No representative {isPilotDataset ? 'pilot' : 'demo'} papers are
+              connected.
+            </p>
           )}
         </section>
 
@@ -157,7 +255,7 @@ export function ResearcherProfile({
             <div className="entity-section-heading">
               <div>
                 <p className="section-kicker">Historical connections</p>
-                <h3>Related demo events</h3>
+                <h3>Related {isPilotDataset ? 'pilot' : 'demo'} events</h3>
               </div>
             </div>
             <ol className="event-list">
@@ -175,8 +273,9 @@ export function ResearcherProfile({
         )}
 
         <p className="entity-disclaimer">
-          This synthetic profile describes ecosystem relationships only. It is
-          not a ranking, recommendation, evaluation, or admission prediction.
+          {isPilotDataset
+            ? 'This incomplete pilot profile reflects a bounded metadata sample only. It is not a ranking, recommendation, evaluation, or admission prediction.'
+            : 'This synthetic profile describes ecosystem relationships only. It is not a ranking, recommendation, evaluation, or admission prediction.'}
         </p>
       </div>
     </aside>

@@ -9,8 +9,10 @@ interface CountryPanelProps {
   institutions: Institution[];
   countryObservation: MetricObservation | null;
   institutionObservations: MetricObservation[];
+  metricLabel: string;
   activeScopeLabel: string;
   selectedYear: number;
+  isPilotDataset: boolean;
   onBackToWorld: () => void;
   onInstitutionSelect: (institutionId: string) => void;
 }
@@ -20,12 +22,14 @@ export function CountryPanel({
   institutions,
   countryObservation,
   institutionObservations,
+  metricLabel,
   activeScopeLabel,
   selectedYear,
+  isPilotDataset,
   onBackToWorld,
   onInstitutionSelect,
 }: CountryPanelProps) {
-  const scoresByInstitution = new Map(
+  const valuesByInstitution = new Map(
     institutionObservations.map((observation) => [
       observation.entityId,
       observation.value,
@@ -39,7 +43,8 @@ export function CountryPanel({
         <p className="section-kicker">World view</p>
         <h2>Select a luminous country</h2>
         <p>
-          Enter a country to reveal its synthetic institution landscape for{' '}
+          Enter a country to reveal its{' '}
+          {isPilotDataset ? 'pilot' : 'synthetic'} institution landscape for{' '}
           {selectedYear}.
         </p>
       </aside>
@@ -51,16 +56,18 @@ export function CountryPanel({
       <button className="panel-back" onClick={onBackToWorld} type="button">
         ← World
       </button>
-      <p className="section-kicker">Country view · demo</p>
+      <p className="section-kicker">
+        Country view · {isPilotDataset ? 'INSPIRE-HEP pilot' : 'demo'}
+      </p>
       <div className="country-heading">
         <span>{country.isoAlpha3}</span>
         <h2>{country.name}</h2>
         <p>{country.region}</p>
       </div>
 
-      <div className="score-card">
+      <div className="metric-card">
         <div>
-          <span className="score-label">research_activity_score</span>
+          <span className="metric-label">{metricLabel}</span>
           <strong>{countryObservation?.value ?? '—'}</strong>
         </div>
         <p>{activeScopeLabel}</p>
@@ -85,7 +92,7 @@ export function CountryPanel({
                 <strong>{institution.name}</strong>
                 <small>{institution.city}</small>
               </span>
-              <b>{scoresByInstitution.get(institution.id) ?? '—'}</b>
+              <b>{valuesByInstitution.get(institution.id) ?? '—'}</b>
             </button>
           ))
         ) : (
@@ -96,7 +103,9 @@ export function CountryPanel({
       </div>
 
       <p className="panel-disclaimer">
-        Synthetic historical interface data — not a ranking or measured result.
+        {isPilotDataset
+          ? 'Bounded, selection-biased pilot metadata — not a ranking or complete scientific result.'
+          : 'Synthetic historical interface data — not a ranking or measured result.'}
       </p>
     </aside>
   );

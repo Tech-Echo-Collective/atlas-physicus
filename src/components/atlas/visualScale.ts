@@ -1,13 +1,13 @@
 import type maplibregl from 'maplibre-gl';
 
 /**
- * Shared presentation scale for the synthetic research_activity_score.
+ * Shared presentation scale for normalized MetricObservation values.
  * Metric calculation remains outside the visualization layer.
  */
-export const researchActivityColor: maplibregl.ExpressionSpecification = [
+export const metricValueColor: maplibregl.ExpressionSpecification = [
   'interpolate-hcl',
   ['linear'],
-  ['get', 'score'],
+  ['get', 'metricValue'],
   0,
   '#8b3ffc',
   16,
@@ -24,7 +24,7 @@ export const researchActivityColor: maplibregl.ExpressionSpecification = [
   '#df2f3f',
 ];
 
-export function getResearchActivityCssColor(value: number): string {
+export function getMetricValueCssColor(value: number): string {
   const normalizedValue = Math.min(100, Math.max(0, value));
   const hue = 270 - normalizedValue * 2.7;
   return `hsl(${hue} 76% 55%)`;

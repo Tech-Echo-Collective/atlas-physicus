@@ -2,29 +2,74 @@ import demoData from './demo/atlas.json';
 import type {
   Affiliation,
   AtlasDataset,
-  AtlasRepository,
   AtlasSearchResult,
   Authorship,
   Country,
+  DatasetUpdate,
   DatasetMetadata,
+  ExternalResource,
   GeographicView,
   HistoricalEvent,
+  IdentityEntityType,
+  IdentityResolution,
+  IdentityResolutionStatus,
   Institution,
+  MetricDefinition,
+  MetricId,
   MetricObservation,
   MetricQuery,
   Paper,
   Researcher,
   ResearchField,
   ResearchGroup,
+  RawEntityRecord,
   ScienceDomain,
+  SourceSnapshot,
 } from '../domain/models';
 import { atlasDatasetSchema } from '../domain/schemas';
+import {
+  KnowledgeGraphService,
+  type ScientificKnowledgeGraph,
+} from '../knowledge/KnowledgeGraph';
+import { MetricRegistry } from '../metrics/MetricRegistry';
+import { createSyntheticDemoMetricEngine } from '../metrics/SyntheticDemoMetricCalculator';
+import {
+  ProfileService,
+  type InstitutionProfileData,
+  type ResearcherProfileData,
+  type ResearchGroupProfileData,
+} from '../profiles/ProfileService';
+import { EntitySearchIndex } from '../search/EntitySearchIndex';
+import type { ScientificAtlasRepository } from './ScientificAtlasRepository';
 
-export class StaticAtlasRepository implements AtlasRepository {
+export class StaticAtlasRepository implements ScientificAtlasRepository {
   private readonly dataset: AtlasDataset;
+  private readonly metricRegistry: MetricRegistry;
+  private readonly searchIndex: EntitySearchIndex;
+  private readonly profileService: ProfileService;
+  private readonly knowledgeGraph: ScientificKnowledgeGraph;
 
   constructor(source: unknown = demoData) {
-    this.dataset = atlasDatasetSchema.parse(source);
+    const validatedDataset = atlasDatasetSchema.parse(source);
+    this.metricRegistry = new MetricRegistry(
+      validatedDataset.metricDefinitions,
+    );
+    if (validatedDataset.metadata.datasetKind !== 'synthetic-demo') {
+      this.dataset = validatedDataset;
+      this.searchIndex = new EntitySearchIndex(this.dataset);
+      this.profileService = new ProfileService(this.dataset);
+      this.knowledgeGraph = new KnowledgeGraphService().build(this.dataset);
+      return;
+    }
+
+    const metricEngine = createSyntheticDemoMetricEngine(this.metricRegistry);
+    this.dataset = atlasDatasetSchema.parse({
+      ...validatedDataset,
+      metricObservations: metricEngine.calculateAll(validatedDataset),
+    });
+    this.searchIndex = new EntitySearchIndex(this.dataset);
+    this.profileService = new ProfileService(this.dataset);
+    this.knowledgeGraph = new KnowledgeGraphService().build(this.dataset);
   }
 
   async loadDataset(): Promise<AtlasDataset> {
@@ -140,8 +185,38 @@ export class StaticAtlasRepository implements AtlasRepository {
     );
   }
 
-  async getMetricObservations(): Promise<MetricObservation[]> {
-    return [...this.dataset.metricObservations];
+  async getMetricDefinitions(): Promise<MetricDefinition[]> {
+    return this.metricRegistry.getMetrics();
+  }
+
+  async getMetricDefinition(id: MetricId): Promise<MetricDefinition | null> {
+    return this.metricRegistry.getMetricDefinition(id);
+  }
+
+  async getMetricObservations(
+    metricId?: MetricId,
+  ): Promise<MetricObservation[]> {
+    return this.dataset.metricObservations.filter(
+      (observation) => !metricId || observation.metricId === metricId,
+    );
+  }
+
+  async getMetricsForEntity(entityId: string): Promise<MetricObservation[]> {
+    return this.dataset.metricObservations.filter(
+      (observation) => observation.entityId === entityId,
+    );
+  }
+
+  async getMetricsForField(fieldId: string): Promise<MetricObservation[]> {
+    return this.dataset.metricObservations.filter(
+      (observation) => observation.fieldId === fieldId,
+    );
+  }
+
+  async getMetricsForPeriod(period: string): Promise<MetricObservation[]> {
+    return this.dataset.metricObservations.filter(
+      (observation) => observation.period === period,
+    );
   }
 
   async findMetricObservations(
@@ -153,75 +228,69 @@ export class StaticAtlasRepository implements AtlasRepository {
         (query.scienceDomainId === undefined ||
           observation.scienceDomainId === query.scienceDomainId) &&
         observation.fieldId === query.fieldId &&
-        observation.metricId === query.metricId &&
+        (query.metricId === undefined ||
+          observation.metricId === query.metricId) &&
         observation.period === query.period,
     );
   }
 
   async searchEntities(query: string, limit = 8): Promise<AtlasSearchResult[]> {
-    const normalizedQuery = query.trim().toLocaleLowerCase();
-    if (!normalizedQuery) {
-      return [];
-    }
+    return this.searchIndex.search(query, limit);
+  }
 
-    const candidates: Array<AtlasSearchResult & { searchable: string }> = [
-      ...this.dataset.scienceDomains.map((domain) => ({
-        entityId: domain.id,
-        entityType: 'science-domain' as const,
-        label: domain.label,
-        context: 'Science domain',
-        searchable: `${domain.id} ${domain.label}`.toLocaleLowerCase(),
-      })),
-      ...this.dataset.fields.map((field) => ({
-        entityId: field.id,
-        entityType: 'research-field' as const,
-        label: field.label,
-        context: `Research field · ${field.id}`,
-        searchable: `${field.id} ${field.label}`.toLocaleLowerCase(),
-      })),
-      ...this.dataset.countries.map((country) => ({
-        entityId: country.id,
-        entityType: 'country' as const,
-        label: country.name,
-        context: `Country · ${country.region}`,
-        searchable:
-          `${country.name} ${country.isoAlpha3} ${country.region}`.toLocaleLowerCase(),
-      })),
-      ...this.dataset.institutions.map((institution) => ({
-        entityId: institution.id,
-        entityType: 'institution' as const,
-        label: institution.name,
-        context: `Institution · ${institution.city}`,
-        searchable:
-          `${institution.id} ${institution.name} ${institution.city}`.toLocaleLowerCase(),
-      })),
-      ...this.dataset.researchers.map((researcher) => ({
-        entityId: researcher.id,
-        entityType: 'researcher' as const,
-        label: researcher.name,
-        context: `Researcher · ${researcher.fieldIds.join(' · ')}`,
-        searchable:
-          `${researcher.name} ${researcher.fieldIds.join(' ')}`.toLocaleLowerCase(),
-      })),
-    ];
+  async getRawEntityRecords(
+    entityType?: IdentityEntityType,
+  ): Promise<RawEntityRecord[]> {
+    return (this.dataset.rawEntityRecords ?? []).filter(
+      (record) => !entityType || record.entityType === entityType,
+    );
+  }
 
-    return candidates
-      .filter((candidate) => candidate.searchable.includes(normalizedQuery))
-      .sort((left, right) => {
-        const leftStarts = left.label.toLocaleLowerCase().startsWith(normalizedQuery);
-        const rightStarts = right.label
-          .toLocaleLowerCase()
-          .startsWith(normalizedQuery);
-        return Number(rightStarts) - Number(leftStarts) ||
-          left.label.localeCompare(right.label);
-      })
-      .slice(0, limit)
-      .map((candidate) => ({
-        entityId: candidate.entityId,
-        entityType: candidate.entityType,
-        label: candidate.label,
-        context: candidate.context,
-      }));
+  async getIdentityResolutions(
+    status?: IdentityResolutionStatus,
+  ): Promise<IdentityResolution[]> {
+    return (this.dataset.identityResolutions ?? []).filter(
+      (resolution) => !status || resolution.status === status,
+    );
+  }
+
+  async getExternalResources(
+    entityType?: ExternalResource['entityType'],
+    entityId?: string,
+  ): Promise<ExternalResource[]> {
+    return (this.dataset.externalResources ?? []).filter(
+      (resource) =>
+        (!entityType || resource.entityType === entityType) &&
+        (!entityId || resource.entityId === entityId),
+    );
+  }
+
+  async getSourceSnapshots(): Promise<SourceSnapshot[]> {
+    return [...(this.dataset.sourceSnapshots ?? [])];
+  }
+
+  async getDatasetUpdates(): Promise<DatasetUpdate[]> {
+    return [...(this.dataset.datasetUpdates ?? [])];
+  }
+
+  async getKnowledgeGraph(): Promise<ScientificKnowledgeGraph> {
+    return this.knowledgeGraph;
+  }
+
+  async getInstitutionProfile(
+    id: string,
+  ): Promise<InstitutionProfileData | null> {
+    return this.profileService.getInstitutionProfile(id);
+  }
+
+  async getResearcherProfile(id: string): Promise<ResearcherProfileData | null> {
+    return this.profileService.getResearcherProfile(id);
+  }
+
+  async getResearchGroupProfile(
+    id: string,
+  ): Promise<ResearchGroupProfileData | null> {
+    return this.profileService.getResearchGroupProfile(id);
   }
 }
 

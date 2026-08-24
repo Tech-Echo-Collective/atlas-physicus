@@ -2,7 +2,21 @@
 
 ## Objective
 
-Phase 2.3 makes the established scientific atlas easier to navigate, share, understand, and later connect to real data sources. It is a usability and data-foundation pass, not an entity or metric expansion.
+v3.0.3-alpha turns the v3.0.2 bounded metric pilot into the first scientific knowledge-graph foundation. It introduces explicit source evidence, canonical identity, temporal affiliations, external resources, entity-aware search, profile aggregation, and non-destructive update lineage while retaining the existing Atlas frontend, `AtlasRepository`, Metric Engine, provenance, and visualization hierarchy.
+
+The central processing order is:
+
+```text
+Scientific source
+    → Preserved raw snapshot
+    → Raw entity record
+    → Identity resolution
+    → Canonical entity and graph relationships
+    → Profile enrichment
+    → Metric Engine
+    → AtlasRepository
+    → Atlas visualization
+```
 
 The product path remains:
 
@@ -17,58 +31,83 @@ Science domain
     → Researcher
 ```
 
-Paper and historical-event records remain preparation and connection layers rather than separate destinations.
+Paper and historical-event records remain connection layers rather than new destinations.
 
-## Phase 2.3 scope
+## v3.0.3 scope
 
-Phase 2.3 includes:
+v3.0.3-alpha includes:
 
-- one compact map-native control stack: global reset, zoom in, and zoom out;
-- explicit world/country/institution layer visibility, with country aggregates replaced by institution activity after entering a country;
-- canonical routes for domain, field, country, institution, and researcher views;
-- browser back/forward restoration and shareable query context for field, year, and group;
-- query-oriented `AtlasRepository` methods implemented by `StaticAtlasRepository`;
-- structured provenance normalized across entities and metric observations;
-- a small entity search that navigates to existing atlas views;
-- an optional guided path through Physics, `hep-th`, 2026, the United States, MIT, a synthetic researcher, and a connected demo event;
-- optional DOI, arXiv, and generic external identifiers on paper preparation records;
-- focused schema, repository, navigation, and geographic regression tests.
+- the complete v3.0.2 metric pilot, numeric weighting profiles, source separation, and map hierarchy;
+- immutable `RawEntityRecord`, auditable `IdentityResolution`, and canonical institution/researcher identity contracts;
+- `matched`, `ambiguous`, and `unresolved` states with method, evidence, confidence, resolver version, timestamp, and provenance;
+- identifier-first resolution, exact canonical/alias/historical-name matching, and an ambiguity-gated fuzzy fallback;
+- canonical names, aliases, historical institution names, external identifiers, and identity confidence;
+- time-dependent affiliations with start/end dates, source, confidence, and legacy-year compatibility;
+- typed `ExternalResource` records for official websites, department/group pages, researcher homepages, ORCID, INSPIRE, arXiv, and DOI links;
+- entity-aware canonical search across names, aliases, historical names, abbreviations, external identifiers, and spelling variations;
+- search results with entity type, matched method/value, search confidence, and available identity confidence;
+- read-only institution, researcher, and research-group profile projections over normalized graph relationships;
+- `ScientificAtlasRepository` read methods plus interface-only `AtlasApiTransport` and `CanonicalEntityPersistence` seams;
+- source-snapshot and dataset-update lineage in the validated domain model;
+- an append-only pilot snapshot manifest, explicit incremental query planner, source-key merge into a new snapshot, and isolated versioned reprocessing;
+- preparation boundaries for a future PostgreSQL store, FastAPI service, and `APIRepository` implementation;
+- documentation of resolution, graph, profile, update, and uncertainty rules;
+- focused schema, identity, search, profile, pipeline, metric, repository, and map-layer tests.
 
-## Phase 2.3 exclusions
+## v3.0.3 exclusions
 
-Phase 2.3 deliberately excludes:
+v3.0.3-alpha deliberately excludes:
 
-- backend services, databases, or authentication;
-- OpenAlex, arXiv, INSPIRE, Crossref, or institutional-site connections;
-- real scientific ingestion, source reconciliation, or identity matching;
-- paper pages, full-text search, citation graphs, or recommendations;
-- ranking, prediction, evaluation, or admission prediction;
-- final metric calculations and custom weighting.
+- a deployed PostgreSQL database, FastAPI backend, cloud service, scheduler, queue, authentication, or moderation system;
+- browser-time scientific API access or automatic continuous ingestion;
+- complete or representative INSPIRE coverage;
+- automatic OpenAlex, Crossref, ROR, ORCID, institutional-site, or multi-source reconciliation;
+- perfect researcher or institution matching, calibrated confidence, or a human resolution-review workflow;
+- authoritative historical affiliation verification;
+- website scraping as a primary source;
+- new paper destinations, full-text search, citation-graph visualization, or recommendations;
+- university rankings, researcher recommendations, prediction, evaluation, or admission prediction;
+- validated scientific formulas, normalization, uncertainty propagation, or methodology;
+- authoritative or optimized metric weights.
 
 ## Acceptance criteria
 
 A user can:
 
-1. reset the atlas from any exploration depth using the control directly above zoom;
-2. see only country activity in World View and only the selected country plus institution activity in Country View;
-3. copy a canonical URL for a domain, field, country, institution, or researcher and restore the same hierarchy;
-4. use browser back and forward navigation without losing dependent state;
-5. search existing domains, fields, countries, institutions, and synthetic researchers;
-6. opt into a guided demonstration without blocking normal exploration;
-7. inspect the synthetic dataset's explicit source, type, version, and status;
-8. continue using every Phase 2.2 country, institution, researcher, field, timeline, fullscreen, and global-reset capability.
+1. continue exploring synthetic and INSPIRE pilot sources through the existing hierarchy;
+2. search canonical institutions and researchers by supported canonical names, aliases, abbreviations, external identifiers, and reasonable spelling variants;
+3. see match confidence and identity confidence as distinct technical signals where available;
+4. navigate a selected search result to the existing canonical Atlas route;
+5. continue exploring institution, group, researcher, paper, field, and metric connections without synthetic/pilot mixing;
+6. inspect clear source, uncertainty, identity, and no-ranking communication.
 
-Engineering acceptance requires successful type checking, unit tests, linting, and a production build.
+The data system can:
+
+1. keep raw source evidence separate from resolution decisions and canonical records;
+2. reject invalid canonical references and silent unresolved merges at schema validation;
+3. preserve concurrent and historical affiliations as dated edges;
+4. aggregate institution, researcher, and group profiles without embedding copies in canonical entities;
+5. plan an incremental refresh without modifying the base snapshot;
+6. reprocess a preserved snapshot into an isolated version directory;
+7. retain source, resolver, metric, and dataset version lineage.
+
+Engineering acceptance requires successful type checking, unit and pipeline tests, linting, and a production build.
 
 ## Known prototype limitations
 
-- The repository boundary is query-oriented, but the static alpha still assembles a small in-memory snapshot at startup.
+- The repository boundary is query-oriented, but the static alpha still validates and loads a local snapshot into memory.
+- Canonical resolution is conservative but heuristic. Authority IDs and sources can be wrong, aliases can collide, and fuzzy matching can produce false positives or false negatives.
+- Confidence values are not statistically calibrated and are not scientific metrics.
+- An ambiguous or unresolved source record is intentionally kept outside canonical traversal; no review UI exists yet.
+- Historical institution names, affiliation dates, group membership, resource links, coordinates, and paper coverage are incomplete.
+- Profile paper and collaboration connections reflect only the selected dataset and source coverage.
+- External resources can move or expire and are not continuously verified.
+- The update planner and merge functions are development foundations; they do not poll sources, schedule jobs, promote snapshots automatically, or deploy infrastructure.
+- The preserved pilot still contains only three records per year, and 2026 is year-to-date.
+- The four pilot calculations remain sample-relative engineering signals, not scientific formulas or complete field measurements.
+- Research Diversity, Talent Ecosystem, and Concentration / Vulnerability remain uncalculated for the pilot; real-data composite profiles remain disabled.
 - Production hosting must provide a single-page-app fallback for direct `/atlas/*` requests.
-- Search covers only existing entity labels and identifiers; it is not scientific or paper full-text search.
-- Provenance records are synthetic examples and do not verify scientific claims.
-- Paper identifiers are preparation metadata only and are not resolved externally.
-- Historical metric values exist at four discrete demo years and are not scientifically reconstructed.
-- The guided path uses fixed synthetic entities solely to explain the atlas hierarchy.
+- The selected metric and custom weights are session state and are not yet encoded in shareable URLs or persisted.
 - Geographic-view membership remains a small validated fixture, not a comprehensive global registry.
 
-Phase 2.3 should be reviewed as the final alpha foundation before choosing a narrow Phase 3 data-source feasibility study.
+Broader ingestion should proceed only after source policy, resolver behavior, ambiguity handling, historical affiliation rules, sampling bias, uncertainty communication, and scientific methodology have been reviewed. A visible unresolved entity is preferable to an unsupported canonical merge.

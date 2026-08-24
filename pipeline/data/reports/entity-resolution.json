@@ -1,0 +1,97 @@
+{
+  "sourceRecords": 81,
+  "sourceInstitutionRecords": 143,
+  "normalizedResearchFields": 1,
+  "normalizedCountries": 35,
+  "normalizedInstitutions": 143,
+  "normalizedResearchers": 178,
+  "authorAppearances": 187,
+  "researcherIdentityMethods": {
+    "inspire-author-record": 178
+  },
+  "authorAppearanceIdentityMethods": {
+    "inspire-author-record": 187
+  },
+  "meanResearcherIdentityConfidence": 0.99,
+  "inferredResearcherSamples": [],
+  "affiliationMentions": 234,
+  "resolvedAffiliationMentions": 234,
+  "unresolvedAffiliationMentions": 0,
+  "normalizedAffiliations": 221,
+  "unresolvedInstitutionRecords": [],
+  "unfetchedInstitutionReferences": [],
+  "failedInstitutionFetches": [],
+  "unresolvedAffiliationSamples": [],
+  "identityLayer": {
+    "rawInstitutionRecords": 143,
+    "rawInstitutionMentions": 234,
+    "rawResearcherAppearances": 187,
+    "institutionDecisions": 377,
+    "researcherDecisions": 187,
+    "canonicalInstitutions": 143,
+    "canonicalResearchers": 178,
+    "unresolvedInstitutionMentions": 0,
+    "inferredResearcherAppearances": 0,
+    "temporalAffiliationObservations": 234,
+    "externalResources": 767
+  },
+  "provenance": {
+    "source": "INSPIRE-HEP REST API",
+    "sourceVersion": "inspire-hep-snapshot:2026-08-24T12:25:25.401Z",
+    "retrievedAt": "2026-08-24T12:25:25.401Z",
+    "fieldId": "hep-th"
+  },
+  "affiliationResolutionRate": 1,
+  "matchedEntities": {
+    "researchers": 178,
+    "institutions": 143,
+    "affiliations": 221,
+    "affiliationMentions": 234
+  },
+  "unresolvedEntities": {
+    "researchers": 0,
+    "institutions": 0,
+    "affiliationMentions": 0
+  },
+  "confidence": {
+    "meanResearcherIdentity": 0.99,
+    "affiliationResolutionRate": 1,
+    "authoritativeResearcherThreshold": 0.9,
+    "inferredResearcherConfidence": 0.62
+  },
+  "methodology": {
+    "researchers": [
+      "INSPIRE author record identifier",
+      "INSPIRE BAI identifier",
+      "normalized name plus first resolved affiliation as an unresolved candidate only"
+    ],
+    "institutions": "INSPIRE institution record identifier with address-derived ISO country mapping",
+    "affiliations": "direct literature-author affiliation record references; unresolved variants are retained in the report",
+    "unresolvedResearchers": "name-and-affiliation candidates are retained as inferred evidence and excluded from canonical entities until resolved",
+    "identityLayers": "Every source appearance is retained as a raw entity record, linked through an explicit matched, inferred, or unresolved decision, and kept separate from the canonical entity.",
+    "temporalAffiliations": "Publication affiliation mentions are stored as dated observations. They are evidence of an affiliation at that publication date, not asserted employment intervals.",
+    "externalResources": "URLs are stored in ExternalResource records linked by canonical entity ID; canonical entities contain identifiers but no embedded URLs."
+  },
+  "identityArchitecture": {
+    "schemaVersion": "1.0.0",
+    "resolutionVersion": "identity-resolution-v1",
+    "rawEntities": {
+      "institutionRecords": 143,
+      "institutionMentions": 234,
+      "researcherAppearances": 187
+    },
+    "decisions": {
+      "institution": 377,
+      "researcher": 187,
+      "matchedInstitution": 377,
+      "matchedResearcher": 187,
+      "inferredResearcher": 0
+    },
+    "canonicalEntities": {
+      "institutions": 143,
+      "researchers": 178
+    },
+    "temporalAffiliationObservations": 234,
+    "externalResources": 767
+  }
+}

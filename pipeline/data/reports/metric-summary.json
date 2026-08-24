@@ -1,0 +1,30 @@
+{
+  "observationCount": 1060,
+  "entityCounts": {
+    "countries": 35,
+    "institutions": 143
+  },
+  "sampledEntityYears": {
+    "countries": 107,
+    "institutions": 158
+  },
+  "period": "2000-2026",
+  "fieldId": "hep-th",
+  "metrics": [
+    "research_activity_score",
+    "research_impact",
+    "collaboration",
+    "momentum"
+  ],
+  "attribution": "Each paper fully attributes participation to every resolved affiliated institution and country.",
+  "normalization": "Within-year min-max scaling by entity type among entities with sampled participation in that year.",
+  "formulas": {
+    "research_activity_score": "Count of distinct sampled papers with at least one resolved affiliation to the entity in year t.",
+    "research_impact": "log1p(sum of INSPIRE citation_count_without_self_citations across the entity's fully attributed sampled papers in year t).",
+    "collaboration": "Count of distinct peer entities co-participating with the entity in at least one sampled paper in year t.",
+    "momentum": "(sampled participation in t-2..t minus sampled participation in t-5..t-3) / max(1, the sum of both windows).",
+    "outputScaling": "For each metric, year, and entity type: 100 * (raw - active minimum) / (active maximum - active minimum); a constant positive cohort maps to 50 and a constant zero cohort maps to 0."
+  },
+  "missingDataTreatment": "No observation is emitted when an entity has no resolved sampled paper participation in a year; absence from the bounded sample is not encoded as measured zero.",
+  "resolutionConfidence": 1
+}

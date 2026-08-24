@@ -39,7 +39,7 @@ For the current requested prototype behavior, the China exploration configuratio
 
 The packaged `world-atlas` source preserves `156` as a renderable MultiPolygon and `158` as a renderable Polygon. The application does not simplify or reconstruct either feature. Country mode composes every configured polygon into a dedicated exploration-canvas GeoJSON source. That source drives the fill, outline, glow, and camera fit independently from the world choropleth, ensuring that all configured geometry remains visibly present.
 
-In World View, heatmap color is also resolved through geographic-view membership. Every source geometry in a view receives the display score supplied for that view's country entity. Native location identity remains unchanged—for example, geometry `158` retains `country-tw` as its location entity while using `country-cn` as its configured visualization metric entity. This is a presentation join only and does not create, duplicate, or reassign metric observations.
+In World View, heatmap color is also resolved through geographic-view membership. Every source geometry in a view receives the display metric value supplied for that view's country entity. Native location identity remains unchanged—for example, geometry `158` retains `country-tw` as its location entity while using `country-cn` as its configured visualization metric entity. This is a presentation join only and does not create, duplicate, or reassign metric observations.
 
 Unconfigured source geometries fall back to direct ISO-numeric matching. Future geographic source changes should be handled by updating validated mapping data and provenance, not by adding one-off rendering patches.
 
@@ -51,4 +51,4 @@ Unconfigured source geometries fall back to direct ISO-numeric matching. Future 
 - Permit multiple institutional and geographic attributions when supported by affiliation records.
 - Describe rendered activity as scientific exploration data, never as political ownership or a scientific ranking.
 
-Phase 2.3 uses synthetic activity observations and a small local location fixture. Geographic-view records carry structured `synthetic-demo` provenance. Its normalized authorship and affiliation records demonstrate multi-institution relationships, but it does not yet ingest or aggregate real paper metadata.
+v3.0.2-alpha retains the synthetic location fixture and also provides a bounded INSPIRE-HEP metadata pilot. Changing the source, displayed metric, or user-defined weight profile does not alter geographic membership, attribution, affiliations, or entity relationships. Pilot country participation is derived from resolved institution-affiliation metadata, not from map geometry, and each collaborative paper is fully attributed to every resolved participating location. The pilot is incomplete and does not establish authoritative historical geography or contribution shares.

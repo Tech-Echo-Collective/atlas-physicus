@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "1.0.0",
+  "manifestVersion": "snapshot-manifest-v1",
+  "datasetId": "inspire-hep-hep-th-pilot",
+  "activeSnapshotId": "inspire-hep-2026-08-24t12-25-25-401z",
+  "generatedAt": "2026-08-24T12:32:45.000Z",
+  "updatePolicy": {
+    "mode": "append-versioned-snapshot",
+    "rawSnapshotsImmutable": true,
+    "mergeKey": "INSPIRE control_number",
+    "conflictPolicy": "A newer record revision is selected only while deriving a new snapshot; prior raw snapshots are never modified.",
+    "reprocessing": "Any preserved snapshot may be reprocessed into an isolated version directory."
+  },
+  "snapshots": [
+    {
+      "id": "inspire-hep-2026-08-24t12-25-25-401z",
+      "snapshotId": "inspire-hep-2026-08-24t12-25-25-401z",
+      "source": "INSPIRE-HEP REST API",
+      "sourceVersion": "inspire-hep-snapshot:2026-08-24T12:25:25.401Z",
+      "capturedAt": "2026-08-24T12:25:25.401Z",
+      "retrievedAt": "2026-08-24T12:25:25.401Z",
+      "calculatedAt": "2026-08-24T12:32:45.000Z",
+      "updateMode": "full-snapshot",
+      "recordCount": 81,
+      "contentChecksum": "sha256:8fec5f3990eaf3488717af86e4049ea8418b93e68de18d47b8ad699ff96c06bb",
+      "storageReference": "data/raw/inspire-hep-hep-th-2000-2026.json",
+      "fieldId": "hep-th",
+      "coverage": {
+        "startYear": 2000,
+        "endYear": 2026,
+        "recordsPerYear": 3
+      },
+      "rawPath": "data/raw/inspire-hep-hep-th-2000-2026.json",
+      "canonicalContentSha256": "8fec5f3990eaf3488717af86e4049ea8418b93e68de18d47b8ad699ff96c06bb",
+      "recordCounts": {
+        "literature": 81,
+        "institutions": 143
+      },
+      "provenance": {
+        "source": "INSPIRE-HEP REST API",
+        "sourceType": "external-api",
+        "version": "inspire-hep-snapshot:2026-08-24T12:25:25.401Z",
+        "status": "unverified",
+        "confidence": 1,
+        "retrievedAt": "2026-08-24T12:25:25.401Z"
+      },
+      "processing": {
+        "pipelineVersion": "v3.0.3-alpha-pilot.1",
+        "identityResolutionVersion": "identity-resolution-v1",
+        "status": "processed",
+        "normalizedPath": "data/processed/normalized-hep-th-pilot.json",
+        "identityPath": "data/processed/identity-resolution-hep-th-pilot.json",
+        "externalResourcesPath": "data/processed/external-resources-hep-th-pilot.json",
+        "atlasExportPath": "export/hep-th-pilot.json"
+      }
+    }
+  ],
+  "datasetUpdates": [
+    {
+      "id": "dataset-update-v3-0-3-alpha-pilot-1-2026-08-24t12-32-45-000z",
+      "appliedAt": "2026-08-24T12:32:45.000Z",
+      "updateMode": "reprocess",
+      "sourceSnapshotIds": [
+        "inspire-hep-2026-08-24t12-25-25-401z"
+      ],
+      "previousDatasetVersion": "v3.0.2-alpha-pilot.1",
+      "datasetVersion": "v3.0.3-alpha-pilot.1",
+      "resolverVersion": "identity-resolution-v1",
+      "metricCalculationVersion": "v3.0.3-alpha-pilot.1",
+      "changes": {
+        "created": 0,
+        "updated": 0,
+        "unchanged": 81,
+        "unresolved": 0
+      },
+      "provenance": {
+        "source": "Physics Atlas pipeline reprocessing",
+        "sourceType": "derived",
+        "version": "v3.0.3-alpha-pilot.1",
+        "status": "unverified",
+        "confidence": 1,
+        "retrievedAt": "2026-08-24T12:32:45.000Z"
+      }
+    }
+  ]
+}

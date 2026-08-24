@@ -1,4 +1,4 @@
-import { prototypeMetricId } from '../domain/models';
+import { defaultMetricId } from '../domain/models';
 import {
   buildInstitutionFeatureCollection,
   selectMajorInstitutionsForMap,
@@ -11,7 +11,7 @@ describe('StaticAtlasRepository', () => {
     const observations = await repository.findMetricObservations({
       entityType: 'country',
       fieldId: 'quant-ph',
-      metricId: prototypeMetricId,
+      metricId: defaultMetricId,
       period: '2026',
     });
 
@@ -28,13 +28,13 @@ describe('StaticAtlasRepository', () => {
     const current = await repository.findMetricObservations({
       entityType: 'country',
       fieldId: 'hep-th',
-      metricId: prototypeMetricId,
+      metricId: defaultMetricId,
       period: '2026',
     });
     const historical = await repository.findMetricObservations({
       entityType: 'country',
       fieldId: 'hep-th',
-      metricId: prototypeMetricId,
+      metricId: defaultMetricId,
       period: '1900',
     });
 
@@ -49,7 +49,7 @@ describe('StaticAtlasRepository', () => {
     const observations = await repository.findMetricObservations({
       entityType: 'country',
       scienceDomainId: 'physics',
-      metricId: prototypeMetricId,
+      metricId: defaultMetricId,
       period: '2026',
     });
 
@@ -69,7 +69,7 @@ describe('StaticAtlasRepository', () => {
     const observations = await repository.findMetricObservations({
       entityType: 'institution',
       scienceDomainId: 'physics',
-      metricId: prototypeMetricId,
+      metricId: defaultMetricId,
       period: '2026',
     });
     const visibleInstitutions = selectMajorInstitutionsForMap(
@@ -90,7 +90,7 @@ describe('StaticAtlasRepository', () => {
           type: 'Point',
           coordinates: [144.9631, -37.8136],
         },
-        properties: expect.objectContaining({ score: 68 }),
+        properties: expect.objectContaining({ metricValue: 68 }),
       }),
     ]);
   });
@@ -123,6 +123,36 @@ describe('StaticAtlasRepository', () => {
     );
   });
 
+  it('exposes definitions and reproducible metric queries', async () => {
+    const repository = new StaticAtlasRepository();
+
+    await expect(repository.getMetricDefinitions()).resolves.toHaveLength(7);
+    await expect(
+      repository.getMetricDefinition('collaboration'),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        name: 'Collaboration / Connectivity',
+        category: 'Collaboration',
+      }),
+    );
+    await expect(
+      repository.getMetricsForEntity('institution-mit'),
+    ).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          metricId: 'research_impact',
+          algorithmVersion: 'metric-engine-synthetic-transform-v1',
+        }),
+      ]),
+    );
+    await expect(repository.getMetricsForField('hep-th')).resolves.not.toEqual(
+      [],
+    );
+    await expect(repository.getMetricsForPeriod('2026')).resolves.not.toEqual(
+      [],
+    );
+  });
+
   it('searches only existing atlas entities and not paper content', async () => {
     const repository = new StaticAtlasRepository();
 
@@ -134,6 +164,40 @@ describe('StaticAtlasRepository', () => {
     ]);
     await expect(repository.searchEntities('boundary symmetries')).resolves.toEqual(
       [],
+    );
+  });
+
+  it('exposes canonical profiles and the knowledge graph through the repository', async () => {
+    const repository = new StaticAtlasRepository();
+
+    await expect(
+      repository.getInstitutionProfile('institution-mit'),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        institution: expect.objectContaining({ id: 'institution-mit' }),
+        researchGroups: expect.arrayContaining([
+          expect.objectContaining({ id: 'group-mit-fields' }),
+        ]),
+      }),
+    );
+    await expect(
+      repository.getExternalResources('researcher', 'researcher-jonah-okafor'),
+    ).resolves.not.toEqual([]);
+
+    const graph = await repository.getKnowledgeGraph();
+    expect(graph.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'researcher:researcher-jonah-okafor',
+        }),
+      ]),
+    );
+    expect(graph.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          edgeType: 'researcher-affiliated-with-institution',
+        }),
+      ]),
     );
   });
 });

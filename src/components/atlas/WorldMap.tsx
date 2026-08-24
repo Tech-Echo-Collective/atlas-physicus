@@ -20,12 +20,13 @@ import {
   institutionColor,
   institutionHeatmapColor,
   institutionHeatmapWeight,
+  institutionPulseColor,
   institutionPulseDurationMs,
   institutionRadius,
 } from './InstitutionLayer';
 import { GlobalViewControl } from './GlobalViewControl';
 import { getAtlasMapLayerHierarchy } from './MapLayerHierarchy';
-import { researchActivityColor } from './visualScale';
+import { metricValueColor } from './visualScale';
 
 interface WorldMapProps {
   countries: Country[];
@@ -33,6 +34,8 @@ interface WorldMapProps {
   countryObservations: MetricObservation[];
   institutions: Institution[];
   institutionObservations: MetricObservation[];
+  metricLabel: string;
+  isPilotDataset: boolean;
   selectedCountryId: string | null;
   selectedInstitutionId: string | null;
   globalResetToken: number;
@@ -48,8 +51,8 @@ const worldCamera = {
 
 const countryFillColor: maplibregl.ExpressionSpecification = [
   'case',
-  ['has', 'score'],
-  researchActivityColor,
+  ['has', 'metricValue'],
+  metricValueColor,
   '#0e1c2a',
 ];
 
@@ -87,6 +90,8 @@ export function WorldMap({
   countryObservations,
   institutions,
   institutionObservations,
+  metricLabel,
+  isPilotDataset,
   selectedCountryId,
   selectedInstitutionId,
   globalResetToken,
@@ -102,6 +107,8 @@ export function WorldMap({
   const [mapReady, setMapReady] = useState(false);
   const onCountrySelectRef = useRef(onCountrySelect);
   const onInstitutionSelectRef = useRef(onInstitutionSelect);
+  const metricLabelRef = useRef(metricLabel);
+  const isPilotDatasetRef = useRef(isPilotDataset);
   const countryGeoJson = useMemo(
     () =>
       buildCountryFeatureCollection(
@@ -152,6 +159,14 @@ export function WorldMap({
   }, [onInstitutionSelect]);
 
   useEffect(() => {
+    metricLabelRef.current = metricLabel;
+  }, [metricLabel]);
+
+  useEffect(() => {
+    isPilotDatasetRef.current = isPilotDataset;
+  }, [isPilotDataset]);
+
+  useEffect(() => {
     if (!containerRef.current || mapRef.current) {
       return;
     }
@@ -198,7 +213,7 @@ export function WorldMap({
           'fill-color': countryFillColor,
           'fill-opacity': [
             'case',
-            ['has', 'score'],
+            ['has', 'metricValue'],
             0.94,
             0.52,
           ],
@@ -211,13 +226,13 @@ export function WorldMap({
         paint: {
           'line-color': [
             'case',
-            ['has', 'score'],
-            researchActivityColor,
+            ['has', 'metricValue'],
+            metricValueColor,
             '#203849',
           ],
           'line-width': [
             'case',
-            ['has', 'score'],
+            ['has', 'metricValue'],
             2.2,
             0.7,
           ],
@@ -232,13 +247,13 @@ export function WorldMap({
         paint: {
           'line-color': [
             'case',
-            ['has', 'score'],
-            researchActivityColor,
+            ['has', 'metricValue'],
+            metricValueColor,
             '#294154',
           ],
           'line-width': [
             'case',
-            ['has', 'score'],
+            ['has', 'metricValue'],
             0.85,
             0.45,
           ],
@@ -346,7 +361,7 @@ export function WorldMap({
             initialPulseFrame.outerRadiusOffset,
           ],
           'circle-color': 'rgba(0, 0, 0, 0)',
-          'circle-stroke-color': institutionColor,
+          'circle-stroke-color': institutionPulseColor,
           'circle-stroke-width': 1,
           'circle-stroke-opacity': initialPulseFrame.opacity * 0.72,
         },
@@ -363,7 +378,7 @@ export function WorldMap({
             initialPulseFrame.innerRadiusOffset,
           ],
           'circle-color': 'rgba(0, 0, 0, 0)',
-          'circle-stroke-color': institutionColor,
+          'circle-stroke-color': institutionPulseColor,
           'circle-stroke-width': 1.2,
           'circle-stroke-opacity': initialPulseFrame.opacity,
         },
@@ -492,12 +507,14 @@ export function WorldMap({
         location.textContent = String(
           properties.city ?? 'Location unavailable',
         );
-        const score = document.createElement('span');
-        score.textContent = `research_activity_score · ${String(properties.score ?? '—')}`;
+        const value = document.createElement('span');
+        value.textContent = `${metricLabelRef.current} · ${String(properties.metricValue ?? '—')}`;
         const status = document.createElement('small');
-        status.textContent = 'Synthetic demo observation';
+        status.textContent = isPilotDatasetRef.current
+          ? 'INSPIRE-HEP pilot observation'
+          : 'Synthetic demo observation';
 
-        content.append(name, location, score, status);
+        content.append(name, location, value, status);
         hoverPopup.setDOMContent(content);
       }
 
@@ -745,7 +762,11 @@ export function WorldMap({
         className="world-map"
         ref={containerRef}
         role="application"
-        aria-label="Temporal geographic atlas of synthetic physics research activity"
+        aria-label={
+          isPilotDataset
+            ? 'Temporal geographic atlas of INSPIRE-HEP pilot metric values'
+            : 'Temporal geographic atlas of synthetic physics metric values'
+        }
       />
       <nav className="map-navigation-controls" aria-label="Map navigation">
         <GlobalViewControl

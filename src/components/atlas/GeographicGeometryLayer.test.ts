@@ -58,7 +58,7 @@ describe('geographic geometry layer', () => {
         countryId: 'country-cn',
         explorationCountryId: 'country-cn',
         metricEntityId: 'country-cn',
-        score: 83,
+        metricValue: 83,
       }),
     );
     expect(taiwanFeature?.properties).toEqual(
@@ -66,7 +66,7 @@ describe('geographic geometry layer', () => {
         countryId: 'country-tw',
         explorationCountryId: 'country-cn',
         metricEntityId: 'country-cn',
-        score: 83,
+        metricValue: 83,
       }),
     );
   });
@@ -98,7 +98,7 @@ describe('geographic geometry layer', () => {
     expect(canvasFeature.properties).toEqual({
       explorationCountryId: 'country-cn',
       sourceIsoNumerics: ['156', '158'],
-      score: 83,
+      metricValue: 83,
     });
     expect(canvasFeature.geometry.type).toBe('MultiPolygon');
     expect(

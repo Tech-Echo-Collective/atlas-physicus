@@ -11,6 +11,8 @@ export function AtlasSearch({ onSearch, onSelect }: AtlasSearchProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<AtlasSearchResult[]>([]);
+  const [searchedQuery, setSearchedQuery] = useState('');
+  const isSearching = Boolean(query.trim()) && searchedQuery !== query;
 
   useEffect(() => {
     if (!isOpen || !query.trim()) {
@@ -18,10 +20,12 @@ export function AtlasSearch({ onSearch, onSelect }: AtlasSearchProps) {
     }
 
     let isCurrent = true;
+    const activeQuery = query;
     const timer = window.setTimeout(() => {
-      void onSearch(query).then((nextResults) => {
+      void onSearch(activeQuery).then((nextResults) => {
         if (isCurrent) {
           setResults(nextResults);
+          setSearchedQuery(activeQuery);
         }
       });
     }, 120);
@@ -41,6 +45,7 @@ export function AtlasSearch({ onSearch, onSelect }: AtlasSearchProps) {
     onSelect(result);
     setQuery('');
     setResults([]);
+    setSearchedQuery('');
     setIsOpen(false);
   };
 
@@ -68,12 +73,14 @@ export function AtlasSearch({ onSearch, onSelect }: AtlasSearchProps) {
                 setQuery(event.target.value);
                 if (!event.target.value.trim()) {
                   setResults([]);
+                  setSearchedQuery('');
                 }
               }}
               onKeyDown={(event) => {
                 if (event.key === 'Escape') {
                   setIsOpen(false);
                   setResults([]);
+                  setSearchedQuery('');
                 }
                 if (event.key === 'Enter' && results[0]) {
                   event.preventDefault();
@@ -89,6 +96,7 @@ export function AtlasSearch({ onSearch, onSelect }: AtlasSearchProps) {
               onClick={() => {
                 setIsOpen(false);
                 setResults([]);
+                setSearchedQuery('');
               }}
               aria-label="Close atlas search"
             >
@@ -96,8 +104,10 @@ export function AtlasSearch({ onSearch, onSelect }: AtlasSearchProps) {
             </button>
           </div>
           <div id="atlas-search-results" className="atlas-search-results">
-            {query.trim() && results.length === 0 ? (
-              <p>No matching demo entities</p>
+            {query.trim() && isSearching ? (
+              <p>Resolving canonical entities…</p>
+            ) : query.trim() && results.length === 0 ? (
+              <p>No sufficiently confident canonical match</p>
             ) : (
               results.map((result) => (
                 <button
@@ -107,6 +117,13 @@ export function AtlasSearch({ onSearch, onSelect }: AtlasSearchProps) {
                 >
                   <strong>{result.label}</strong>
                   <span>{result.context}</span>
+                  <small>
+                    {Math.round(result.matchConfidence * 100)}% search match ·{' '}
+                    {result.matchedOn.replaceAll('-', ' ')}
+                    {result.identityConfidence !== undefined && (
+                      <> · {Math.round(result.identityConfidence * 100)}% identity</>
+                    )}
+                  </small>
                 </button>
               ))
             )}

@@ -1,9 +1,11 @@
 import type { CSSProperties } from 'react';
 import type { MetricObservation } from '../../domain/models';
-import { getResearchActivityCssColor } from './visualScale';
+import { getMetricValueCssColor } from './visualScale';
 
 interface InstitutionActivityHistoryProps {
   observations: MetricObservation[];
+  metricLabel: string;
+  isPilotDataset: boolean;
 }
 
 type ActivityBarStyle = CSSProperties & {
@@ -13,6 +15,8 @@ type ActivityBarStyle = CSSProperties & {
 
 export function InstitutionActivityHistory({
   observations,
+  metricLabel,
+  isPilotDataset,
 }: InstitutionActivityHistoryProps) {
   const orderedObservations = [...observations].sort(
     (left, right) => Number(left.period) - Number(right.period),
@@ -22,21 +26,24 @@ export function InstitutionActivityHistory({
     <section className="entity-section activity-history">
       <div className="entity-section-heading">
         <div>
-          <p className="section-kicker">Historical activity</p>
-          <h3>Research activity over time</h3>
+          <p className="section-kicker">Metric history</p>
+          <h3>{metricLabel} over time</h3>
         </div>
-        <span>Synthetic values</span>
+        <span>{isPilotDataset ? 'Pilot values' : 'Synthetic values'}</span>
       </div>
 
       {orderedObservations.length > 0 ? (
-        <ol className="activity-bars" aria-label="Synthetic activity history">
+        <ol
+          className="activity-bars"
+          aria-label={`${isPilotDataset ? 'Pilot' : 'Synthetic'} ${metricLabel} history`}
+        >
           {orderedObservations.map((observation) => (
             <li key={observation.id}>
               <div
                 className="activity-bar"
                 style={
                   {
-                    '--activity-color': getResearchActivityCssColor(
+                    '--activity-color': getMetricValueCssColor(
                       observation.value,
                     ),
                     '--activity-value': `${observation.value}%`,
@@ -51,7 +58,9 @@ export function InstitutionActivityHistory({
           ))}
         </ol>
       ) : (
-        <p className="muted-copy">No demo activity history for this scope.</p>
+        <p className="muted-copy">
+          No {isPilotDataset ? 'pilot' : 'demo'} metric history for this scope.
+        </p>
       )}
     </section>
   );

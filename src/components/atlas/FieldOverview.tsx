@@ -16,6 +16,7 @@ interface FieldOverviewProps {
   papers: Paper[];
   authorships: Authorship[];
   historicalEvents: HistoricalEvent[];
+  isPilotDataset: boolean;
   onClose: () => void;
 }
 
@@ -27,6 +28,7 @@ export function FieldOverview({
   papers,
   authorships,
   historicalEvents,
+  isPilotDataset,
   onClose,
 }: FieldOverviewProps) {
   const fieldInstitutions = institutions
@@ -61,7 +63,9 @@ export function FieldOverview({
         <button className="entity-back" type="button" onClick={onClose}>
           ← Back to Atlas
         </button>
-        <p className="section-kicker">Research field overview · demo</p>
+        <p className="section-kicker">
+          Research field overview · {isPilotDataset ? 'INSPIRE-HEP pilot' : 'demo'}
+        </p>
         <span className="field-overview-code">{field.id}</span>
         <h2>{field.label}</h2>
         <p>{field.description}</p>
@@ -72,7 +76,7 @@ export function FieldOverview({
           <div className="entity-section-heading">
             <div>
               <p className="section-kicker">Historical milestones</p>
-              <h3>Demo chronology</h3>
+              <h3>{isPilotDataset ? 'Pilot' : 'Demo'} chronology</h3>
             </div>
             <span>Not comprehensive</span>
           </div>
@@ -89,7 +93,10 @@ export function FieldOverview({
               ))}
             </ol>
           ) : (
-            <p className="muted-copy">No synthetic milestones are connected.</p>
+            <p className="muted-copy">
+              No {isPilotDataset ? 'pilot' : 'synthetic'} milestones are
+              connected.
+            </p>
           )}
         </section>
 
@@ -97,7 +104,7 @@ export function FieldOverview({
           <div className="entity-section-heading">
             <div>
               <p className="section-kicker">Institutions</p>
-              <h3>Major nodes in this demo</h3>
+              <h3>Major nodes in this {isPilotDataset ? 'pilot' : 'demo'}</h3>
             </div>
             <span>Unranked sample</span>
           </div>
@@ -115,7 +122,7 @@ export function FieldOverview({
           <div className="entity-section-heading">
             <div>
               <p className="section-kicker">Researchers</p>
-              <h3>Associated demo community</h3>
+              <h3>Associated {isPilotDataset ? 'pilot' : 'demo'} community</h3>
             </div>
             <span>Not ranked</span>
           </div>
@@ -142,7 +149,7 @@ export function FieldOverview({
               <p className="section-kicker">Representative papers</p>
               <h3>Preparation records</h3>
             </div>
-            <span>Synthetic sample</span>
+            <span>{isPilotDataset ? 'Pilot sample' : 'Synthetic sample'}</span>
           </div>
           <ol className="paper-list">
             {fieldPapers.map((paper) => (
@@ -160,8 +167,9 @@ export function FieldOverview({
       </div>
 
       <p className="entity-disclaimer field-overview-disclaimer">
-        This overview uses incomplete synthetic content to prepare the field
-        exploration model. It does not claim historical or community completeness.
+        {isPilotDataset
+          ? 'This bounded INSPIRE-HEP overview is incomplete and selection-biased. It does not claim historical or community completeness.'
+          : 'This overview uses incomplete synthetic content to prepare the field exploration model. It does not claim historical or community completeness.'}
       </p>
     </aside>
   );

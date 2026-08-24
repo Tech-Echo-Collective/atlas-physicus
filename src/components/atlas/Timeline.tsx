@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 interface TimelineProps {
   years: number[];
   selectedYear: number;
+  isPilotDataset: boolean;
   onChange: (year: number) => void;
 }
 
@@ -10,7 +11,12 @@ type TimelineStyle = CSSProperties & {
   '--timeline-progress': string;
 };
 
-export function Timeline({ years, selectedYear, onChange }: TimelineProps) {
+export function Timeline({
+  years,
+  selectedYear,
+  isPilotDataset,
+  onChange,
+}: TimelineProps) {
   const selectedIndex = Math.max(0, years.indexOf(selectedYear));
   const progress =
     years.length <= 1 ? 100 : (selectedIndex / (years.length - 1)) * 100;
@@ -18,7 +24,7 @@ export function Timeline({ years, selectedYear, onChange }: TimelineProps) {
   return (
     <section
       className="timeline"
-      aria-label="Historical research activity timeline"
+      aria-label="Historical metric timeline"
       style={{ '--timeline-progress': `${progress}%` } as TimelineStyle}
     >
       <div className="timeline-heading">
@@ -26,7 +32,7 @@ export function Timeline({ years, selectedYear, onChange }: TimelineProps) {
           <p className="section-kicker">Temporal layer</p>
           <strong>{selectedYear}</strong>
         </div>
-        <span>Demo historical data</span>
+        <span>{isPilotDataset ? 'INSPIRE-HEP pilot' : 'Demo historical data'}</span>
       </div>
 
       <div className="timeline-control">
@@ -55,7 +61,7 @@ export function Timeline({ years, selectedYear, onChange }: TimelineProps) {
               type="button"
               data-active={year === selectedYear}
               onClick={() => onChange(year)}
-              aria-label={`Show ${year} demo data`}
+              aria-label={`Show ${year} ${isPilotDataset ? 'pilot' : 'demo'} data`}
             >
               <i aria-hidden="true" />
               <span>{year}</span>

@@ -1,7 +1,7 @@
 {
   "name": "physics-atlas",
   "private": true,
-  "version": "2.3.0-alpha.0",
+  "version": "3.0.3-alpha.0",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {
@@ -11,10 +11,13 @@
     "dev": "vite",
     "build": "npm run typecheck && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "lint": "eslint ."
+    "test": "vitest run && node --test pipeline/**/*.test.mjs",
+    "lint": "eslint .",
+    "pipeline:ingest": "node pipeline/run.mjs",
+    "pipeline:rebuild": "node pipeline/rebuild.mjs"
   },
   "dependencies": {
+    "i18n-iso-countries": "^7.14.0",
     "maplibre-gl": "^5.12.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

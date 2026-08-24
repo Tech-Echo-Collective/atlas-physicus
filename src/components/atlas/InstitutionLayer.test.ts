@@ -6,18 +6,19 @@ import {
   institutionHeatmapColor,
   institutionHeatmapWeight,
   institutionNodeDisplayConfig,
+  institutionPulseColor,
   institutionPulseDurationMs,
   selectMajorInstitutionsForMap,
 } from './InstitutionLayer';
 import {
-  getResearchActivityCssColor,
-  researchActivityColor,
+  getMetricValueCssColor,
+  metricValueColor,
 } from './visualScale';
 
 const provenance = {
   source: 'Physics Atlas synthetic demonstration dataset',
   sourceType: 'synthetic-demo' as const,
-  version: 'v2.3-alpha',
+  version: 'v3.0.1-alpha',
   status: 'synthetic' as const,
 };
 
@@ -39,6 +40,9 @@ const observation: MetricObservation = {
   metricId: 'research_activity_score',
   period: '2026',
   value: 73,
+  source: 'synthetic-demo',
+  algorithmVersion: 'metric-engine-v1',
+  calculationVersion: 'v3.0.1-alpha',
   provenance,
 };
 
@@ -57,7 +61,7 @@ describe('buildInstitutionFeatureCollection', () => {
         },
         properties: expect.objectContaining({
           institutionId: institution.id,
-          score: 73,
+          metricValue: 73,
         }),
       }),
     ]);
@@ -70,17 +74,20 @@ describe('buildInstitutionFeatureCollection', () => {
   });
 
   it('shares the standardized full-spectrum activity scale', () => {
-    expect(institutionColor).toBe(researchActivityColor);
-    expect(researchActivityColor).toContain('#8b3ffc');
-    expect(researchActivityColor).toContain('#3157e8');
-    expect(researchActivityColor).toContain('#00b7d6');
-    expect(researchActivityColor).toContain('#2db96f');
-    expect(researchActivityColor).toContain('#d8c83f');
-    expect(researchActivityColor).toContain('#f07a2b');
-    expect(researchActivityColor).toContain('#df2f3f');
-    expect(getResearchActivityCssColor(0)).toContain('hsl(270');
-    expect(getResearchActivityCssColor(100)).toContain('hsl(0');
-    expect(JSON.stringify(institutionHeatmapWeight)).toContain('"score"');
+    expect(institutionColor).toBe(metricValueColor);
+    expect(institutionPulseColor).toBe(institutionColor);
+    expect(metricValueColor).toContain('#8b3ffc');
+    expect(metricValueColor).toContain('#3157e8');
+    expect(metricValueColor).toContain('#00b7d6');
+    expect(metricValueColor).toContain('#2db96f');
+    expect(metricValueColor).toContain('#d8c83f');
+    expect(metricValueColor).toContain('#f07a2b');
+    expect(metricValueColor).toContain('#df2f3f');
+    expect(getMetricValueCssColor(0)).toContain('hsl(270');
+    expect(getMetricValueCssColor(100)).toContain('hsl(0');
+    expect(JSON.stringify(institutionHeatmapWeight)).toContain(
+      '"metricValue"',
+    );
     expect(institutionHeatmapColor).toContain('rgba(139, 63, 252, 0.48)');
     expect(institutionHeatmapColor).toContain('rgba(223, 47, 63, 0.76)');
   });
@@ -118,7 +125,7 @@ describe('buildInstitutionFeatureCollection', () => {
       selectMajorInstitutionsForMap(
         [institution, secondInstitution, thirdInstitution],
         observations,
-        { maxNodes: 2, minimumActivity: 20 },
+        { maxNodes: 2, minimumMetricValue: 20 },
       ).map((candidate) => candidate.id),
     ).toEqual([secondInstitution.id, institution.id]);
     expect(institutionNodeDisplayConfig.maxNodes).toBeGreaterThan(0);

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "schemaVersion": "0.5.0",
+    "schemaVersion": "0.6.0",
     "datasetKind": "synthetic-demo",
     "period": "2026",
     "generatedAt": "2026-08-24T00:00:00.000Z",
@@ -8,7 +8,7 @@
     "provenance": {
       "source": "Physics Atlas synthetic demonstration dataset",
       "sourceType": "synthetic-demo",
-      "version": "v2.3-alpha",
+      "version": "v3.0.1-alpha",
       "status": "synthetic"
     }
   },
@@ -45,6 +45,92 @@
       "id": "cond-mat",
       "label": "Condensed Matter",
       "description": "Theoretical and experimental physics of matter and materials."
+    }
+  ],
+  "metricDefinitions": [
+    {
+      "id": "research_activity_score",
+      "name": "Research Activity",
+      "category": "Research Activity",
+      "description": "Synthetic demonstration of the volume and continuity of research activity represented in the atlas interface.",
+      "interpretation": "Explores the displayed intensity and continuity of research activity within a selected scope; it does not represent research quality.",
+      "unit": "normalized demo index (0–100)",
+      "version": "metric-definition-v1",
+      "requiredData": ["synthetic activity fixture"],
+      "implementationStatus": "synthetic-demo",
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "research_impact",
+      "name": "Research Impact",
+      "category": "Research Impact",
+      "description": "Synthetic demonstration layer reserved for future validated impact methodology.",
+      "interpretation": "Prepares exploration of how research is received or used within a defined context; it is not an institutional quality ranking.",
+      "unit": "normalized demo index (0–100)",
+      "version": "metric-definition-v1",
+      "requiredData": ["synthetic activity fixture", "deterministic demo transform"],
+      "implementationStatus": "synthetic-demo",
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "collaboration",
+      "name": "Collaboration / Connectivity",
+      "category": "Collaboration",
+      "description": "Synthetic demonstration layer reserved for future affiliation and collaboration methodology.",
+      "interpretation": "Prepares exploration of scientific relationships across researchers and institutions without assigning value to individual participants.",
+      "unit": "normalized demo index (0–100)",
+      "version": "metric-definition-v1",
+      "requiredData": ["synthetic activity fixture", "deterministic demo transform"],
+      "implementationStatus": "synthetic-demo",
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "research_diversity",
+      "name": "Research Diversity",
+      "category": "Research Diversity",
+      "description": "Taxonomy and synthetic demonstration layer for the breadth and diversity of a research ecosystem.",
+      "interpretation": "Prepares future exploration of subfield diversity, topic diversity, and research breadth; the current value is not a validated diversity measurement.",
+      "unit": "normalized demo index (0–100)",
+      "version": "metric-definition-v1",
+      "requiredData": ["synthetic activity fixture", "deterministic demo transform"],
+      "implementationStatus": "synthetic-demo",
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "momentum",
+      "name": "Research Momentum / Sustainability",
+      "category": "Research Momentum",
+      "description": "Synthetic demonstration layer reserved for future temporal research-evolution methodology.",
+      "interpretation": "Prepares exploration of change over time within a selected scope; it is not a prediction of future performance.",
+      "unit": "normalized demo index (0–100)",
+      "version": "metric-definition-v1",
+      "requiredData": ["synthetic activity fixture", "deterministic demo transform"],
+      "implementationStatus": "synthetic-demo",
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "talent_ecosystem",
+      "name": "Talent Ecosystem",
+      "category": "Talent Ecosystem",
+      "description": "Taxonomy definition for the ability of a research ecosystem to develop and sustain researchers.",
+      "interpretation": "Reserved for future study of researcher growth, career mobility, and early-career activity; no value is calculated in this release.",
+      "unit": "taxonomy definition only",
+      "version": "metric-definition-v1",
+      "requiredData": ["future validated researcher and career-path data"],
+      "implementationStatus": "taxonomy-only",
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "concentration_vulnerability",
+      "name": "Concentration / Vulnerability",
+      "category": "Concentration / Vulnerability",
+      "description": "Taxonomy definition for structural concentration and dependency within a research ecosystem.",
+      "interpretation": "Reserved for future study of institutional concentration, geographic concentration, and ecosystem dependency; no resilience claim is calculated in this release.",
+      "unit": "taxonomy definition only",
+      "version": "metric-definition-v1",
+      "requiredData": ["future validated institutional and geographic dependency data"],
+      "implementationStatus": "taxonomy-only",
+      "provenance": "synthetic-demo"
     }
   ],
   "countries": [
@@ -303,6 +389,9 @@
     {
       "id": "institution-mit",
       "name": "Massachusetts Institute of Technology",
+      "canonicalName": "Massachusetts Institute of Technology",
+      "aliases": ["MIT", "Massachusetts Inst. of Technology"],
+      "identityConfidence": 1,
       "countryId": "country-us",
       "city": "Cambridge",
       "fieldIds": [
@@ -319,6 +408,10 @@
     {
       "id": "institution-caltech",
       "name": "California Institute of Technology",
+      "canonicalName": "California Institute of Technology",
+      "aliases": ["Caltech", "California Inst. of Technology", "CIT"],
+      "historicalNames": ["Throop University"],
+      "identityConfidence": 1,
       "countryId": "country-us",
       "city": "Pasadena",
       "fieldIds": [
@@ -334,6 +427,9 @@
     {
       "id": "institution-princeton",
       "name": "Princeton University",
+      "canonicalName": "Princeton University",
+      "aliases": ["Princeton"],
+      "identityConfidence": 1,
       "countryId": "country-us",
       "city": "Princeton",
       "fieldIds": [
@@ -351,12 +447,12 @@
     {
       "id": "researcher-maya-chen",
       "name": "Maya Chen",
+      "canonicalName": "Maya Chen",
+      "aliases": ["M. Chen"],
+      "identityConfidence": 1,
       "fieldIds": [
         "hep-th"
-      ],
-      "externalLinks": {
-        "personalWebsite": "https://example.org/physics-atlas-demo/maya-chen"
-      }
+      ]
     },
     {
       "id": "researcher-elias-ward",
@@ -368,13 +464,13 @@
     {
       "id": "researcher-amina-rahman",
       "name": "Amina Rahman",
+      "canonicalName": "Amina Rahman",
+      "aliases": ["A. Rahman"],
+      "identityConfidence": 1,
       "fieldIds": [
         "hep-th",
         "gr-qc"
-      ],
-      "externalLinks": {
-        "institutionalHomepage": "https://example.org/physics-atlas-demo/amina-rahman"
-      }
+      ]
     },
     {
       "id": "researcher-luca-meier",
@@ -402,12 +498,12 @@
     {
       "id": "researcher-lin-qiao",
       "name": "Lin Qiao",
+      "canonicalName": "Lin Qiao",
+      "aliases": ["L. Qiao"],
+      "identityConfidence": 1,
       "fieldIds": [
         "quant-ph"
-      ],
-      "externalLinks": {
-        "github": "https://example.org/physics-atlas-demo/github/lin-qiao"
-      }
+      ]
     },
     {
       "id": "researcher-sofia-alvarez",
@@ -426,25 +522,24 @@
     {
       "id": "researcher-jonah-okafor",
       "name": "Jonah Okafor",
+      "canonicalName": "Jonah Okafor",
+      "aliases": ["J. Okafor"],
+      "identityConfidence": 1,
       "fieldIds": [
         "hep-th",
         "gr-qc"
-      ],
-      "externalLinks": {
-        "institutionalHomepage": "https://example.org/physics-atlas-demo/jonah-okafor",
-        "arxiv": "https://example.org/physics-atlas-demo/arxiv/jonah-okafor"
-      }
+      ]
     },
     {
       "id": "researcher-nila-patel",
       "name": "Nila Patel",
+      "canonicalName": "Nila Patel",
+      "aliases": ["N. Patel"],
+      "identityConfidence": 1,
       "fieldIds": [
         "quant-ph",
         "cond-mat"
-      ],
-      "externalLinks": {
-        "personalWebsite": "https://example.org/physics-atlas-demo/nila-patel"
-      }
+      ]
     },
     {
       "id": "researcher-iris-morgan",
@@ -457,13 +552,13 @@
     {
       "id": "researcher-ethan-zhou",
       "name": "Ethan Zhou",
+      "canonicalName": "Ethan Zhou",
+      "aliases": ["E. Zhou"],
+      "identityConfidence": 1,
       "fieldIds": [
         "hep-th",
         "quant-ph"
-      ],
-      "externalLinks": {
-        "github": "https://example.org/physics-atlas-demo/github/ethan-zhou"
-      }
+      ]
     }
   ],
   "researchGroups": [
@@ -594,7 +689,9 @@
       "researcherId": "researcher-maya-chen",
       "institutionId": "institution-northstar",
       "researchGroupId": "group-northstar-geometry",
-      "startYear": 2019,
+      "startDate": "2019",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     },
     {
@@ -602,7 +699,9 @@
       "researcherId": "researcher-elias-ward",
       "institutionId": "institution-northstar",
       "researchGroupId": "group-northstar-geometry",
-      "startYear": 2017,
+      "startDate": "2017",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     },
     {
@@ -610,7 +709,9 @@
       "researcherId": "researcher-amina-rahman",
       "institutionId": "institution-calder",
       "researchGroupId": "group-calder-relativity",
-      "startYear": 2018,
+      "startDate": "2018",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     },
     {
@@ -618,7 +719,9 @@
       "researcherId": "researcher-luca-meier",
       "institutionId": "institution-alpine",
       "researchGroupId": "group-alpine-duality",
-      "startYear": 2020,
+      "startDate": "2020",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     },
     {
@@ -626,7 +729,9 @@
       "researcherId": "researcher-hanna-vogel",
       "institutionId": "institution-rhine",
       "researchGroupId": "group-rhine-quantum-matter",
-      "startYear": 2016,
+      "startDate": "2016",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     },
     {
@@ -634,7 +739,9 @@
       "researcherId": "researcher-ren-ito",
       "institutionId": "institution-kansai",
       "researchGroupId": "group-kansai-cosmology",
-      "startYear": 2021,
+      "startDate": "2021",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     },
     {
@@ -642,7 +749,9 @@
       "researcherId": "researcher-lin-qiao",
       "institutionId": "institution-eastern",
       "researchGroupId": "group-eastern-networks",
-      "startYear": 2019,
+      "startDate": "2019",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     },
     {
@@ -650,7 +759,9 @@
       "researcherId": "researcher-sofia-alvarez",
       "institutionId": "institution-laurentian",
       "researchGroupId": "group-laurentian-relativity",
-      "startYear": 2018,
+      "startDate": "2018",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     },
     {
@@ -658,7 +769,9 @@
       "researcherId": "researcher-noah-bennett",
       "institutionId": "institution-southern-cross",
       "researchGroupId": "group-southern-materials",
-      "startYear": 2017,
+      "startDate": "2017",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     },
     {
@@ -666,7 +779,9 @@
       "researcherId": "researcher-jonah-okafor",
       "institutionId": "institution-mit",
       "researchGroupId": "group-mit-fields",
-      "startYear": 2020,
+      "startDate": "2020",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     },
     {
@@ -674,7 +789,9 @@
       "researcherId": "researcher-nila-patel",
       "institutionId": "institution-mit",
       "researchGroupId": "group-mit-quantum",
-      "startYear": 2021,
+      "startDate": "2021",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     },
     {
@@ -682,7 +799,9 @@
       "researcherId": "researcher-iris-morgan",
       "institutionId": "institution-caltech",
       "researchGroupId": "group-caltech-cosmology",
-      "startYear": 2018,
+      "startDate": "2018",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     },
     {
@@ -690,7 +809,9 @@
       "researcherId": "researcher-ethan-zhou",
       "institutionId": "institution-princeton",
       "researchGroupId": "group-princeton-geometry",
-      "startYear": 2022,
+      "startDate": "2022",
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "confidence": 1,
       "provenance": "synthetic-demo"
     }
   ],
@@ -819,6 +940,58 @@
     { "id": "authorship-excitations-noah", "paperId": "paper-layered-excitations", "researcherId": "researcher-noah-bennett", "authorPosition": 1 },
     { "id": "authorship-excitations-ren", "paperId": "paper-layered-excitations", "researcherId": "researcher-ren-ito", "authorPosition": 2 },
     { "id": "authorship-excitations-hanna", "paperId": "paper-layered-excitations", "researcherId": "researcher-hanna-vogel", "authorPosition": 3 }
+  ],
+  "externalResources": [
+    {
+      "id": "resource-maya-homepage",
+      "entityType": "researcher",
+      "entityId": "researcher-maya-chen",
+      "resourceType": "researcher-homepage",
+      "label": "Synthetic researcher homepage",
+      "url": "https://example.org/physics-atlas-demo/maya-chen",
+      "isPrimary": true,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "resource-amina-homepage",
+      "entityType": "researcher",
+      "entityId": "researcher-amina-rahman",
+      "resourceType": "researcher-homepage",
+      "label": "Synthetic institutional homepage",
+      "url": "https://example.org/physics-atlas-demo/amina-rahman",
+      "isPrimary": true,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "resource-jonah-homepage",
+      "entityType": "researcher",
+      "entityId": "researcher-jonah-okafor",
+      "resourceType": "researcher-homepage",
+      "label": "Synthetic institutional homepage",
+      "url": "https://example.org/physics-atlas-demo/jonah-okafor",
+      "isPrimary": true,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "resource-jonah-arxiv",
+      "entityType": "researcher",
+      "entityId": "researcher-jonah-okafor",
+      "resourceType": "arxiv",
+      "label": "Synthetic arXiv reference",
+      "url": "https://example.org/physics-atlas-demo/arxiv/jonah-okafor",
+      "isPrimary": false,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "resource-nila-homepage",
+      "entityType": "researcher",
+      "entityId": "researcher-nila-patel",
+      "resourceType": "researcher-homepage",
+      "label": "Synthetic researcher homepage",
+      "url": "https://example.org/physics-atlas-demo/nila-patel",
+      "isPrimary": true,
+      "provenance": "synthetic-demo"
+    }
   ],
   "historicalEvents": [
     {

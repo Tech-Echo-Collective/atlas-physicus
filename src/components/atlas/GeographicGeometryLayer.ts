@@ -19,13 +19,13 @@ export type CountryFeatureProperties = NonNullable<GeoJsonProperties> & {
   explorationCountryId?: string;
   metricEntityId?: string;
   isoNumeric: string;
-  score?: number;
+  metricValue?: number;
 };
 
 export type ExplorationCanvasProperties = NonNullable<GeoJsonProperties> & {
   explorationCountryId: string;
   sourceIsoNumerics: string[];
-  score?: number;
+  metricValue?: number;
 };
 
 /**
@@ -47,7 +47,7 @@ export function buildCountryFeatureCollection(
   const countriesByIso = new Map(
     countries.map((country) => [country.isoNumeric, country]),
   );
-  const scoresByCountryId = new Map(
+  const valuesByCountryId = new Map(
     observations.map((observation) => [
       observation.entityId,
       observation.value,
@@ -65,8 +65,8 @@ export function buildCountryFeatureCollection(
         geographicViews,
       );
       const metricEntityId = explorationCountryId ?? country?.id;
-      const score = metricEntityId
-        ? scoresByCountryId.get(metricEntityId)
+      const metricValue = metricEntityId
+        ? valuesByCountryId.get(metricEntityId)
         : undefined;
 
       return {
@@ -77,7 +77,7 @@ export function buildCountryFeatureCollection(
           ...(country ? { countryId: country.id } : {}),
           ...(explorationCountryId ? { explorationCountryId } : {}),
           ...(metricEntityId ? { metricEntityId } : {}),
-          ...(score === undefined ? {} : { score }),
+          ...(metricValue === undefined ? {} : { metricValue }),
         },
       } as FeatureCollection<
         Geometry,
@@ -122,8 +122,8 @@ export function buildExplorationCanvasFeatureCollection(
     return { type: 'FeatureCollection', features: [] };
   }
 
-  const scoredFeature = sourceFeatures.find(
-    (candidate) => candidate.properties.score !== undefined,
+  const valuedFeature = sourceFeatures.find(
+    (candidate) => candidate.properties.metricValue !== undefined,
   );
 
   return {
@@ -138,9 +138,9 @@ export function buildExplorationCanvasFeatureCollection(
           sourceIsoNumerics: sourceFeatures.map(
             (candidate) => candidate.properties.isoNumeric,
           ),
-          ...(scoredFeature?.properties.score === undefined
+          ...(valuedFeature?.properties.metricValue === undefined
             ? {}
-            : { score: scoredFeature.properties.score }),
+            : { metricValue: valuedFeature.properties.metricValue }),
         },
       },
     ],

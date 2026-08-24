@@ -24,7 +24,7 @@ const steps: Array<{
     action: 'physics',
     eyebrow: 'Science domain',
     title: 'Begin with Physics',
-    description: 'The domain heatmap shows the global synthetic activity layer.',
+    description: 'The domain heatmap shows the selected global synthetic metric layer.',
     buttonLabel: 'Show Physics',
   },
   {

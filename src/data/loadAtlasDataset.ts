@@ -21,6 +21,7 @@ export async function loadAtlasDataset(
     papers,
     authorships,
     historicalEvents,
+    metricDefinitions,
     metricObservations,
   ] = await Promise.all([
     repository.getMetadata(),
@@ -35,6 +36,7 @@ export async function loadAtlasDataset(
     repository.getPapers(),
     repository.getAuthorships(),
     repository.getHistoricalEvents(),
+    repository.getMetricDefinitions(),
     repository.getMetricObservations(),
   ]);
 
@@ -51,6 +53,7 @@ export async function loadAtlasDataset(
     papers,
     authorships,
     historicalEvents,
+    metricDefinitions,
     metricObservations,
   };
 }

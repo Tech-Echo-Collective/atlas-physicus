@@ -1,8 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { atlasRepository } from '../../data/StaticAtlasRepository';
 import { loadAtlasDataset } from '../../data/loadAtlasDataset';
-import type { AtlasDataset, AtlasSearchResult } from '../../domain/models';
-import { prototypeMetricId } from '../../domain/models';
+import {
+  buildDataSourceAwareAtlasUrl,
+  resolveAtlasDataSource,
+  type AtlasDataSourceId,
+} from '../../data/AtlasDataSources';
+import type {
+  AtlasDataset,
+  AtlasRepository,
+  AtlasSearchResult,
+  MetricId,
+} from '../../domain/models';
+import { compositeMetricId, defaultMetricId } from '../../domain/models';
+import {
+  buildCompositeMetricObservations,
+  defaultMetricWeightConfiguration,
+  hasCompositeMetricInputs,
+} from '../../metrics/CompositeMetric';
+import { ProfileService } from '../../profiles/ProfileService';
 import {
   buildAtlasUrl,
   getExplorationCountryId,
@@ -12,6 +28,7 @@ import {
 import { AtlasSearch } from './AtlasSearch';
 import { CountryPanel } from './CountryPanel';
 import { DataProvenancePanel } from './DataProvenancePanel';
+import { DataSourceSelector } from './DataSourceSelector';
 import { FieldOverview } from './FieldOverview';
 import { FieldSelector } from './FieldSelector';
 import { FullscreenControl } from './FullscreenControl';
@@ -22,6 +39,7 @@ import {
 } from './GuidedExploration';
 import { InstitutionView } from './InstitutionView';
 import { selectMajorInstitutionsForMap } from './InstitutionLayer';
+import { MetricWeightingPanel } from './MetricWeightingPanel';
 import { ResearcherProfile } from './ResearcherProfile';
 import { ScienceDomainSelector } from './ScienceDomainSelector';
 import { Timeline } from './Timeline';
@@ -30,6 +48,14 @@ import { WorldMap } from './WorldMap';
 export function AtlasExplorer() {
   const shellRef = useRef<HTMLElement>(null);
   const [dataset, setDataset] = useState<AtlasDataset | null>(null);
+  const [repository, setRepository] =
+    useState<AtlasRepository>(atlasRepository);
+  const [selectedDataSourceId, setSelectedDataSourceId] =
+    useState<AtlasDataSourceId>(() =>
+      typeof window === 'undefined'
+        ? 'synthetic-framework'
+        : resolveAtlasDataSource(window.location.search),
+    );
   const [error, setError] = useState<string | null>(null);
   const [selectedDomainId, setSelectedDomainId] = useState('physics');
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
@@ -48,6 +74,13 @@ export function AtlasExplorer() {
   >(null);
   const [isFieldOverviewOpen, setIsFieldOverviewOpen] = useState(false);
   const [globalResetToken, setGlobalResetToken] = useState(0);
+  const [selectedMetricId, setSelectedMetricId] =
+    useState<MetricId>(defaultMetricId);
+  const [metricWeightConfiguration, setMetricWeightConfiguration] = useState(
+    defaultMetricWeightConfiguration,
+  );
+  const [hasConfirmedMetricProfile, setHasConfirmedMetricProfile] =
+    useState(false);
 
   const applyNavigationState = useCallback(
     (navigation: AtlasNavigationState) => {
@@ -92,27 +125,56 @@ export function AtlasExplorer() {
       if (!dataset || typeof window === 'undefined') {
         return;
       }
-      const url = buildAtlasUrl(navigation, dataset);
+      const url = buildDataSourceAwareAtlasUrl(
+        buildAtlasUrl(navigation, dataset),
+        selectedDataSourceId,
+      );
       if (url === `${window.location.pathname}${window.location.search}`) {
         return;
       }
       window.history[replace ? 'replaceState' : 'pushState'](null, '', url);
     },
-    [applyNavigationState, dataset],
+    [applyNavigationState, dataset, selectedDataSourceId],
   );
 
   const searchAtlas = useCallback(
-    (query: string) => atlasRepository.searchEntities(query),
-    [],
+    (query: string) => repository.searchEntities(query),
+    [repository],
   );
 
   useEffect(() => {
-    loadAtlasDataset(atlasRepository)
-      .then(setDataset)
-      .catch(() =>
-        setError('The local demonstration dataset could not be loaded.'),
-      );
-  }, []);
+    let isActive = true;
+
+    const repositoryPromise =
+      selectedDataSourceId === 'inspire-hep-pilot'
+        ? import('../../data/PilotAtlasRepository').then(
+            ({ pilotAtlasRepository }) => pilotAtlasRepository,
+          )
+        : Promise.resolve(atlasRepository);
+
+    repositoryPromise
+      .then((nextRepository) => {
+        if (!isActive) {
+          return null;
+        }
+        setRepository(nextRepository);
+        return loadAtlasDataset(nextRepository);
+      })
+      .then((nextDataset) => {
+        if (isActive && nextDataset) {
+          setDataset(nextDataset);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setError('The selected Atlas dataset could not be loaded.');
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedDataSourceId]);
 
   useEffect(() => {
     if (!dataset || typeof window === 'undefined') {
@@ -120,9 +182,20 @@ export function AtlasExplorer() {
     }
 
     const restoreLocation = () => {
-      const navigation = resolveAtlasLocation(window.location, dataset);
+      const resolvedNavigation = resolveAtlasLocation(window.location, dataset);
+      const navigation =
+        dataset.metadata.datasetKind === 'inspire-hep-pilot' &&
+        !resolvedNavigation.selectedFieldId
+          ? {
+              ...resolvedNavigation,
+              selectedFieldId: dataset.fields[0]?.id ?? null,
+            }
+          : resolvedNavigation;
       applyNavigationState(navigation);
-      const canonicalUrl = buildAtlasUrl(navigation, dataset);
+      const canonicalUrl = buildDataSourceAwareAtlasUrl(
+        buildAtlasUrl(navigation, dataset),
+        selectedDataSourceId,
+      );
       if (canonicalUrl !== `${window.location.pathname}${window.location.search}`) {
         window.history.replaceState(null, '', canonicalUrl);
       }
@@ -131,7 +204,22 @@ export function AtlasExplorer() {
     restoreLocation();
     window.addEventListener('popstate', restoreLocation);
     return () => window.removeEventListener('popstate', restoreLocation);
-  }, [applyNavigationState, dataset]);
+  }, [applyNavigationState, dataset, selectedDataSourceId]);
+
+  const visualizationObservations = useMemo(() => {
+    if (!dataset) {
+      return [];
+    }
+
+    return selectedMetricId === compositeMetricId
+      ? buildCompositeMetricObservations(
+          dataset.metricObservations,
+          metricWeightConfiguration,
+        )
+      : dataset.metricObservations.filter(
+          (observation) => observation.metricId === selectedMetricId,
+        );
+  }, [dataset, metricWeightConfiguration, selectedMetricId]);
 
   const availableYears = useMemo(() => {
     if (!dataset) {
@@ -140,30 +228,33 @@ export function AtlasExplorer() {
 
     return Array.from(
       new Set(
-        dataset.metricObservations
+        visualizationObservations
           .filter(
             (observation) =>
-              observation.entityType === 'country' &&
-              observation.metricId === prototypeMetricId,
+              observation.entityType === 'country',
           )
           .map((observation) => Number(observation.period)),
       ),
     ).sort((left, right) => left - right);
-  }, [dataset]);
+  }, [dataset, visualizationObservations]);
 
   const countryObservations = useMemo(
     () =>
-      dataset?.metricObservations.filter(
+      visualizationObservations.filter(
         (observation) =>
           observation.entityType === 'country' &&
           (selectedFieldId
             ? observation.fieldId === selectedFieldId
             : observation.scienceDomainId === selectedDomainId &&
               observation.fieldId === undefined) &&
-          observation.metricId === prototypeMetricId &&
           observation.period === String(selectedYear),
-      ) ?? [],
-    [dataset, selectedDomainId, selectedFieldId, selectedYear],
+      ),
+    [
+      selectedDomainId,
+      selectedFieldId,
+      selectedYear,
+      visualizationObservations,
+    ],
   );
 
   const selectedCountry =
@@ -191,7 +282,7 @@ export function AtlasExplorer() {
       geographicInstitutions.map((institution) => institution.id),
     );
 
-    return dataset.metricObservations.filter(
+    return visualizationObservations.filter(
       (observation) =>
         observation.entityType === 'institution' &&
         countryInstitutionIds.has(observation.entityId) &&
@@ -199,7 +290,6 @@ export function AtlasExplorer() {
           ? observation.fieldId === selectedFieldId
           : observation.scienceDomainId === selectedDomainId &&
             observation.fieldId === undefined) &&
-        observation.metricId === prototypeMetricId &&
         observation.period === String(selectedYear),
     );
   }, [
@@ -209,6 +299,7 @@ export function AtlasExplorer() {
     selectedDomainId,
     selectedFieldId,
     selectedYear,
+    visualizationObservations,
   ]);
 
   if (error) {
@@ -229,6 +320,21 @@ export function AtlasExplorer() {
   const activeField = selectedFieldId
     ? visibleFields.find((field) => field.id === selectedFieldId) ?? null
     : null;
+  const activeMetricDefinition = dataset.metricDefinitions.find(
+    (definition) => definition.id === selectedMetricId,
+  );
+  const visualizationMetricDefinitions = dataset.metricDefinitions.filter(
+    (definition) => definition.implementationStatus !== 'taxonomy-only',
+  );
+  const compositeAvailable = hasCompositeMetricInputs(
+    visualizationMetricDefinitions,
+    defaultMetricWeightConfiguration,
+  );
+  const isPilotDataset = dataset.metadata.datasetKind === 'inspire-hep-pilot';
+  const activeMetricLabel =
+    selectedMetricId === compositeMetricId
+      ? metricWeightConfiguration.name
+      : (activeMetricDefinition?.name ?? selectedMetricId);
   const visibleInstitutions = selectedCountry
     ? selectMajorInstitutionsForMap(
         geographicInstitutions,
@@ -277,16 +383,15 @@ export function AtlasExplorer() {
     countryObservations.find(
       (observation) => observation.entityId === selectedCountryId,
     ) ?? null;
-  const selectedInstitutionActivity = selectedInstitution
-    ? dataset.metricObservations.filter(
+  const selectedInstitutionMetricObservations = selectedInstitution
+    ? visualizationObservations.filter(
         (observation) =>
           observation.entityType === 'institution' &&
           observation.entityId === selectedInstitution.id &&
           (selectedFieldId
             ? observation.fieldId === selectedFieldId
             : observation.scienceDomainId === selectedDomainId &&
-              observation.fieldId === undefined) &&
-          observation.metricId === prototypeMetricId,
+              observation.fieldId === undefined),
       )
     : [];
   const selectedInstitutionLocationCountry = selectedInstitution
@@ -294,6 +399,27 @@ export function AtlasExplorer() {
         (country) => country.id === selectedInstitution.countryId,
       ) ?? selectedCountry
     : null;
+  const profileService = new ProfileService(dataset);
+  const selectedInstitutionProfile = selectedInstitution
+    ? profileService.getInstitutionProfile(selectedInstitution.id)
+    : null;
+  const selectedResearcherProfile = selectedResearcher
+    ? profileService.getResearcherProfile(selectedResearcher.id)
+    : null;
+  const selectedInstitutionIdentityResolutions = selectedInstitution
+    ? (dataset.identityResolutions ?? []).filter(
+        (resolution) =>
+          resolution.status === 'matched' &&
+          resolution.canonicalEntityId === selectedInstitution.id,
+      )
+    : [];
+  const selectedResearcherIdentityResolutions = selectedResearcher
+    ? (dataset.identityResolutions ?? []).filter(
+        (resolution) =>
+          resolution.status === 'matched' &&
+          resolution.canonicalEntityId === selectedResearcher.id,
+      )
+    : [];
   const atlasView = isFieldOverviewOpen
     ? 'field'
     : selectedResearcher
@@ -304,11 +430,49 @@ export function AtlasExplorer() {
           ? 'country'
           : 'world';
 
+  const selectDataSource = (sourceId: AtlasDataSourceId) => {
+    if (sourceId === selectedDataSourceId) {
+      return;
+    }
+
+    setSelectedDataSourceId(sourceId);
+    setDataset(null);
+    setError(null);
+    setSelectedDomainId('physics');
+    setSelectedFieldId(
+      sourceId === 'inspire-hep-pilot' ? 'hep-th' : null,
+    );
+    setSelectedYear(2026);
+    setSelectedCountryId(null);
+    setSelectedInstitutionId(null);
+    setSelectedResearchGroupId(null);
+    setSelectedResearcherId(null);
+    setIsFieldOverviewOpen(false);
+    setSelectedMetricId(defaultMetricId);
+    setMetricWeightConfiguration(defaultMetricWeightConfiguration);
+    setHasConfirmedMetricProfile(false);
+    setGlobalResetToken((token) => token + 1);
+
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '',
+        buildDataSourceAwareAtlasUrl(
+          sourceId === 'inspire-hep-pilot'
+            ? '/atlas/physics/hep-th?year=2026'
+            : '/atlas/physics?year=2026',
+          sourceId,
+        ),
+      );
+    }
+  };
+
   const selectDomain = (domainId: string) => {
+    const domain = dataset.scienceDomains.find(
+      (candidate) => candidate.id === domainId,
+    );
     navigateTo({
       ...navigationState,
       selectedDomainId: domainId,
-      selectedFieldId: null,
+      selectedFieldId: isPilotDataset ? (domain?.fieldIds[0] ?? null) : null,
       selectedCountryId: null,
       selectedInstitutionId: null,
       selectedResearchGroupId: null,
@@ -421,6 +585,25 @@ export function AtlasExplorer() {
     });
   };
 
+  const selectMetric = (metricId: MetricId) => {
+    if (
+      metricId === compositeMetricId &&
+      (!hasConfirmedMetricProfile || !compositeAvailable)
+    ) {
+      return;
+    }
+    setSelectedMetricId(metricId);
+  };
+
+  const applyMetricProfile = (configuration: typeof metricWeightConfiguration) => {
+    if (!compositeAvailable) {
+      return;
+    }
+    setMetricWeightConfiguration(configuration);
+    setHasConfirmedMetricProfile(true);
+    setSelectedMetricId(compositeMetricId);
+  };
+
   const selectSearchResult = (result: AtlasSearchResult) => {
     if (result.entityType === 'science-domain') {
       selectDomain(result.entityId);
@@ -471,6 +654,34 @@ export function AtlasExplorer() {
         ),
         selectedInstitutionId: institution.id,
         selectedResearchGroupId: firstGroup?.id ?? null,
+        selectedResearcherId: null,
+        isFieldOverviewOpen: false,
+      });
+      return;
+    }
+
+    if (result.entityType === 'research-group') {
+      const group = dataset.researchGroups.find(
+        (candidate) => candidate.id === result.entityId,
+      );
+      const institution = dataset.institutions.find(
+        (candidate) => candidate.id === group?.institutionId,
+      );
+      if (!group || !institution) {
+        return;
+      }
+      navigateTo({
+        ...navigationState,
+        selectedFieldId:
+          selectedFieldId && group.fieldIds.includes(selectedFieldId)
+            ? selectedFieldId
+            : group.fieldIds[0] ?? null,
+        selectedCountryId: getExplorationCountryId(
+          institution.countryId,
+          dataset,
+        ),
+        selectedInstitutionId: institution.id,
+        selectedResearchGroupId: group.id,
         selectedResearcherId: null,
         isFieldOverviewOpen: false,
       });
@@ -585,6 +796,8 @@ export function AtlasExplorer() {
         countryObservations={countryObservations}
         institutions={mapInstitutions}
         institutionObservations={institutionObservations}
+        metricLabel={activeMetricLabel}
+        isPilotDataset={isPilotDataset}
         selectedCountryId={selectedCountryId}
         selectedInstitutionId={selectedInstitutionId}
         globalResetToken={globalResetToken}
@@ -601,7 +814,9 @@ export function AtlasExplorer() {
           <p>Tech Echo Collective</p>
           <h1>Physics Atlas</h1>
         </div>
-        <span className="alpha-badge">Foundation alpha</span>
+        <span className="alpha-badge" data-pilot={isPilotDataset}>
+          {isPilotDataset ? 'INSPIRE-HEP pilot' : 'Metric Engine alpha'}
+        </span>
       </header>
 
       <nav className="atlas-path" aria-label="Current atlas location">
@@ -661,8 +876,18 @@ export function AtlasExplorer() {
 
       <FullscreenControl targetRef={shellRef} />
       <div className="atlas-utility-controls" aria-label="Atlas tools">
+        <MetricWeightingPanel
+          key={`${dataset.metadata.datasetKind}:${dataset.metadata.provenance.version}`}
+          definitions={visualizationMetricDefinitions}
+          selectedMetricId={selectedMetricId}
+          configuration={metricWeightConfiguration}
+          hasConfirmedProfile={hasConfirmedMetricProfile}
+          compositeAvailable={compositeAvailable}
+          onMetricSelect={selectMetric}
+          onApply={applyMetricProfile}
+        />
         <AtlasSearch onSearch={searchAtlas} onSelect={selectSearchResult} />
-        <GuidedExploration onNavigate={runGuidedAction} />
+        {!isPilotDataset && <GuidedExploration onNavigate={runGuidedAction} />}
         <DataProvenancePanel metadata={dataset.metadata} />
       </div>
 
@@ -685,6 +910,10 @@ export function AtlasExplorer() {
           <p className="section-kicker">Atlas coordinates</p>
           <h2>Trace research through space and time</h2>
         </div>
+        <DataSourceSelector
+          selectedSourceId={selectedDataSourceId}
+          onSelect={selectDataSource}
+        />
         <ScienceDomainSelector
           domains={dataset.scienceDomains}
           selectedDomainId={selectedDomainId}
@@ -718,10 +947,12 @@ export function AtlasExplorer() {
           institutions={visibleInstitutions}
           countryObservation={selectedCountryObservation}
           institutionObservations={institutionObservations}
+          metricLabel={activeMetricLabel}
           activeScopeLabel={
             activeField?.label ?? activeDomain?.label ?? 'Physics'
           }
           selectedYear={selectedYear}
+          isPilotDataset={isPilotDataset}
           onBackToWorld={returnToWorld}
           onInstitutionSelect={selectInstitution}
         />
@@ -743,7 +974,11 @@ export function AtlasExplorer() {
           papers={dataset.papers}
           authorships={dataset.authorships}
           historicalEvents={dataset.historicalEvents}
-          activityObservations={selectedInstitutionActivity}
+          metricObservations={selectedInstitutionMetricObservations}
+          metricLabel={activeMetricLabel}
+          isPilotDataset={isPilotDataset}
+          externalResources={selectedInstitutionProfile?.resources ?? []}
+          identityResolutions={selectedInstitutionIdentityResolutions}
           selectedGroupId={selectedResearchGroup?.id ?? null}
           onGroupSelect={selectResearchGroup}
           onResearcherSelect={selectResearcher}
@@ -754,13 +989,22 @@ export function AtlasExplorer() {
       {selectedResearcher && selectedInstitution && (
         <ResearcherProfile
           researcher={selectedResearcher}
-          affiliation={selectedResearcherAffiliation}
+          affiliationHistory={
+            selectedResearcherProfile?.affiliationHistory.map(
+              (entry) => entry.affiliation,
+            ) ?? []
+          }
           institution={selectedInstitution}
+          institutions={dataset.institutions}
           group={selectedResearcherGroup}
           fields={dataset.fields}
           papers={dataset.papers}
           authorships={dataset.authorships}
           historicalEvents={dataset.historicalEvents}
+          externalResources={selectedResearcherProfile?.resources ?? []}
+          identityResolutions={selectedResearcherIdentityResolutions}
+          collaborators={selectedResearcherProfile?.collaborators ?? []}
+          isPilotDataset={isPilotDataset}
           onBackToInstitution={returnToInstitution}
         />
       )}
@@ -774,6 +1018,7 @@ export function AtlasExplorer() {
           papers={dataset.papers}
           authorships={dataset.authorships}
           historicalEvents={dataset.historicalEvents}
+          isPilotDataset={isPilotDataset}
           onClose={() =>
             navigateTo({
               ...navigationState,
@@ -787,7 +1032,7 @@ export function AtlasExplorer() {
         <div className="legend-header">
           <span>
             {selectedCountry ? 'institutions' : 'countries'} ·{' '}
-            research_activity_score
+            {activeMetricLabel}
           </span>
           <span>
             {selectedYear} · {activeField?.id ?? activeDomain?.label}
@@ -803,16 +1048,19 @@ export function AtlasExplorer() {
         </div>
         <div className="missing-data-key">
           <i aria-hidden="true" />
-          Missing data ≠ zero activity
+          Missing data ≠ zero value
         </div>
         <p className="legend-disclaimer">
-          Demo visualization only. Not a scientific ranking.
+          {isPilotDataset
+            ? 'Bounded INSPIRE-HEP pilot. Not a scientific ranking.'
+            : 'Demo visualization only. Not a scientific ranking.'}
         </p>
       </section>
 
       <Timeline
         years={availableYears}
         selectedYear={selectedYear}
+        isPilotDataset={isPilotDataset}
         onChange={selectYear}
       />
     </main>
