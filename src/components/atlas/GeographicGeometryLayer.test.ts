@@ -1,6 +1,9 @@
 import demoData from '../../data/demo/atlas.json';
 import { atlasDatasetSchema } from '../../domain/schemas';
-import { buildCountryFeatureCollection } from './GeographicGeometryLayer';
+import {
+  buildCountryFeatureCollection,
+  buildExplorationCanvasFeatureCollection,
+} from './GeographicGeometryLayer';
 
 const dataset = atlasDatasetSchema.parse(demoData);
 
@@ -31,7 +34,7 @@ describe('geographic geometry layer', () => {
     ).toBe(true);
   });
 
-  it('preserves native heatmap scoring independently from view membership', () => {
+  it('resolves world heatmap color through view membership without changing native identity', () => {
     const observations = dataset.metricObservations.filter(
       (observation) =>
         observation.entityType === 'country' &&
@@ -54,6 +57,7 @@ describe('geographic geometry layer', () => {
       expect.objectContaining({
         countryId: 'country-cn',
         explorationCountryId: 'country-cn',
+        metricEntityId: 'country-cn',
         score: 83,
       }),
     );
@@ -61,8 +65,50 @@ describe('geographic geometry layer', () => {
       expect.objectContaining({
         countryId: 'country-tw',
         explorationCountryId: 'country-cn',
+        metricEntityId: 'country-cn',
+        score: 83,
       }),
     );
-    expect(taiwanFeature?.properties.score).toBeUndefined();
+  });
+
+  it('composes the complete China exploration canvas into one render feature', () => {
+    const observations = dataset.metricObservations.filter(
+      (observation) =>
+        observation.entityType === 'country' &&
+        observation.scienceDomainId === 'physics' &&
+        observation.period === '2026',
+    );
+    const countries = buildCountryFeatureCollection(
+      dataset.countries,
+      dataset.geographicViews,
+      observations,
+    );
+    const canvas = buildExplorationCanvasFeatureCollection(
+      countries,
+      'country-cn',
+    );
+    const canvasFeature = canvas.features[0];
+    const coordinates = canvasFeature.geometry.coordinates.flat(3) as number[];
+    const coordinatePairs = Array.from(
+      { length: coordinates.length / 2 },
+      (_, index) => coordinates.slice(index * 2, index * 2 + 2),
+    );
+
+    expect(canvas.features).toHaveLength(1);
+    expect(canvasFeature.properties).toEqual({
+      explorationCountryId: 'country-cn',
+      sourceIsoNumerics: ['156', '158'],
+      score: 83,
+    });
+    expect(canvasFeature.geometry.type).toBe('MultiPolygon');
+    expect(
+      coordinatePairs.some(
+        ([longitude, latitude]) =>
+          longitude >= 119 &&
+          longitude <= 123 &&
+          latitude >= 21 &&
+          latitude <= 26,
+      ),
+    ).toBe(true);
   });
 });

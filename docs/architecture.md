@@ -45,9 +45,11 @@ The prototype uses local geographic data from the `world-atlas` package. It does
 
 ### Presentation
 
-`src/components/atlas` contains the exploration interface. `AtlasExplorer` coordinates the current path, `WorldMap` owns MapLibre lifecycle and geographic navigation, `GeographicGeometryLayer` joins packaged GeoJSON features to configured views, `GeographicEntityMapping` resolves geometry and location membership, and `InstitutionLayer` converts already-provided institution observations into points. Dedicated institution, researcher, and field layers resolve normalized entity relationships without embedding records inside UI state.
+`src/components/atlas` contains the exploration interface. `AtlasExplorer` coordinates the current path, `WorldMap` owns MapLibre lifecycle and geographic navigation, `GeographicGeometryLayer` joins packaged GeoJSON features to configured views and composes a dedicated country-mode canvas, `GeographicEntityMapping` resolves geometry and location membership, and `InstitutionLayer` converts already-provided institution observations into points. Dedicated institution, researcher, and field layers resolve normalized entity relationships without embedding records inside UI state.
 
 The map only converts a provided normalized prototype value into fixed color and point-size scales. It does not interpret scientific quality, derive historical values, or create rankings.
+
+World-layer colors resolve through `GeographicView` membership rather than assuming a one-to-one relationship between a source polygon and a metric entity. The native geometry/location identifier is retained alongside the visualization metric identifier, keeping rendering decisions separate from scientific attribution.
 
 Geographic geometry and scientific attribution are independent inputs. Map boundaries provide exploration context, while institution locations and future collaboration attribution follow institutional and affiliation metadata. The governing rules are documented in the [geographic representation policy](geography-policy.md).
 

@@ -37,7 +37,9 @@ The frontend uses validated `GeographicView` records to connect an exploration c
 
 For the current requested prototype behavior, the China exploration configuration contains source geometry identifiers `156` and `158` and location entities `country-cn` and `country-tw`. Consequently, the complete configured canvas and institutions located in Taiwan appear while exploring the China view. This configuration controls map membership only. It does not merge entity identity, alter research attribution, or express scientific or political ownership.
 
-The packaged `world-atlas` source preserves `156` as a renderable MultiPolygon and `158` as a renderable Polygon. The application does not simplify or reconstruct either feature. Country-mode layer filters use the resolved exploration-view identifier, so every configured source geometry remains in the fill, outline, selection, and camera-fit layers.
+The packaged `world-atlas` source preserves `156` as a renderable MultiPolygon and `158` as a renderable Polygon. The application does not simplify or reconstruct either feature. Country mode composes every configured polygon into a dedicated exploration-canvas GeoJSON source. That source drives the fill, outline, glow, and camera fit independently from the world choropleth, ensuring that all configured geometry remains visibly present.
+
+In World View, heatmap color is also resolved through geographic-view membership. Every source geometry in a view receives the display score supplied for that view's country entity. Native location identity remains unchanged—for example, geometry `158` retains `country-tw` as its location entity while using `country-cn` as its configured visualization metric entity. This is a presentation join only and does not create, duplicate, or reassign metric observations.
 
 Unconfigured source geometries fall back to direct ISO-numeric matching. Future geographic source changes should be handled by updating validated mapping data and provenance, not by adding one-off rendering patches.
 

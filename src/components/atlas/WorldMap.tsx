@@ -10,7 +10,10 @@ import type {
   Institution,
   MetricObservation,
 } from '../../domain/models';
-import { buildCountryFeatureCollection } from './GeographicGeometryLayer';
+import {
+  buildCountryFeatureCollection,
+  buildExplorationCanvasFeatureCollection,
+} from './GeographicGeometryLayer';
 import {
   buildInstitutionFeatureCollection,
   institutionColor,
@@ -105,12 +108,25 @@ export function WorldMap({
       ),
     [institutions, institutionObservations],
   );
+  const explorationCanvasGeoJson = useMemo(
+    () =>
+      buildExplorationCanvasFeatureCollection(
+        countryGeoJson,
+        selectedCountryId,
+      ),
+    [countryGeoJson, selectedCountryId],
+  );
   const countryGeoJsonRef = useRef(countryGeoJson);
+  const explorationCanvasGeoJsonRef = useRef(explorationCanvasGeoJson);
   const institutionGeoJsonRef = useRef(institutionGeoJson);
 
   useEffect(() => {
     countryGeoJsonRef.current = countryGeoJson;
   }, [countryGeoJson]);
+
+  useEffect(() => {
+    explorationCanvasGeoJsonRef.current = explorationCanvasGeoJson;
+  }, [explorationCanvasGeoJson]);
 
   useEffect(() => {
     institutionGeoJsonRef.current = institutionGeoJson;
@@ -229,6 +245,44 @@ export function WorldMap({
         },
       });
 
+      map.addSource('exploration-canvas', {
+        type: 'geojson',
+        data: explorationCanvasGeoJsonRef.current,
+      });
+      map.addLayer({
+        id: 'exploration-canvas-fill',
+        type: 'fill',
+        source: 'exploration-canvas',
+        layout: { visibility: 'none' },
+        paint: {
+          'fill-color': countryFillColor,
+          'fill-opacity': 0.24,
+        },
+      });
+      map.addLayer({
+        id: 'exploration-canvas-glow',
+        type: 'line',
+        source: 'exploration-canvas',
+        layout: { visibility: 'none' },
+        paint: {
+          'line-color': '#ff9a54',
+          'line-width': 7,
+          'line-blur': 3,
+          'line-opacity': 0.5,
+        },
+      });
+      map.addLayer({
+        id: 'exploration-canvas-outline',
+        type: 'line',
+        source: 'exploration-canvas',
+        layout: { visibility: 'none' },
+        paint: {
+          'line-color': '#ffc078',
+          'line-width': 2.6,
+          'line-opacity': 1,
+        },
+      });
+
       map.addSource('institutions', {
         type: 'geojson',
         data: institutionGeoJsonRef.current,
@@ -340,6 +394,17 @@ export function WorldMap({
       return;
     }
 
+    (
+      map.getSource('exploration-canvas') as GeoJSONSource | undefined
+    )?.setData(explorationCanvasGeoJson);
+  }, [explorationCanvasGeoJson, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map?.isStyleLoaded()) {
+      return;
+    }
+
     (map.getSource('institutions') as GeoJSONSource | undefined)?.setData(
       institutionGeoJson,
     );
@@ -351,40 +416,27 @@ export function WorldMap({
       return;
     }
 
-    map.setFilter('country-selection', [
-      '==',
-      ['get', 'explorationCountryId'],
-      selectedCountryId ?? '',
-    ]);
+    const worldVisibility = selectedCountryId ? 'none' : 'visible';
+    const canvasVisibility = selectedCountryId ? 'visible' : 'none';
 
-    const countryFocusFilter: maplibregl.FilterSpecification | null =
-      selectedCountryId
-        ? ['==', ['get', 'explorationCountryId'], selectedCountryId]
-        : null;
-    map.setFilter('countries-fill', countryFocusFilter);
-    map.setFilter('countries-glow', countryFocusFilter);
-    map.setFilter('countries-outline', countryFocusFilter);
-    map.setPaintProperty(
-      'countries-fill',
-      'fill-opacity',
-      selectedCountryId
-        ? 0.08
-        : ['case', ['has', 'score'], 0.94, 0.52],
+    map.setLayoutProperty('countries-fill', 'visibility', worldVisibility);
+    map.setLayoutProperty('countries-glow', 'visibility', worldVisibility);
+    map.setLayoutProperty('countries-outline', 'visibility', worldVisibility);
+    map.setLayoutProperty('country-selection', 'visibility', worldVisibility);
+    map.setLayoutProperty(
+      'exploration-canvas-fill',
+      'visibility',
+      canvasVisibility,
     );
-    map.setPaintProperty(
-      'countries-glow',
-      'line-opacity',
-      selectedCountryId ? 0.78 : 0.3,
+    map.setLayoutProperty(
+      'exploration-canvas-glow',
+      'visibility',
+      canvasVisibility,
     );
-    map.setPaintProperty(
-      'countries-glow',
-      'line-width',
-      selectedCountryId ? 5 : ['case', ['has', 'score'], 2.2, 0.7],
-    );
-    map.setPaintProperty(
-      'countries-outline',
-      'line-width',
-      selectedCountryId ? 1.8 : ['case', ['has', 'score'], 0.85, 0.45],
+    map.setLayoutProperty(
+      'exploration-canvas-outline',
+      'visibility',
+      canvasVisibility,
     );
 
     if (!selectedCountryId) {
@@ -400,10 +452,7 @@ export function WorldMap({
       return;
     }
 
-    const selectedFeatures = countryGeoJson.features.filter(
-      (candidate) =>
-        candidate.properties.explorationCountryId === selectedCountryId,
-    );
+    const selectedFeatures = explorationCanvasGeoJson.features;
     if (selectedFeatures.length === 0) {
       return;
     }
@@ -421,6 +470,7 @@ export function WorldMap({
     }
   }, [
     countryGeoJson,
+    explorationCanvasGeoJson,
     globalResetToken,
     mapReady,
     selectedCountryId,

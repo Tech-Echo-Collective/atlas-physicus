@@ -3,6 +3,7 @@ import type {
   FeatureCollection,
   GeoJsonProperties,
   Geometry,
+  MultiPolygon,
 } from 'geojson';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import worldCountries from 'world-atlas/countries-110m.json';
@@ -16,7 +17,14 @@ import { resolveExplorationCountryId } from './GeographicEntityMapping';
 export type CountryFeatureProperties = NonNullable<GeoJsonProperties> & {
   countryId?: string;
   explorationCountryId?: string;
+  metricEntityId?: string;
   isoNumeric: string;
+  score?: number;
+};
+
+export type ExplorationCanvasProperties = NonNullable<GeoJsonProperties> & {
+  explorationCountryId: string;
+  sourceIsoNumerics: string[];
   score?: number;
 };
 
@@ -56,7 +64,10 @@ export function buildCountryFeatureCollection(
         countries,
         geographicViews,
       );
-      const score = country ? scoresByCountryId.get(country.id) : undefined;
+      const metricEntityId = explorationCountryId ?? country?.id;
+      const score = metricEntityId
+        ? scoresByCountryId.get(metricEntityId)
+        : undefined;
 
       return {
         ...worldFeature,
@@ -65,6 +76,7 @@ export function buildCountryFeatureCollection(
           isoNumeric,
           ...(country ? { countryId: country.id } : {}),
           ...(explorationCountryId ? { explorationCountryId } : {}),
+          ...(metricEntityId ? { metricEntityId } : {}),
           ...(score === undefined ? {} : { score }),
         },
       } as FeatureCollection<
@@ -72,5 +84,65 @@ export function buildCountryFeatureCollection(
         CountryFeatureProperties
       >['features'][number];
     }),
+  };
+}
+
+/**
+ * Composes every configured polygon for one exploration view into a dedicated
+ * render feature. This prevents country mode from depending on filters over
+ * the global choropleth while preserving the original source coordinates.
+ */
+export function buildExplorationCanvasFeatureCollection(
+  countries: FeatureCollection<Geometry, CountryFeatureProperties>,
+  explorationCountryId: string | null,
+): FeatureCollection<MultiPolygon, ExplorationCanvasProperties> {
+  if (!explorationCountryId) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+
+  const sourceFeatures = countries.features.filter(
+    (candidate) =>
+      candidate.properties.explorationCountryId === explorationCountryId,
+  );
+  const coordinates: MultiPolygon['coordinates'] = sourceFeatures.flatMap(
+    (sourceFeature) => {
+      if (sourceFeature.geometry.type === 'Polygon') {
+        return [sourceFeature.geometry.coordinates];
+      }
+
+      if (sourceFeature.geometry.type === 'MultiPolygon') {
+        return sourceFeature.geometry.coordinates;
+      }
+
+      return [];
+    },
+  );
+
+  if (coordinates.length === 0) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+
+  const scoredFeature = sourceFeatures.find(
+    (candidate) => candidate.properties.score !== undefined,
+  );
+
+  return {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        id: explorationCountryId,
+        geometry: { type: 'MultiPolygon', coordinates },
+        properties: {
+          explorationCountryId,
+          sourceIsoNumerics: sourceFeatures.map(
+            (candidate) => candidate.properties.isoNumeric,
+          ),
+          ...(scoredFeature?.properties.score === undefined
+            ? {}
+            : { score: scoredFeature.properties.score }),
+        },
+      },
+    ],
   };
 }
