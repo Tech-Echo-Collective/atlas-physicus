@@ -2,7 +2,7 @@ import type { ResearchField } from '../../domain/models';
 
 interface FieldSelectorProps {
   fields: ResearchField[];
-  selectedFieldId: string;
+  selectedFieldId: string | null;
   onSelect: (fieldId: string) => void;
 }
 

@@ -8,6 +8,19 @@ The JSON dataset is normalized: countries do not embed duplicated institution or
 
 ## Core entities
 
+### ScienceDomain
+
+Groups research fields above the field level without changing their identifiers.
+
+| Property | Meaning |
+| --- | --- |
+| `id` | Stable domain identifier |
+| `label` | Human-readable domain name |
+| `description` | Short exploration description |
+| `fieldIds` | References to fields within the domain |
+
+Phase 2.2 contains only `Physics`. The array structure supports future domains, but no non-physics data is included.
+
 ### ResearchField
 
 Represents a physics classification used to filter the atlas.
@@ -22,7 +35,7 @@ Initial fields are `hep-th`, `gr-qc`, `quant-ph`, and `cond-mat`.
 
 ### Country
 
-Represents the geographic level used by the Phase 1 choropleth.
+Represents a geographic location entity and the direct ISO join for world geometry.
 
 | Property | Meaning |
 | --- | --- |
@@ -31,6 +44,20 @@ Represents the geographic level used by the Phase 1 choropleth.
 | `isoNumeric` | ISO numeric code used to join world geometry |
 | `name` | Display name |
 | `region` | Broad geographic region |
+
+### GeographicView
+
+Defines membership in a country exploration canvas without changing location or attribution records.
+
+| Property | Meaning |
+| --- | --- |
+| `id` | Stable view identifier |
+| `countryId` | Country entity presented by the exploration view |
+| `geometryIsoNumerics` | Source geometries rendered and fitted in the view |
+| `locationCountryIds` | Location entities whose institutions appear in the view |
+| `provenance` | Origin classification |
+
+This mapping is consumed only by geographic navigation and institution visibility. It does not assign papers, researchers, or metrics to a different entity.
 
 ### Institution
 
@@ -43,17 +70,69 @@ Represents a research institution located in one country.
 | `countryId` | Reference to `Country` |
 | `city` | Display location |
 | `fieldIds` | References to represented research fields |
+| `location` | Optional longitude and latitude used by the map |
 
 ### Researcher
 
-Represents a researcher for later institution-to-researcher exploration.
+Represents a research person independently from affiliation records.
 
 | Property | Meaning |
 | --- | --- |
 | `id` | Internal stable identifier |
 | `name` | Display name |
-| `institutionId` | Reference to `Institution` |
 | `fieldIds` | References to research fields |
+| `externalLinks` | Optional validated homepage, personal site, arXiv, or GitHub references |
+
+The optional legacy `institutionId` remains schema-compatible with Phase 2.1 data, but Phase 2.2 fixtures use normalized `Affiliation` records instead.
+
+### ResearchGroup
+
+Represents a named research community hosted by an institution.
+
+| Property | Meaning |
+| --- | --- |
+| `id` | Internal stable identifier |
+| `name` | Display name |
+| `institutionId` | Reference to the host `Institution` |
+| `description` | Short demo scope description |
+| `fieldIds` | References to associated research fields |
+
+Group membership is derived from affiliations rather than embedded researcher arrays.
+
+### Affiliation
+
+Connects a researcher to an institution and optionally a research group.
+
+| Property | Meaning |
+| --- | --- |
+| `id` | Stable relationship identifier |
+| `researcherId` | Reference to `Researcher` |
+| `institutionId` | Reference to `Institution` |
+| `researchGroupId` | Optional reference to a group at that institution |
+| `startYear`, `endYear` | Optional temporal bounds |
+| `provenance` | Origin classification |
+
+Affiliations are separate records so future metadata can represent multiple institutions and time ranges without duplicating researchers.
+
+### Paper and Authorship
+
+`Paper` is a normalized preparation record with a title, summary, year, fields, and provenance. `Authorship` is a join record that connects one paper to one researcher and preserves author position.
+
+Papers do not embed researchers, institutions, or countries. Multi-institution collaboration is derived by traversing authorship and affiliation relationships.
+
+### HistoricalEvent
+
+Prepares field history and timeline connections.
+
+| Property | Meaning |
+| --- | --- |
+| `id` | Stable event identifier |
+| `title`, `summary` | Demo event description |
+| `year` | Timeline year |
+| `fieldId` | Reference to the connected field |
+| `relatedResearcherIds` | Researcher references |
+| `relatedInstitutionIds` | Institution references |
+| `provenance` | Origin classification |
 
 ### MetricObservation
 
@@ -64,34 +143,39 @@ Stores a metric value separately from entity identity and presentation.
 | `id` | Stable observation identifier |
 | `entityType` | Type of entity being observed |
 | `entityId` | Reference to the observed entity |
-| `fieldId` | Research-field context |
+| `scienceDomainId` | Optional science-domain context |
+| `fieldId` | Optional research-field context |
 | `metricId` | Metric identity |
 | `period` | Observation year in the alpha |
 | `value` | Provided metric value |
 | `provenance` | Origin classification |
 
-Phase 1 accepts only `research_activity_score` with `synthetic-demo` provenance. This constraint prevents demo values from being mistaken for implemented scientific metrics.
+Each observation must identify either a science domain or a research field. Phase 2.2 still accepts only `research_activity_score` with `synthetic-demo` provenance. The Physics-domain fixtures are explicit visualization inputs rather than values calculated by summing the four fields. Multiple observations may share an entity and scope while carrying different year values in `period`. This constraint prevents demo values from being mistaken for implemented scientific metrics.
 
 ## Relationships
 
 The conceptual model includes:
 
 ```text
-Researcher ── belongs to ──> Institution
+Researcher <── Affiliation ──> Institution
+                         └──> ResearchGroup
 Institution ── located in ──> Country
-Researcher ── writes ──> Paper
+GeographicView ── renders ──> Geometry / institution-location membership
+Researcher <── Authorship ──> Paper
 Paper ── belongs to ──> ResearchField
-Paper ── cites ──> Paper
+HistoricalEvent ── connects ──> ResearchField / Researcher / Institution
 ```
 
-Paper, authorship, citation, temporal affiliation, and research-group records are deferred until they are needed by a real data pipeline. They remain part of the approved long-term model.
+Phase 2.2 implements these relationships only as synthetic preparation records. Citation edges, researcher identity matching, affiliation disambiguation, and complete publication metadata remain deferred.
+
+Country aggregation must be derived from affiliation relationships rather than by assigning a paper to one country. Geographic rendering remains separate from this attribution model, as defined by the [geographic representation policy](geography-policy.md).
 
 ## Validation
 
-Zod schemas verify structure, identifier format, field references, institution-to-country references, researcher-to-institution references, metric period, and demo provenance when the repository loads the dataset.
+Zod schemas verify structure, identifier format, science-domain field references, geographic-view references, institution locations, field references, group-to-institution references, affiliation relationships, authorships, event references, metric scope and period, and demo provenance when the repository loads the dataset.
 
 The dataset fails closed if required relationships are invalid. Presentation components only receive a validated `AtlasDataset`.
 
 ## Demo-data policy
 
-Country names are geographic references. Institution names, researcher names, and activity values in the alpha dataset are synthetic. They must not be presented as measurements, rankings, or claims about real organizations and people.
+Country names are geographic references. Phase 2.2 also uses MIT, Caltech, and Princeton as recognizable institution-location examples. All researcher identities, group names, paper records, historical events, relationships, and activity values are synthetic. No displayed value or ordering is a measurement, ranking, or claim about any real organization or person.

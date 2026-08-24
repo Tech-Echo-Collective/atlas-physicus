@@ -1,11 +1,24 @@
 {
   "metadata": {
-    "schemaVersion": "0.1.0",
+    "schemaVersion": "0.4.0",
     "datasetKind": "synthetic-demo",
-    "period": "2025",
+    "period": "2026",
     "generatedAt": "2026-08-24T00:00:00.000Z",
-    "disclaimer": "Synthetic demonstration data for interface evaluation only. It does not represent measured research output, impact, ranking, or institutional performance."
+    "disclaimer": "Synthetic demonstration and historical data for interface evaluation only. It does not represent measured research output, impact, ranking, institutional performance, or historical scientific accuracy."
   },
+  "scienceDomains": [
+    {
+      "id": "physics",
+      "label": "Physics",
+      "description": "Explore the synthetic global activity landscape across the included physics fields.",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc",
+        "quant-ph",
+        "cond-mat"
+      ]
+    }
+  ],
   "fields": [
     {
       "id": "hep-th",
@@ -29,71 +42,4212 @@
     }
   ],
   "countries": [
-    { "id": "country-us", "isoAlpha3": "USA", "isoNumeric": "840", "name": "United States", "region": "North America" },
-    { "id": "country-gb", "isoAlpha3": "GBR", "isoNumeric": "826", "name": "United Kingdom", "region": "Europe" },
-    { "id": "country-ch", "isoAlpha3": "CHE", "isoNumeric": "756", "name": "Switzerland", "region": "Europe" },
-    { "id": "country-de", "isoAlpha3": "DEU", "isoNumeric": "276", "name": "Germany", "region": "Europe" },
-    { "id": "country-jp", "isoAlpha3": "JPN", "isoNumeric": "392", "name": "Japan", "region": "East Asia" },
-    { "id": "country-cn", "isoAlpha3": "CHN", "isoNumeric": "156", "name": "China", "region": "East Asia" },
-    { "id": "country-ca", "isoAlpha3": "CAN", "isoNumeric": "124", "name": "Canada", "region": "North America" },
-    { "id": "country-au", "isoAlpha3": "AUS", "isoNumeric": "036", "name": "Australia", "region": "Oceania" }
+    {
+      "id": "country-us",
+      "isoAlpha3": "USA",
+      "isoNumeric": "840",
+      "name": "United States",
+      "region": "North America"
+    },
+    {
+      "id": "country-gb",
+      "isoAlpha3": "GBR",
+      "isoNumeric": "826",
+      "name": "United Kingdom",
+      "region": "Europe"
+    },
+    {
+      "id": "country-ch",
+      "isoAlpha3": "CHE",
+      "isoNumeric": "756",
+      "name": "Switzerland",
+      "region": "Europe"
+    },
+    {
+      "id": "country-de",
+      "isoAlpha3": "DEU",
+      "isoNumeric": "276",
+      "name": "Germany",
+      "region": "Europe"
+    },
+    {
+      "id": "country-jp",
+      "isoAlpha3": "JPN",
+      "isoNumeric": "392",
+      "name": "Japan",
+      "region": "East Asia"
+    },
+    {
+      "id": "country-cn",
+      "isoAlpha3": "CHN",
+      "isoNumeric": "156",
+      "name": "China",
+      "region": "East Asia"
+    },
+    {
+      "id": "country-tw",
+      "isoAlpha3": "TWN",
+      "isoNumeric": "158",
+      "name": "Taiwan",
+      "region": "East Asia"
+    },
+    {
+      "id": "country-ca",
+      "isoAlpha3": "CAN",
+      "isoNumeric": "124",
+      "name": "Canada",
+      "region": "North America"
+    },
+    {
+      "id": "country-au",
+      "isoAlpha3": "AUS",
+      "isoNumeric": "036",
+      "name": "Australia",
+      "region": "Oceania"
+    }
+  ],
+  "geographicViews": [
+    {
+      "id": "geographic-view-us",
+      "countryId": "country-us",
+      "geometryIsoNumerics": ["840"],
+      "locationCountryIds": ["country-us"],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "geographic-view-gb",
+      "countryId": "country-gb",
+      "geometryIsoNumerics": ["826"],
+      "locationCountryIds": ["country-gb"],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "geographic-view-ch",
+      "countryId": "country-ch",
+      "geometryIsoNumerics": ["756"],
+      "locationCountryIds": ["country-ch"],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "geographic-view-de",
+      "countryId": "country-de",
+      "geometryIsoNumerics": ["276"],
+      "locationCountryIds": ["country-de"],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "geographic-view-jp",
+      "countryId": "country-jp",
+      "geometryIsoNumerics": ["392"],
+      "locationCountryIds": ["country-jp"],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "geographic-view-cn",
+      "countryId": "country-cn",
+      "geometryIsoNumerics": ["156", "158"],
+      "locationCountryIds": ["country-cn", "country-tw"],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "geographic-view-ca",
+      "countryId": "country-ca",
+      "geometryIsoNumerics": ["124"],
+      "locationCountryIds": ["country-ca"],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "geographic-view-au",
+      "countryId": "country-au",
+      "geometryIsoNumerics": ["036"],
+      "locationCountryIds": ["country-au"],
+      "provenance": "synthetic-demo"
+    }
   ],
   "institutions": [
-    { "id": "institution-northstar", "name": "Northstar Institute for Fundamental Physics", "countryId": "country-us", "city": "Chicago", "fieldIds": ["hep-th", "gr-qc"] },
-    { "id": "institution-calder", "name": "Calder Research Institute", "countryId": "country-gb", "city": "Cambridge", "fieldIds": ["hep-th", "gr-qc", "quant-ph"] },
-    { "id": "institution-alpine", "name": "Alpine Center for Particle Theory", "countryId": "country-ch", "city": "Geneva", "fieldIds": ["hep-th", "quant-ph"] },
-    { "id": "institution-rhine", "name": "Rhine Institute for Quantum Matter", "countryId": "country-de", "city": "Cologne", "fieldIds": ["quant-ph", "cond-mat"] },
-    { "id": "institution-kansai", "name": "Kansai Center for Fundamental Physics", "countryId": "country-jp", "city": "Kyoto", "fieldIds": ["gr-qc", "cond-mat"] },
-    { "id": "institution-eastern", "name": "Eastern Institute for Quantum Studies", "countryId": "country-cn", "city": "Shanghai", "fieldIds": ["quant-ph", "cond-mat"] },
-    { "id": "institution-laurentian", "name": "Laurentian Physics Network", "countryId": "country-ca", "city": "Toronto", "fieldIds": ["gr-qc", "quant-ph"] },
-    { "id": "institution-southern-cross", "name": "Southern Cross Centre for Condensed Matter", "countryId": "country-au", "city": "Melbourne", "fieldIds": ["cond-mat", "quant-ph"] }
+    {
+      "id": "institution-northstar",
+      "name": "Northstar Institute for Fundamental Physics",
+      "countryId": "country-us",
+      "city": "Chicago",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc"
+      ],
+      "location": {
+        "longitude": -87.6298,
+        "latitude": 41.8781
+      }
+    },
+    {
+      "id": "institution-calder",
+      "name": "Calder Research Institute",
+      "countryId": "country-gb",
+      "city": "Cambridge",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc",
+        "quant-ph"
+      ],
+      "location": {
+        "longitude": 0.1218,
+        "latitude": 52.2053
+      }
+    },
+    {
+      "id": "institution-alpine",
+      "name": "Alpine Center for Particle Theory",
+      "countryId": "country-ch",
+      "city": "Geneva",
+      "fieldIds": [
+        "hep-th",
+        "quant-ph"
+      ],
+      "location": {
+        "longitude": 6.1432,
+        "latitude": 46.2044
+      }
+    },
+    {
+      "id": "institution-rhine",
+      "name": "Rhine Institute for Quantum Matter",
+      "countryId": "country-de",
+      "city": "Cologne",
+      "fieldIds": [
+        "quant-ph",
+        "cond-mat"
+      ],
+      "location": {
+        "longitude": 6.9603,
+        "latitude": 50.9375
+      }
+    },
+    {
+      "id": "institution-kansai",
+      "name": "Kansai Center for Fundamental Physics",
+      "countryId": "country-jp",
+      "city": "Kyoto",
+      "fieldIds": [
+        "gr-qc",
+        "cond-mat"
+      ],
+      "location": {
+        "longitude": 135.7681,
+        "latitude": 35.0116
+      }
+    },
+    {
+      "id": "institution-eastern",
+      "name": "Eastern Institute for Quantum Studies",
+      "countryId": "country-cn",
+      "city": "Shanghai",
+      "fieldIds": [
+        "quant-ph",
+        "cond-mat"
+      ],
+      "location": {
+        "longitude": 121.4737,
+        "latitude": 31.2304
+      }
+    },
+    {
+      "id": "institution-taipei",
+      "name": "Taipei Institute for Physical Sciences",
+      "countryId": "country-tw",
+      "city": "Taipei",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc",
+        "quant-ph",
+        "cond-mat"
+      ],
+      "location": {
+        "longitude": 121.5654,
+        "latitude": 25.033
+      }
+    },
+    {
+      "id": "institution-laurentian",
+      "name": "Laurentian Physics Network",
+      "countryId": "country-ca",
+      "city": "Toronto",
+      "fieldIds": [
+        "gr-qc",
+        "quant-ph"
+      ],
+      "location": {
+        "longitude": -79.3832,
+        "latitude": 43.6532
+      }
+    },
+    {
+      "id": "institution-southern-cross",
+      "name": "Southern Cross Centre for Condensed Matter",
+      "countryId": "country-au",
+      "city": "Melbourne",
+      "fieldIds": [
+        "cond-mat",
+        "quant-ph"
+      ],
+      "location": {
+        "longitude": 144.9631,
+        "latitude": -37.8136
+      }
+    },
+    {
+      "id": "institution-mit",
+      "name": "Massachusetts Institute of Technology",
+      "countryId": "country-us",
+      "city": "Cambridge",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc",
+        "quant-ph",
+        "cond-mat"
+      ],
+      "location": {
+        "longitude": -71.0942,
+        "latitude": 42.3601
+      }
+    },
+    {
+      "id": "institution-caltech",
+      "name": "California Institute of Technology",
+      "countryId": "country-us",
+      "city": "Pasadena",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc",
+        "quant-ph"
+      ],
+      "location": {
+        "longitude": -118.1253,
+        "latitude": 34.1377
+      }
+    },
+    {
+      "id": "institution-princeton",
+      "name": "Princeton University",
+      "countryId": "country-us",
+      "city": "Princeton",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc",
+        "quant-ph"
+      ],
+      "location": {
+        "longitude": -74.6551,
+        "latitude": 40.3431
+      }
+    }
   ],
   "researchers": [
-    { "id": "researcher-maya-chen", "name": "Maya Chen", "institutionId": "institution-northstar", "fieldIds": ["hep-th"] },
-    { "id": "researcher-elias-ward", "name": "Elias Ward", "institutionId": "institution-northstar", "fieldIds": ["gr-qc"] },
-    { "id": "researcher-amina-rahman", "name": "Amina Rahman", "institutionId": "institution-calder", "fieldIds": ["hep-th", "gr-qc"] },
-    { "id": "researcher-luca-meier", "name": "Luca Meier", "institutionId": "institution-alpine", "fieldIds": ["hep-th"] },
-    { "id": "researcher-hanna-vogel", "name": "Hanna Vogel", "institutionId": "institution-rhine", "fieldIds": ["quant-ph", "cond-mat"] },
-    { "id": "researcher-ren-ito", "name": "Ren Ito", "institutionId": "institution-kansai", "fieldIds": ["gr-qc", "cond-mat"] },
-    { "id": "researcher-lin-qiao", "name": "Lin Qiao", "institutionId": "institution-eastern", "fieldIds": ["quant-ph"] },
-    { "id": "researcher-sofia-alvarez", "name": "Sofia Alvarez", "institutionId": "institution-laurentian", "fieldIds": ["gr-qc"] },
-    { "id": "researcher-noah-bennett", "name": "Noah Bennett", "institutionId": "institution-southern-cross", "fieldIds": ["cond-mat"] }
+    {
+      "id": "researcher-maya-chen",
+      "name": "Maya Chen",
+      "fieldIds": [
+        "hep-th"
+      ],
+      "externalLinks": {
+        "personalWebsite": "https://example.org/physics-atlas-demo/maya-chen"
+      }
+    },
+    {
+      "id": "researcher-elias-ward",
+      "name": "Elias Ward",
+      "fieldIds": [
+        "gr-qc"
+      ]
+    },
+    {
+      "id": "researcher-amina-rahman",
+      "name": "Amina Rahman",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc"
+      ],
+      "externalLinks": {
+        "institutionalHomepage": "https://example.org/physics-atlas-demo/amina-rahman"
+      }
+    },
+    {
+      "id": "researcher-luca-meier",
+      "name": "Luca Meier",
+      "fieldIds": [
+        "hep-th"
+      ]
+    },
+    {
+      "id": "researcher-hanna-vogel",
+      "name": "Hanna Vogel",
+      "fieldIds": [
+        "quant-ph",
+        "cond-mat"
+      ]
+    },
+    {
+      "id": "researcher-ren-ito",
+      "name": "Ren Ito",
+      "fieldIds": [
+        "gr-qc",
+        "cond-mat"
+      ]
+    },
+    {
+      "id": "researcher-lin-qiao",
+      "name": "Lin Qiao",
+      "fieldIds": [
+        "quant-ph"
+      ],
+      "externalLinks": {
+        "github": "https://example.org/physics-atlas-demo/github/lin-qiao"
+      }
+    },
+    {
+      "id": "researcher-sofia-alvarez",
+      "name": "Sofia Alvarez",
+      "fieldIds": [
+        "gr-qc"
+      ]
+    },
+    {
+      "id": "researcher-noah-bennett",
+      "name": "Noah Bennett",
+      "fieldIds": [
+        "cond-mat"
+      ]
+    },
+    {
+      "id": "researcher-jonah-okafor",
+      "name": "Jonah Okafor",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc"
+      ],
+      "externalLinks": {
+        "institutionalHomepage": "https://example.org/physics-atlas-demo/jonah-okafor",
+        "arxiv": "https://example.org/physics-atlas-demo/arxiv/jonah-okafor"
+      }
+    },
+    {
+      "id": "researcher-nila-patel",
+      "name": "Nila Patel",
+      "fieldIds": [
+        "quant-ph",
+        "cond-mat"
+      ],
+      "externalLinks": {
+        "personalWebsite": "https://example.org/physics-atlas-demo/nila-patel"
+      }
+    },
+    {
+      "id": "researcher-iris-morgan",
+      "name": "Iris Morgan",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc"
+      ]
+    },
+    {
+      "id": "researcher-ethan-zhou",
+      "name": "Ethan Zhou",
+      "fieldIds": [
+        "hep-th",
+        "quant-ph"
+      ],
+      "externalLinks": {
+        "github": "https://example.org/physics-atlas-demo/github/ethan-zhou"
+      }
+    }
+  ],
+  "researchGroups": [
+    {
+      "id": "group-northstar-geometry",
+      "name": "Emergent Geometry Group",
+      "institutionId": "institution-northstar",
+      "description": "Synthetic group exploring formal connections between fields, geometry, and gravitation.",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc"
+      ]
+    },
+    {
+      "id": "group-calder-relativity",
+      "name": "Relativity Methods Unit",
+      "institutionId": "institution-calder",
+      "description": "Synthetic collaboration focused on gravitation and mathematical field methods.",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc"
+      ]
+    },
+    {
+      "id": "group-alpine-duality",
+      "name": "Duality and Fields Group",
+      "institutionId": "institution-alpine",
+      "description": "Synthetic research group studying duality-inspired descriptions of quantum fields.",
+      "fieldIds": [
+        "hep-th",
+        "quant-ph"
+      ]
+    },
+    {
+      "id": "group-rhine-quantum-matter",
+      "name": "Quantum Materials Laboratory",
+      "institutionId": "institution-rhine",
+      "description": "Synthetic laboratory connecting quantum information concepts with matter systems.",
+      "fieldIds": [
+        "quant-ph",
+        "cond-mat"
+      ]
+    },
+    {
+      "id": "group-kansai-cosmology",
+      "name": "Cosmology and Matter Group",
+      "institutionId": "institution-kansai",
+      "description": "Synthetic group examining gravitational models and collective matter behavior.",
+      "fieldIds": [
+        "gr-qc",
+        "cond-mat"
+      ]
+    },
+    {
+      "id": "group-eastern-networks",
+      "name": "Quantum Networks Group",
+      "institutionId": "institution-eastern",
+      "description": "Synthetic group investigating quantum communication and network structures.",
+      "fieldIds": [
+        "quant-ph"
+      ]
+    },
+    {
+      "id": "group-laurentian-relativity",
+      "name": "Relativity Networks Group",
+      "institutionId": "institution-laurentian",
+      "description": "Synthetic network linking geometric gravitation and quantum information questions.",
+      "fieldIds": [
+        "gr-qc",
+        "quant-ph"
+      ]
+    },
+    {
+      "id": "group-southern-materials",
+      "name": "Layered Matter Group",
+      "institutionId": "institution-southern-cross",
+      "description": "Synthetic group studying emergent behavior in layered and correlated matter.",
+      "fieldIds": [
+        "cond-mat",
+        "quant-ph"
+      ]
+    },
+    {
+      "id": "group-mit-fields",
+      "name": "Field Structures Group",
+      "institutionId": "institution-mit",
+      "description": "Synthetic demo group for formal field structures and gravitational models.",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc"
+      ]
+    },
+    {
+      "id": "group-mit-quantum",
+      "name": "Quantum Systems Group",
+      "institutionId": "institution-mit",
+      "description": "Synthetic demo group connecting quantum information and many-body systems.",
+      "fieldIds": [
+        "quant-ph",
+        "cond-mat"
+      ]
+    },
+    {
+      "id": "group-caltech-cosmology",
+      "name": "Synthetic Cosmology Group",
+      "institutionId": "institution-caltech",
+      "description": "Synthetic demo group exploring geometric approaches to cosmology.",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc"
+      ]
+    },
+    {
+      "id": "group-princeton-geometry",
+      "name": "Geometry and Information Group",
+      "institutionId": "institution-princeton",
+      "description": "Synthetic demo group connecting geometry, field theory, and quantum information.",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc",
+        "quant-ph"
+      ]
+    }
+  ],
+  "affiliations": [
+    {
+      "id": "affiliation-maya-northstar",
+      "researcherId": "researcher-maya-chen",
+      "institutionId": "institution-northstar",
+      "researchGroupId": "group-northstar-geometry",
+      "startYear": 2019,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "affiliation-elias-northstar",
+      "researcherId": "researcher-elias-ward",
+      "institutionId": "institution-northstar",
+      "researchGroupId": "group-northstar-geometry",
+      "startYear": 2017,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "affiliation-amina-calder",
+      "researcherId": "researcher-amina-rahman",
+      "institutionId": "institution-calder",
+      "researchGroupId": "group-calder-relativity",
+      "startYear": 2018,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "affiliation-luca-alpine",
+      "researcherId": "researcher-luca-meier",
+      "institutionId": "institution-alpine",
+      "researchGroupId": "group-alpine-duality",
+      "startYear": 2020,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "affiliation-hanna-rhine",
+      "researcherId": "researcher-hanna-vogel",
+      "institutionId": "institution-rhine",
+      "researchGroupId": "group-rhine-quantum-matter",
+      "startYear": 2016,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "affiliation-ren-kansai",
+      "researcherId": "researcher-ren-ito",
+      "institutionId": "institution-kansai",
+      "researchGroupId": "group-kansai-cosmology",
+      "startYear": 2021,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "affiliation-lin-eastern",
+      "researcherId": "researcher-lin-qiao",
+      "institutionId": "institution-eastern",
+      "researchGroupId": "group-eastern-networks",
+      "startYear": 2019,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "affiliation-sofia-laurentian",
+      "researcherId": "researcher-sofia-alvarez",
+      "institutionId": "institution-laurentian",
+      "researchGroupId": "group-laurentian-relativity",
+      "startYear": 2018,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "affiliation-noah-southern",
+      "researcherId": "researcher-noah-bennett",
+      "institutionId": "institution-southern-cross",
+      "researchGroupId": "group-southern-materials",
+      "startYear": 2017,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "affiliation-jonah-mit",
+      "researcherId": "researcher-jonah-okafor",
+      "institutionId": "institution-mit",
+      "researchGroupId": "group-mit-fields",
+      "startYear": 2020,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "affiliation-nila-mit",
+      "researcherId": "researcher-nila-patel",
+      "institutionId": "institution-mit",
+      "researchGroupId": "group-mit-quantum",
+      "startYear": 2021,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "affiliation-iris-caltech",
+      "researcherId": "researcher-iris-morgan",
+      "institutionId": "institution-caltech",
+      "researchGroupId": "group-caltech-cosmology",
+      "startYear": 2018,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "affiliation-ethan-princeton",
+      "researcherId": "researcher-ethan-zhou",
+      "institutionId": "institution-princeton",
+      "researchGroupId": "group-princeton-geometry",
+      "startYear": 2022,
+      "provenance": "synthetic-demo"
+    }
+  ],
+  "papers": [
+    {
+      "id": "paper-boundary-symmetries",
+      "title": "Boundary Symmetries in Emergent Spacetimes",
+      "summary": "Synthetic paper record exploring formal links between boundary structure and emergent geometry.",
+      "year": 2024,
+      "fieldIds": [
+        "hep-th",
+        "gr-qc"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "paper-quantum-channels",
+      "title": "Quantum Channels Across Noisy Networks",
+      "summary": "Synthetic paper record about information flow through distributed quantum systems.",
+      "year": 2023,
+      "fieldIds": [
+        "quant-ph"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "paper-geometric-phases",
+      "title": "Geometric Phases in Layered Matter",
+      "summary": "Synthetic paper record connecting geometric phases with collective matter behavior.",
+      "year": 2022,
+      "fieldIds": [
+        "quant-ph",
+        "cond-mat"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "paper-compact-horizons",
+      "title": "Relational Horizons in Compact Systems",
+      "summary": "Synthetic paper record describing a demo collaboration on compact gravitational models.",
+      "year": 2021,
+      "fieldIds": [
+        "gr-qc"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "paper-duality-methods",
+      "title": "Duality Methods for Coupled Fields",
+      "summary": "Synthetic paper record exploring shared methods across formal field descriptions.",
+      "year": 2025,
+      "fieldIds": [
+        "hep-th"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "paper-entanglement-maps",
+      "title": "Entanglement Maps for Many-Body Systems",
+      "summary": "Synthetic paper record connecting quantum-information structure to many-body systems.",
+      "year": 2025,
+      "fieldIds": [
+        "quant-ph",
+        "cond-mat"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "paper-relational-observables",
+      "title": "Relational Observables Across Geometry Networks",
+      "summary": "Synthetic paper record about observable structure in distributed geometry models.",
+      "year": 2020,
+      "fieldIds": [
+        "gr-qc"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "paper-layered-excitations",
+      "title": "Collective Excitations in Layered Systems",
+      "summary": "Synthetic paper record for a cross-institution demo collaboration on matter systems.",
+      "year": 2024,
+      "fieldIds": [
+        "cond-mat"
+      ],
+      "provenance": "synthetic-demo"
+    }
+  ],
+  "authorships": [
+    { "id": "authorship-boundary-jonah", "paperId": "paper-boundary-symmetries", "researcherId": "researcher-jonah-okafor", "authorPosition": 1 },
+    { "id": "authorship-boundary-ethan", "paperId": "paper-boundary-symmetries", "researcherId": "researcher-ethan-zhou", "authorPosition": 2 },
+    { "id": "authorship-boundary-maya", "paperId": "paper-boundary-symmetries", "researcherId": "researcher-maya-chen", "authorPosition": 3 },
+    { "id": "authorship-channels-nila", "paperId": "paper-quantum-channels", "researcherId": "researcher-nila-patel", "authorPosition": 1 },
+    { "id": "authorship-channels-lin", "paperId": "paper-quantum-channels", "researcherId": "researcher-lin-qiao", "authorPosition": 2 },
+    { "id": "authorship-channels-hanna", "paperId": "paper-quantum-channels", "researcherId": "researcher-hanna-vogel", "authorPosition": 3 },
+    { "id": "authorship-phases-nila", "paperId": "paper-geometric-phases", "researcherId": "researcher-nila-patel", "authorPosition": 1 },
+    { "id": "authorship-phases-noah", "paperId": "paper-geometric-phases", "researcherId": "researcher-noah-bennett", "authorPosition": 2 },
+    { "id": "authorship-phases-hanna", "paperId": "paper-geometric-phases", "researcherId": "researcher-hanna-vogel", "authorPosition": 3 },
+    { "id": "authorship-horizons-iris", "paperId": "paper-compact-horizons", "researcherId": "researcher-iris-morgan", "authorPosition": 1 },
+    { "id": "authorship-horizons-elias", "paperId": "paper-compact-horizons", "researcherId": "researcher-elias-ward", "authorPosition": 2 },
+    { "id": "authorship-horizons-ren", "paperId": "paper-compact-horizons", "researcherId": "researcher-ren-ito", "authorPosition": 3 },
+    { "id": "authorship-duality-amina", "paperId": "paper-duality-methods", "researcherId": "researcher-amina-rahman", "authorPosition": 1 },
+    { "id": "authorship-duality-luca", "paperId": "paper-duality-methods", "researcherId": "researcher-luca-meier", "authorPosition": 2 },
+    { "id": "authorship-duality-jonah", "paperId": "paper-duality-methods", "researcherId": "researcher-jonah-okafor", "authorPosition": 3 },
+    { "id": "authorship-entanglement-ethan", "paperId": "paper-entanglement-maps", "researcherId": "researcher-ethan-zhou", "authorPosition": 1 },
+    { "id": "authorship-entanglement-nila", "paperId": "paper-entanglement-maps", "researcherId": "researcher-nila-patel", "authorPosition": 2 },
+    { "id": "authorship-entanglement-lin", "paperId": "paper-entanglement-maps", "researcherId": "researcher-lin-qiao", "authorPosition": 3 },
+    { "id": "authorship-observables-sofia", "paperId": "paper-relational-observables", "researcherId": "researcher-sofia-alvarez", "authorPosition": 1 },
+    { "id": "authorship-observables-iris", "paperId": "paper-relational-observables", "researcherId": "researcher-iris-morgan", "authorPosition": 2 },
+    { "id": "authorship-observables-elias", "paperId": "paper-relational-observables", "researcherId": "researcher-elias-ward", "authorPosition": 3 },
+    { "id": "authorship-excitations-noah", "paperId": "paper-layered-excitations", "researcherId": "researcher-noah-bennett", "authorPosition": 1 },
+    { "id": "authorship-excitations-ren", "paperId": "paper-layered-excitations", "researcherId": "researcher-ren-ito", "authorPosition": 2 },
+    { "id": "authorship-excitations-hanna", "paperId": "paper-layered-excitations", "researcherId": "researcher-hanna-vogel", "authorPosition": 3 }
+  ],
+  "historicalEvents": [
+    {
+      "id": "event-symbolic-fields-1900",
+      "title": "Symbolic Field Methods Archive",
+      "summary": "Synthetic milestone representing an early point in the demo hep-th chronology.",
+      "year": 1900,
+      "fieldId": "hep-th",
+      "relatedResearcherIds": [],
+      "relatedInstitutionIds": [
+        "institution-northstar"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "event-relativity-forum-1950",
+      "title": "Relativity Collaboration Forum",
+      "summary": "Synthetic milestone representing institutional exchange in the demo gr-qc chronology.",
+      "year": 1950,
+      "fieldId": "gr-qc",
+      "relatedResearcherIds": [],
+      "relatedInstitutionIds": [
+        "institution-calder",
+        "institution-kansai"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "event-quantum-networks-2000",
+      "title": "Distributed Quantum Networks Program",
+      "summary": "Synthetic milestone representing a network-oriented phase in the demo quant-ph chronology.",
+      "year": 2000,
+      "fieldId": "quant-ph",
+      "relatedResearcherIds": [],
+      "relatedInstitutionIds": [
+        "institution-eastern",
+        "institution-rhine"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "event-layered-matter-1950",
+      "title": "Layered Matter Research Exchange",
+      "summary": "Synthetic milestone representing collaboration in the demo condensed-matter chronology.",
+      "year": 1950,
+      "fieldId": "cond-mat",
+      "relatedResearcherIds": [],
+      "relatedInstitutionIds": [
+        "institution-southern-cross"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "event-hep-community-2026",
+      "title": "Field Theory Community Snapshot",
+      "summary": "Synthetic current-year connection between demo researchers and institutions.",
+      "year": 2026,
+      "fieldId": "hep-th",
+      "relatedResearcherIds": [
+        "researcher-jonah-okafor",
+        "researcher-ethan-zhou"
+      ],
+      "relatedInstitutionIds": [
+        "institution-mit",
+        "institution-princeton"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "event-gravity-community-2026",
+      "title": "Gravity Community Snapshot",
+      "summary": "Synthetic current-year connection across the demo gravitation ecosystem.",
+      "year": 2026,
+      "fieldId": "gr-qc",
+      "relatedResearcherIds": [
+        "researcher-iris-morgan",
+        "researcher-sofia-alvarez"
+      ],
+      "relatedInstitutionIds": [
+        "institution-caltech",
+        "institution-laurentian"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "event-quantum-community-2026",
+      "title": "Quantum Community Snapshot",
+      "summary": "Synthetic current-year connection across the demo quantum-information ecosystem.",
+      "year": 2026,
+      "fieldId": "quant-ph",
+      "relatedResearcherIds": [
+        "researcher-nila-patel",
+        "researcher-lin-qiao"
+      ],
+      "relatedInstitutionIds": [
+        "institution-mit",
+        "institution-eastern"
+      ],
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "event-matter-community-2026",
+      "title": "Matter Community Snapshot",
+      "summary": "Synthetic current-year connection across the demo condensed-matter ecosystem.",
+      "year": 2026,
+      "fieldId": "cond-mat",
+      "relatedResearcherIds": [
+        "researcher-noah-bennett",
+        "researcher-hanna-vogel"
+      ],
+      "relatedInstitutionIds": [
+        "institution-southern-cross",
+        "institution-rhine"
+      ],
+      "provenance": "synthetic-demo"
+    }
   ],
   "metricObservations": [
-    { "id": "metric-us-hep-th-2025", "entityType": "country", "entityId": "country-us", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 88, "provenance": "synthetic-demo" },
-    { "id": "metric-gb-hep-th-2025", "entityType": "country", "entityId": "country-gb", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 76, "provenance": "synthetic-demo" },
-    { "id": "metric-ch-hep-th-2025", "entityType": "country", "entityId": "country-ch", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 95, "provenance": "synthetic-demo" },
-    { "id": "metric-de-hep-th-2025", "entityType": "country", "entityId": "country-de", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 72, "provenance": "synthetic-demo" },
-    { "id": "metric-jp-hep-th-2025", "entityType": "country", "entityId": "country-jp", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 64, "provenance": "synthetic-demo" },
-    { "id": "metric-cn-hep-th-2025", "entityType": "country", "entityId": "country-cn", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 81, "provenance": "synthetic-demo" },
-    { "id": "metric-ca-hep-th-2025", "entityType": "country", "entityId": "country-ca", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 55, "provenance": "synthetic-demo" },
-    { "id": "metric-au-hep-th-2025", "entityType": "country", "entityId": "country-au", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 48, "provenance": "synthetic-demo" },
-
-    { "id": "metric-us-gr-qc-2025", "entityType": "country", "entityId": "country-us", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 84, "provenance": "synthetic-demo" },
-    { "id": "metric-gb-gr-qc-2025", "entityType": "country", "entityId": "country-gb", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 91, "provenance": "synthetic-demo" },
-    { "id": "metric-ch-gr-qc-2025", "entityType": "country", "entityId": "country-ch", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 70, "provenance": "synthetic-demo" },
-    { "id": "metric-de-gr-qc-2025", "entityType": "country", "entityId": "country-de", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 79, "provenance": "synthetic-demo" },
-    { "id": "metric-jp-gr-qc-2025", "entityType": "country", "entityId": "country-jp", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 73, "provenance": "synthetic-demo" },
-    { "id": "metric-cn-gr-qc-2025", "entityType": "country", "entityId": "country-cn", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 68, "provenance": "synthetic-demo" },
-    { "id": "metric-ca-gr-qc-2025", "entityType": "country", "entityId": "country-ca", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 82, "provenance": "synthetic-demo" },
-    { "id": "metric-au-gr-qc-2025", "entityType": "country", "entityId": "country-au", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 51, "provenance": "synthetic-demo" },
-
-    { "id": "metric-us-quant-ph-2025", "entityType": "country", "entityId": "country-us", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 96, "provenance": "synthetic-demo" },
-    { "id": "metric-gb-quant-ph-2025", "entityType": "country", "entityId": "country-gb", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 78, "provenance": "synthetic-demo" },
-    { "id": "metric-ch-quant-ph-2025", "entityType": "country", "entityId": "country-ch", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 83, "provenance": "synthetic-demo" },
-    { "id": "metric-de-quant-ph-2025", "entityType": "country", "entityId": "country-de", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 89, "provenance": "synthetic-demo" },
-    { "id": "metric-jp-quant-ph-2025", "entityType": "country", "entityId": "country-jp", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 87, "provenance": "synthetic-demo" },
-    { "id": "metric-cn-quant-ph-2025", "entityType": "country", "entityId": "country-cn", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 93, "provenance": "synthetic-demo" },
-    { "id": "metric-ca-quant-ph-2025", "entityType": "country", "entityId": "country-ca", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 77, "provenance": "synthetic-demo" },
-    { "id": "metric-au-quant-ph-2025", "entityType": "country", "entityId": "country-au", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 69, "provenance": "synthetic-demo" },
-
-    { "id": "metric-us-cond-mat-2025", "entityType": "country", "entityId": "country-us", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 92, "provenance": "synthetic-demo" },
-    { "id": "metric-gb-cond-mat-2025", "entityType": "country", "entityId": "country-gb", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 71, "provenance": "synthetic-demo" },
-    { "id": "metric-ch-cond-mat-2025", "entityType": "country", "entityId": "country-ch", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 66, "provenance": "synthetic-demo" },
-    { "id": "metric-de-cond-mat-2025", "entityType": "country", "entityId": "country-de", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 94, "provenance": "synthetic-demo" },
-    { "id": "metric-jp-cond-mat-2025", "entityType": "country", "entityId": "country-jp", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 90, "provenance": "synthetic-demo" },
-    { "id": "metric-cn-cond-mat-2025", "entityType": "country", "entityId": "country-cn", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 88, "provenance": "synthetic-demo" },
-    { "id": "metric-ca-cond-mat-2025", "entityType": "country", "entityId": "country-ca", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 63, "provenance": "synthetic-demo" },
-    { "id": "metric-au-cond-mat-2025", "entityType": "country", "entityId": "country-au", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 85, "provenance": "synthetic-demo" }
+    {
+      "id": "metric-country-us-physics-1900",
+      "entityType": "country",
+      "entityId": "country-us",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 15,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-physics-1950",
+      "entityType": "country",
+      "entityId": "country-us",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 36,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-physics-2000",
+      "entityType": "country",
+      "entityId": "country-us",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 67,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-physics-2026",
+      "entityType": "country",
+      "entityId": "country-us",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 90,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-physics-1900",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 15,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-physics-1950",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 32,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-physics-2000",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 57,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-physics-2026",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 79,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-physics-1900",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 14,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-physics-1950",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 30,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-physics-2000",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 59,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-physics-2026",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 79,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-physics-1900",
+      "entityType": "country",
+      "entityId": "country-de",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 15,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-physics-1950",
+      "entityType": "country",
+      "entityId": "country-de",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 36,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-physics-2000",
+      "entityType": "country",
+      "entityId": "country-de",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 61,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-physics-2026",
+      "entityType": "country",
+      "entityId": "country-de",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 84,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-physics-1900",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 15,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-physics-1950",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 32,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-physics-2000",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 58,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-physics-2026",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 79,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-physics-1900",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 16,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-physics-1950",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 31,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-physics-2000",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 61,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-physics-2026",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 83,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-physics-1900",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 12,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-physics-1950",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 29,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-physics-2000",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 52,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-physics-2026",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 69,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-physics-1900",
+      "entityType": "country",
+      "entityId": "country-au",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 13,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-physics-1950",
+      "entityType": "country",
+      "entityId": "country-au",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 25,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-physics-2000",
+      "entityType": "country",
+      "entityId": "country-au",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 46,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-physics-2026",
+      "entityType": "country",
+      "entityId": "country-au",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 63,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-northstar-physics-1900",
+      "entityType": "institution",
+      "entityId": "institution-northstar",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 12,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-northstar-physics-1950",
+      "entityType": "institution",
+      "entityId": "institution-northstar",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 30,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-northstar-physics-2000",
+      "entityType": "institution",
+      "entityId": "institution-northstar",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 57,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-northstar-physics-2026",
+      "entityType": "institution",
+      "entityId": "institution-northstar",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 75,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-physics-1900",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 15,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-physics-1950",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 30,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-physics-2000",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 53,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-physics-2026",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 72,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-alpine-physics-1900",
+      "entityType": "institution",
+      "entityId": "institution-alpine",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 16,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-alpine-physics-1950",
+      "entityType": "institution",
+      "entityId": "institution-alpine",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 31,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-alpine-physics-2000",
+      "entityType": "institution",
+      "entityId": "institution-alpine",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 58,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-alpine-physics-2026",
+      "entityType": "institution",
+      "entityId": "institution-alpine",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 79,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-rhine-physics-1900",
+      "entityType": "institution",
+      "entityId": "institution-rhine",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 17,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-rhine-physics-1950",
+      "entityType": "institution",
+      "entityId": "institution-rhine",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 36,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-rhine-physics-2000",
+      "entityType": "institution",
+      "entityId": "institution-rhine",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 61,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-rhine-physics-2026",
+      "entityType": "institution",
+      "entityId": "institution-rhine",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 81,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-kansai-physics-1900",
+      "entityType": "institution",
+      "entityId": "institution-kansai",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 13,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-kansai-physics-1950",
+      "entityType": "institution",
+      "entityId": "institution-kansai",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 31,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-kansai-physics-2000",
+      "entityType": "institution",
+      "entityId": "institution-kansai",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 52,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-kansai-physics-2026",
+      "entityType": "institution",
+      "entityId": "institution-kansai",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 71,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-eastern-physics-1900",
+      "entityType": "institution",
+      "entityId": "institution-eastern",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 18,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-eastern-physics-1950",
+      "entityType": "institution",
+      "entityId": "institution-eastern",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 33,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-eastern-physics-2000",
+      "entityType": "institution",
+      "entityId": "institution-eastern",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 61,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-eastern-physics-2026",
+      "entityType": "institution",
+      "entityId": "institution-eastern",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 80,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-physics-1900",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 4,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-physics-1950",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 17,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-physics-2000",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 50,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-physics-2026",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 75,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-laurentian-physics-1900",
+      "entityType": "institution",
+      "entityId": "institution-laurentian",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 15,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-laurentian-physics-1950",
+      "entityType": "institution",
+      "entityId": "institution-laurentian",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 32,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-laurentian-physics-2000",
+      "entityType": "institution",
+      "entityId": "institution-laurentian",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 53,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-laurentian-physics-2026",
+      "entityType": "institution",
+      "entityId": "institution-laurentian",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 72,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-southern-cross-physics-1900",
+      "entityType": "institution",
+      "entityId": "institution-southern-cross",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 16,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-southern-cross-physics-1950",
+      "entityType": "institution",
+      "entityId": "institution-southern-cross",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 29,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-southern-cross-physics-2000",
+      "entityType": "institution",
+      "entityId": "institution-southern-cross",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 49,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-southern-cross-physics-2026",
+      "entityType": "institution",
+      "entityId": "institution-southern-cross",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 68,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-physics-1900",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 13,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-physics-1950",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 29,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-physics-2000",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 52,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-physics-2026",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 70,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-physics-1900",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 12,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-physics-1950",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 27,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-physics-2000",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 47,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-physics-2026",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 63,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-physics-1900",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 11,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-physics-1950",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 24,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-physics-2000",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 42,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-physics-2026",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "scienceDomainId": "physics",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 56,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-hep-th-1900",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 2,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-hep-th-1950",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 14,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-hep-th-2000",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 42,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-hep-th-2026",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 67,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-gr-qc-1900",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 3,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-gr-qc-1950",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 16,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-gr-qc-2000",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 45,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-gr-qc-2026",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 70,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-quant-ph-1900",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 5,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-quant-ph-1950",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 20,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-quant-ph-2000",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 58,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-quant-ph-2026",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 82,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-cond-mat-1900",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 4,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-cond-mat-1950",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 18,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-cond-mat-2000",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 55,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-taipei-cond-mat-2026",
+      "entityType": "institution",
+      "entityId": "institution-taipei",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 79,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-hep-th-1900",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 12,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-hep-th-1950",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 33,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-hep-th-2000",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 65,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-hep-th-2026",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 88,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-gr-qc-1900",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 14,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-gr-qc-1950",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 35,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-gr-qc-2000",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 65,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-gr-qc-2026",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 84,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-quant-ph-1900",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 19,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-quant-ph-1950",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 42,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-quant-ph-2000",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 68,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-quant-ph-2026",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 96,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-cond-mat-1900",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 13,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-cond-mat-1950",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 35,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-cond-mat-2000",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 68,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-us-cond-mat-2026",
+      "entityType": "country",
+      "entityId": "country-us",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 92,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-hep-th-1900",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 15,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-hep-th-1950",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 33,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-hep-th-2000",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 52,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-hep-th-2026",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 76,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-gr-qc-1900",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 20,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-gr-qc-1950",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 33,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-gr-qc-2000",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 66,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-gr-qc-2026",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 91,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-quant-ph-1900",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 12,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-quant-ph-1950",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 31,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-quant-ph-2000",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 60,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-quant-ph-2026",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 78,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-cond-mat-1900",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 14,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-cond-mat-1950",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 31,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-cond-mat-2000",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 49,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-gb-cond-mat-2026",
+      "entityType": "country",
+      "entityId": "country-gb",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 71,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-hep-th-1900",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 14,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-hep-th-1950",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 37,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-hep-th-2000",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 71,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-hep-th-2026",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 95,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-gr-qc-1900",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 13,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-gr-qc-1950",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 30,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-gr-qc-2000",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 56,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-gr-qc-2026",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 70,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-quant-ph-1900",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 18,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-quant-ph-1950",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 29,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-quant-ph-2000",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 59,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-quant-ph-2026",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 83,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-cond-mat-1900",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 9,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-cond-mat-1950",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 25,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-cond-mat-2000",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 50,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ch-cond-mat-2026",
+      "entityType": "country",
+      "entityId": "country-ch",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 66,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-hep-th-1900",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 15,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-hep-th-1950",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 33,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-hep-th-2000",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 50,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-hep-th-2026",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 72,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-gr-qc-1900",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 10,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-gr-qc-1950",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 30,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-gr-qc-2000",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 58,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-gr-qc-2026",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 79,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-quant-ph-1900",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 15,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-quant-ph-1950",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 37,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-quant-ph-2000",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 69,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-quant-ph-2026",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 89,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-cond-mat-1900",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 19,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-cond-mat-1950",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 42,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-cond-mat-2000",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 67,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-de-cond-mat-2026",
+      "entityType": "country",
+      "entityId": "country-de",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 94,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-hep-th-1900",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 10,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-hep-th-1950",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 26,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-hep-th-2000",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 49,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-hep-th-2026",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 64,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-gr-qc-1900",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 14,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-gr-qc-1950",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 32,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-gr-qc-2000",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 50,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-gr-qc-2026",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 73,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-quant-ph-1900",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 20,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-quant-ph-1950",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 32,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-quant-ph-2000",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 63,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-quant-ph-2026",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 87,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-cond-mat-1900",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 14,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-cond-mat-1950",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 36,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-cond-mat-2000",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 69,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-jp-cond-mat-2026",
+      "entityType": "country",
+      "entityId": "country-jp",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 90,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-hep-th-1900",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 18,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-hep-th-1950",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 28,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-hep-th-2000",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 58,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-hep-th-2026",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 81,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-gr-qc-1900",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 9,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-gr-qc-1950",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 26,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-gr-qc-2000",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 51,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-gr-qc-2026",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 68,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-quant-ph-1900",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 17,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-quant-ph-1950",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 39,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-quant-ph-2000",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 73,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-quant-ph-2026",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 93,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-cond-mat-1900",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 19,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-cond-mat-1950",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 31,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-cond-mat-2000",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 63,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-cn-cond-mat-2026",
+      "entityType": "country",
+      "entityId": "country-cn",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 88,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-hep-th-1900",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 9,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-hep-th-1950",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 23,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-hep-th-2000",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 44,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-hep-th-2026",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 55,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-gr-qc-1900",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 17,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-gr-qc-1950",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 37,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-gr-qc-2000",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 58,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-gr-qc-2026",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 82,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-quant-ph-1900",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 10,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-quant-ph-1950",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 29,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-quant-ph-2000",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 57,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-quant-ph-2026",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 77,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-cond-mat-1900",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 10,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-cond-mat-1950",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 26,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-cond-mat-2000",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 50,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-ca-cond-mat-2026",
+      "entityType": "country",
+      "entityId": "country-ca",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 63,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-hep-th-1900",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 13,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-hep-th-1950",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 16,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-hep-th-2000",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 35,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-hep-th-2026",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 48,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-gr-qc-1900",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 7,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-gr-qc-1950",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 20,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-gr-qc-2000",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 40,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-gr-qc-2026",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 51,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-quant-ph-1900",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 13,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-quant-ph-1950",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 31,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-quant-ph-2000",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 47,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-quant-ph-2026",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 69,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-cond-mat-1900",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 19,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-cond-mat-1950",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 31,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-cond-mat-2000",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 62,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-country-au-cond-mat-2026",
+      "entityType": "country",
+      "entityId": "country-au",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 85,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-northstar-hep-th-1900",
+      "entityType": "institution",
+      "entityId": "institution-northstar",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 10,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-northstar-hep-th-1950",
+      "entityType": "institution",
+      "entityId": "institution-northstar",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 28,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-northstar-hep-th-2000",
+      "entityType": "institution",
+      "entityId": "institution-northstar",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 56,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-northstar-hep-th-2026",
+      "entityType": "institution",
+      "entityId": "institution-northstar",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 76,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-northstar-gr-qc-1900",
+      "entityType": "institution",
+      "entityId": "institution-northstar",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 14,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-northstar-gr-qc-1950",
+      "entityType": "institution",
+      "entityId": "institution-northstar",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 32,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-northstar-gr-qc-2000",
+      "entityType": "institution",
+      "entityId": "institution-northstar",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 58,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-northstar-gr-qc-2026",
+      "entityType": "institution",
+      "entityId": "institution-northstar",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 74,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-hep-th-1900",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 13,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-hep-th-1950",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 28,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-hep-th-2000",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 45,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-hep-th-2026",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 65,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-gr-qc-1900",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 19,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-gr-qc-1950",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 30,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-gr-qc-2000",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 59,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-gr-qc-2026",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 80,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-quant-ph-1900",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 14,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-quant-ph-1950",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 31,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-quant-ph-2000",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 56,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-calder-quant-ph-2026",
+      "entityType": "institution",
+      "entityId": "institution-calder",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 71,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-alpine-hep-th-1900",
+      "entityType": "institution",
+      "entityId": "institution-alpine",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 12,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-alpine-hep-th-1950",
+      "entityType": "institution",
+      "entityId": "institution-alpine",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 32,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-alpine-hep-th-2000",
+      "entityType": "institution",
+      "entityId": "institution-alpine",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 61,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-alpine-hep-th-2026",
+      "entityType": "institution",
+      "entityId": "institution-alpine",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 82,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-alpine-quant-ph-1900",
+      "entityType": "institution",
+      "entityId": "institution-alpine",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 19,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-alpine-quant-ph-1950",
+      "entityType": "institution",
+      "entityId": "institution-alpine",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 29,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-alpine-quant-ph-2000",
+      "entityType": "institution",
+      "entityId": "institution-alpine",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 55,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-alpine-quant-ph-2026",
+      "entityType": "institution",
+      "entityId": "institution-alpine",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 75,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-rhine-quant-ph-1900",
+      "entityType": "institution",
+      "entityId": "institution-rhine",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 17,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-rhine-quant-ph-1950",
+      "entityType": "institution",
+      "entityId": "institution-rhine",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 36,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-rhine-quant-ph-2000",
+      "entityType": "institution",
+      "entityId": "institution-rhine",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 63,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-rhine-quant-ph-2026",
+      "entityType": "institution",
+      "entityId": "institution-rhine",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 81,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-rhine-cond-mat-1900",
+      "entityType": "institution",
+      "entityId": "institution-rhine",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 16,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-rhine-cond-mat-1950",
+      "entityType": "institution",
+      "entityId": "institution-rhine",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 36,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-rhine-cond-mat-2000",
+      "entityType": "institution",
+      "entityId": "institution-rhine",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 58,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-rhine-cond-mat-2026",
+      "entityType": "institution",
+      "entityId": "institution-rhine",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 81,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-kansai-gr-qc-1900",
+      "entityType": "institution",
+      "entityId": "institution-kansai",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 14,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-kansai-gr-qc-1950",
+      "entityType": "institution",
+      "entityId": "institution-kansai",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 30,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-kansai-gr-qc-2000",
+      "entityType": "institution",
+      "entityId": "institution-kansai",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 45,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-kansai-gr-qc-2026",
+      "entityType": "institution",
+      "entityId": "institution-kansai",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 65,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-kansai-cond-mat-1900",
+      "entityType": "institution",
+      "entityId": "institution-kansai",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 12,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-kansai-cond-mat-1950",
+      "entityType": "institution",
+      "entityId": "institution-kansai",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 31,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-kansai-cond-mat-2000",
+      "entityType": "institution",
+      "entityId": "institution-kansai",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 59,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-kansai-cond-mat-2026",
+      "entityType": "institution",
+      "entityId": "institution-kansai",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 77,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-eastern-quant-ph-1900",
+      "entityType": "institution",
+      "entityId": "institution-eastern",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 19,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-eastern-quant-ph-1950",
+      "entityType": "institution",
+      "entityId": "institution-eastern",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 38,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-eastern-quant-ph-2000",
+      "entityType": "institution",
+      "entityId": "institution-eastern",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 67,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-eastern-quant-ph-2026",
+      "entityType": "institution",
+      "entityId": "institution-eastern",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 84,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-eastern-cond-mat-1900",
+      "entityType": "institution",
+      "entityId": "institution-eastern",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 16,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-eastern-cond-mat-1950",
+      "entityType": "institution",
+      "entityId": "institution-eastern",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 27,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-eastern-cond-mat-2000",
+      "entityType": "institution",
+      "entityId": "institution-eastern",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 54,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-eastern-cond-mat-2026",
+      "entityType": "institution",
+      "entityId": "institution-eastern",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 76,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-laurentian-gr-qc-1900",
+      "entityType": "institution",
+      "entityId": "institution-laurentian",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 17,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-laurentian-gr-qc-1950",
+      "entityType": "institution",
+      "entityId": "institution-laurentian",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 34,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-laurentian-gr-qc-2000",
+      "entityType": "institution",
+      "entityId": "institution-laurentian",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 52,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-laurentian-gr-qc-2026",
+      "entityType": "institution",
+      "entityId": "institution-laurentian",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 73,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-laurentian-quant-ph-1900",
+      "entityType": "institution",
+      "entityId": "institution-laurentian",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 13,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-laurentian-quant-ph-1950",
+      "entityType": "institution",
+      "entityId": "institution-laurentian",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 29,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-laurentian-quant-ph-2000",
+      "entityType": "institution",
+      "entityId": "institution-laurentian",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 53,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-laurentian-quant-ph-2026",
+      "entityType": "institution",
+      "entityId": "institution-laurentian",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 70,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-southern-cross-cond-mat-1900",
+      "entityType": "institution",
+      "entityId": "institution-southern-cross",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 16,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-southern-cross-cond-mat-1950",
+      "entityType": "institution",
+      "entityId": "institution-southern-cross",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 27,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-southern-cross-cond-mat-2000",
+      "entityType": "institution",
+      "entityId": "institution-southern-cross",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 53,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-southern-cross-cond-mat-2026",
+      "entityType": "institution",
+      "entityId": "institution-southern-cross",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 73,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-southern-cross-quant-ph-1900",
+      "entityType": "institution",
+      "entityId": "institution-southern-cross",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 15,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-southern-cross-quant-ph-1950",
+      "entityType": "institution",
+      "entityId": "institution-southern-cross",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 31,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-southern-cross-quant-ph-2000",
+      "entityType": "institution",
+      "entityId": "institution-southern-cross",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 44,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-southern-cross-quant-ph-2026",
+      "entityType": "institution",
+      "entityId": "institution-southern-cross",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 63,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-hep-th-1900",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 9,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-hep-th-1950",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 25,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-hep-th-2000",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 49,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-hep-th-2026",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 67,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-gr-qc-1900",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 13,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-gr-qc-1950",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 29,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-gr-qc-2000",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 51,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-gr-qc-2026",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 66,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-quant-ph-1900",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 18,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-quant-ph-1950",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 36,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-quant-ph-2000",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 56,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-quant-ph-2026",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 77,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-cond-mat-1900",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 10,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-cond-mat-1950",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 27,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-cond-mat-2000",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 52,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-mit-cond-mat-2026",
+      "entityType": "institution",
+      "entityId": "institution-mit",
+      "fieldId": "cond-mat",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 70,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-hep-th-1900",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 8,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-hep-th-1950",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 22,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-hep-th-2000",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 44,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-hep-th-2026",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 60,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-gr-qc-1900",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 12,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-gr-qc-1950",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 26,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-gr-qc-2000",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 46,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-gr-qc-2026",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 59,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-quant-ph-1900",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 17,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-quant-ph-1950",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 33,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-quant-ph-2000",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 50,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-caltech-quant-ph-2026",
+      "entityType": "institution",
+      "entityId": "institution-caltech",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 69,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-hep-th-1900",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 7,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-hep-th-1950",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 20,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-hep-th-2000",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 39,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-hep-th-2026",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "fieldId": "hep-th",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 53,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-gr-qc-1900",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 10,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-gr-qc-1950",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 23,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-gr-qc-2000",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 41,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-gr-qc-2026",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "fieldId": "gr-qc",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 52,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-quant-ph-1900",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1900",
+      "value": 15,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-quant-ph-1950",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "1950",
+      "value": 29,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-quant-ph-2000",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2000",
+      "value": 45,
+      "provenance": "synthetic-demo"
+    },
+    {
+      "id": "metric-institution-princeton-quant-ph-2026",
+      "entityType": "institution",
+      "entityId": "institution-princeton",
+      "fieldId": "quant-ph",
+      "metricId": "research_activity_score",
+      "period": "2026",
+      "value": 62,
+      "provenance": "synthetic-demo"
+    }
+  ],
+  "scienceDomains": [
+    {
+      "id": "physics",
+      "label": "Physics",
+      "description": "Explore the geographic and temporal structure of physics research.",
+      "fieldIds": [
+        "hep-th",
+        "gr-qc",
+        "quant-ph",
+        "cond-mat"
+      ]
+    }
   ]
 }

@@ -2,56 +2,78 @@
 
 ## Objective
 
-The first prototype demonstrates that a world-map exploration model can communicate the idea of a global physics research atlas to a professor and future contributors.
+Phase 2.2 extends the established geographic and temporal exploration model into a small research-community atlas. It connects where and when research activity appears with synthetic researchers, groups, papers, and historical context.
 
 The product path is:
 
 ```text
-World → Research field → Country → Institution → Researcher
+Science domain
+    → Optional research field
+    → Time
+    → World
+    → Country
+    → Institution
+    → Research group
+    → Researcher
 ```
 
-## Phase 1 scope
+Paper records remain a preparation layer rather than a separate destination.
 
-Phase 1 includes:
+## Phase 2.2 scope
 
-- Physics Atlas identity and alpha status;
-- interactive MapLibre world map;
-- four research-field selections;
-- local, schema-validated synthetic data;
-- `research_activity_score` color updates;
-- country selection and a basic information panel;
-- explicit demo-data and non-ranking notices;
-- responsive desktop and narrow-screen layouts;
-- repository documentation and automated quality checks.
+Phase 2.2 includes:
 
-## Phase 1 exclusions
+- a continuous violet, blue, cyan, green, yellow, orange, and red activity scale;
+- explicit Physics-domain and field-specific heatmap scopes;
+- the existing country and institution geographic exploration;
+- validated geographic-view membership for composite exploration canvases;
+- a persistent global reset at country and institution depth;
+- dedicated institution exploration with associated fields and synthetic activity history;
+- research-group selection derived from normalized affiliations;
+- researcher profiles with affiliation, fields, optional external links, paper connections, and event connections;
+- field overviews with an introduction, demo milestones, representative institutions, researchers, and papers;
+- normalized `ResearchGroup`, `Affiliation`, `Paper`, `Authorship`, and `HistoricalEvent` records;
+- explicit non-ranking and incomplete-demo language throughout entity views;
+- runtime relationship validation and focused automated tests.
 
-Phase 1 deliberately excludes:
+## Phase 2.2 exclusions
 
-- backend services;
-- databases and knowledge-graph infrastructure;
+Phase 2.2 deliberately excludes:
+
+- backend services or databases;
 - external scientific API integration;
-- data cleaning and entity matching;
-- final metric calculations;
-- custom weighting controls;
-- AI prediction or researcher recommendation;
-- paper and citation exploration;
+- real researcher, group, paper, or event datasets;
+- publication ingestion, citation graphs, and identity disambiguation;
+- full paper pages;
+- ranking, recommendation, evaluation, or admission prediction;
+- final metric calculations and custom weighting;
 - authentication and persistent user state.
 
 ## Acceptance criteria
 
 A user can:
 
-1. open the website and recognize Physics Atlas;
-2. see an interactive world map;
-3. select `hep-th`, `gr-qc`, `quant-ph`, or `cond-mat`;
-4. observe the map colors update from local demo observations;
-5. click a highlighted country;
-6. read its name, region, placeholder score, period, and demo entity counts;
-7. understand that all displayed values are synthetic and are not rankings.
+1. view overall Physics activity or select a field, then explore a year, country, and institution through the existing atlas path;
+2. understand that the heat scale runs continuously from low violet to high red;
+3. open a dedicated institution layer and see its associated fields and synthetic activity history;
+4. move through an institution's research groups to affiliated researchers;
+5. open a researcher profile and return clearly to the institution;
+6. view optional external links and representative paper connections without ranking language;
+7. open a field overview with synthetic milestones and connected entities;
+8. understand that every research entity and historical record is incomplete synthetic demo content.
+9. return from any map exploration depth to the minimum-zoom global atlas without leaving fullscreen.
 
 Engineering acceptance requires successful type checking, unit tests, linting, and a production build.
 
-## Next validated slice
+## Known prototype limitations
 
-After Phase 1 is reviewed, the smallest sensible extension is deeper local-data navigation from country to institution and researcher. External data acquisition should begin only as a narrow feasibility study—one field, one period, and one source—after the interaction model is accepted.
+- Historical metric values exist at four discrete years and are not scientifically reconstructed.
+- Research groups, researchers, papers, authorships, and events are a deliberately small synthetic graph.
+- Real institution names are location examples only; their surrounding entity records are fictional.
+- Paper records have no dedicated page, citation network, identifier resolution, or source provenance beyond `synthetic-demo`.
+- External links on synthetic profiles are interface examples rather than verified researcher metadata.
+- Entity exploration is in-memory and URL state is not persistent or shareable.
+- Geographic-view membership is a small manually maintained synthetic fixture, not a comprehensive boundary or location registry.
+- Physics-domain activity values are explicit demo observations, not computed aggregates of field activity.
+
+Phase 2.2 should be reviewed as an entity-navigation and normalization slice before any real metadata feasibility work begins.

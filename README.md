@@ -6,22 +6,31 @@ The project is a visualization and knowledge-exploration platform. It is not a s
 
 ## Alpha prototype
 
-Physics Atlas is currently an early alpha prototype. The first product slice demonstrates the interaction model:
+Physics Atlas is currently an early alpha prototype. Phase 2.2 extends the temporal geographic atlas into a normalized research-entity exploration system:
 
 ```text
-World map → Research field → Country → Institution → Researcher
+Science domain → Optional research field → Time → World → Country → Institution → Research group → Researcher
 ```
 
-Phase 1 currently provides:
+The current development state provides:
 
-- an interactive MapLibre world map;
+- a dark, interactive MapLibre scientific atlas with a full violet-to-red spectral activity scale;
+- an overall Physics domain heatmap and field-specific heatmaps, designed for later domain expansion;
 - field selection for `hep-th`, `gr-qc`, `quant-ph`, and `cond-mat`;
-- a synthetic `research_activity_score` visualization;
-- country selection with basic institution and researcher counts;
+- a historical timeline with synthetic observations for 1900, 1950, 2000, and 2026;
+- a synthetic country-level `research_activity_score` heatmap;
+- world-to-country camera transitions and activity-scaled institution nodes;
+- configurable geographic-view membership, keeping rendered geometry separate from institution and affiliation metadata;
+- a persistent control that clears entity selection and returns the map to its minimum global zoom;
+- dedicated institution exploration with historical activity, groups, researchers, and representative papers;
+- synthetic researcher profiles with affiliations, fields, paper connections, and optional external links;
+- field overviews with demo milestones and connected research entities;
+- normalized research-group, affiliation, paper, authorship, and historical-event records;
+- an immersive fullscreen mode;
 - typed, schema-validated local demo data;
 - an interface boundary that can later be backed by a real metric engine and API.
 
-All values shown in the prototype are synthetic demonstration data. They do not measure research output, impact, quality, influence, or institutional performance.
+All metric values, researchers, groups, papers, events, and relationship records shown in the prototype are synthetic demonstration data. Real institution names are used only as recognizable location examples. The prototype does not measure research output, impact, quality, influence, or institutional performance.
 
 ## Technology
 
@@ -32,7 +41,7 @@ All values shown in the prototype are synthetic demonstration data. They do not 
 - Zod
 - Vitest
 
-The alpha has no backend, database, external scientific API connection, AI prediction, custom metric weighting, or final metric engine.
+The alpha has no backend, database, external scientific API connection, real research dataset, AI prediction, custom metric weighting, or final metric engine.
 
 ## Local development
 
@@ -70,6 +79,7 @@ The frontend depends on an `AtlasRepository` interface rather than on a transpor
 
 - [Architecture](docs/architecture.md)
 - [Data model](docs/data-model.md)
+- [Geographic representation policy](docs/geography-policy.md)
 - [Metric model](docs/metric-model.md)
 - [Prototype plan](docs/prototype-plan.md)
 

@@ -8,7 +8,7 @@ Physics Atlas is a visualization and knowledge-exploration system. It is not a r
 
 ## Alpha architecture
 
-The Phase 1 prototype is a static client application:
+The Phase 2.2 prototype remains a static client application:
 
 ```text
 Synthetic JSON dataset
@@ -19,7 +19,7 @@ StaticAtlasRepository
         ↓
 React application
         ↓
-MapLibre world map and exploration panels
+MapLibre geographic layers, timeline, and entity exploration layers
 ```
 
 Technology choices:
@@ -31,7 +31,7 @@ Technology choices:
 - Zod for validating data at the application boundary;
 - Vitest for focused domain and repository tests.
 
-The prototype uses local geographic data from the `world-atlas` package. It does not require a map API key or remote tile service.
+The prototype uses local geographic data from the `world-atlas` package. It does not require a map API key or remote tile service. Historical activity observations and institution coordinates are part of the validated local fixture.
 
 ## Module boundaries
 
@@ -45,9 +45,37 @@ The prototype uses local geographic data from the `world-atlas` package. It does
 
 ### Presentation
 
-`src/components/atlas` contains the exploration interface. It receives typed domain values and does not calculate scientific metrics.
+`src/components/atlas` contains the exploration interface. `AtlasExplorer` coordinates the current path, `WorldMap` owns MapLibre lifecycle and geographic navigation, `GeographicGeometryLayer` joins packaged GeoJSON features to configured views, `GeographicEntityMapping` resolves geometry and location membership, and `InstitutionLayer` converts already-provided institution observations into points. Dedicated institution, researcher, and field layers resolve normalized entity relationships without embedding records inside UI state.
 
-The map only converts a provided normalized prototype value into a fixed visual color scale. It does not interpret scientific quality or create rankings.
+The map only converts a provided normalized prototype value into fixed color and point-size scales. It does not interpret scientific quality, derive historical values, or create rankings.
+
+Geographic geometry and scientific attribution are independent inputs. Map boundaries provide exploration context, while institution locations and future collaboration attribution follow institutional and affiliation metadata. The governing rules are documented in the [geographic representation policy](geography-policy.md).
+
+## Phase 2.2 interaction architecture
+
+```text
+ScienceDomain (Physics)
+        ├── domain observations ────────────────┐
+        └── optional ResearchField              │
+                    └── field observations ─────┤
+                                                ↓
+                                  MetricObservation.period
+                                                ↓
+country observations → world heatmap
+        ↓ country selection
+institution observations + location → institution points
+        ↓ institution selection
+InstitutionView
+        ↓ research-group affiliation
+ResearcherProfile
+
+ResearchField → HistoricalEvent + Institution + Researcher + Paper
+Paper ← Authorship → Researcher ← Affiliation → Institution / ResearchGroup
+
+GeographicView → source geometry membership + institution-location membership
+```
+
+Time is represented by the existing `MetricObservation.period` field. This avoids introducing a parallel historical metric type and keeps the repository query boundary compatible with the Phase 1 model.
 
 ## Future architecture
 
@@ -71,7 +99,7 @@ Frontend repository adapter
 Visualization interface
 ```
 
-Potential scientific sources include OpenAlex, arXiv, INSPIRE, and Crossref. None are connected in Phase 1.
+Potential scientific sources include OpenAlex, arXiv, INSPIRE, and Crossref. None are connected in Phase 2.2.
 
 The future API adapter should implement the same repository contract used by the static prototype. A graph database is a possible future storage component, not an alpha dependency. Its adoption should follow demonstrated graph-query requirements rather than precede them.
 
@@ -82,4 +110,7 @@ The future API adapter should implement the same repository contract used by the
 - Missing observations are distinct from zero-valued observations.
 - Demo data is always identified as synthetic.
 - Metric provenance and period travel with every observation.
-- Backend, persistence, authentication, and external ingestion remain out of Phase 1.
+- Geographic rendering does not determine exclusive ownership of scientific activity.
+- Domain and field observations are separate validated inputs; the frontend does not aggregate one into the other.
+- Global reset clears geographic/entity state and restores the minimum world camera without leaving fullscreen.
+- Backend, persistence, authentication, and external ingestion remain out of Phase 2.2.

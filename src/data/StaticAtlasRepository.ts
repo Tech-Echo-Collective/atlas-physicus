@@ -24,6 +24,8 @@ export class StaticAtlasRepository implements AtlasRepository {
     return this.dataset.metricObservations.filter(
       (observation) =>
         observation.entityType === query.entityType &&
+        (query.scienceDomainId === undefined ||
+          observation.scienceDomainId === query.scienceDomainId) &&
         observation.fieldId === query.fieldId &&
         observation.metricId === query.metricId &&
         observation.period === query.period,
