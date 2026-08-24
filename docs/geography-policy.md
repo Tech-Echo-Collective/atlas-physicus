@@ -51,4 +51,4 @@ Unconfigured source geometries fall back to direct ISO-numeric matching. Future 
 - Permit multiple institutional and geographic attributions when supported by affiliation records.
 - Describe rendered activity as scientific exploration data, never as political ownership or a scientific ranking.
 
-Phase 2.2 uses synthetic activity observations and a small local location fixture. Geographic-view records also have `synthetic-demo` provenance. Its normalized authorship and affiliation records demonstrate multi-institution relationships, but it does not yet ingest or aggregate real paper metadata.
+Phase 2.3 uses synthetic activity observations and a small local location fixture. Geographic-view records carry structured `synthetic-demo` provenance. Its normalized authorship and affiliation records demonstrate multi-institution relationships, but it does not yet ingest or aggregate real paper metadata.

@@ -1,14 +1,27 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { atlasRepository } from '../../data/StaticAtlasRepository';
-import type { AtlasDataset } from '../../domain/models';
+import { loadAtlasDataset } from '../../data/loadAtlasDataset';
+import type { AtlasDataset, AtlasSearchResult } from '../../domain/models';
 import { prototypeMetricId } from '../../domain/models';
+import {
+  buildAtlasUrl,
+  getExplorationCountryId,
+  resolveAtlasLocation,
+  type AtlasNavigationState,
+} from '../../navigation/AtlasNavigation';
+import { AtlasSearch } from './AtlasSearch';
 import { CountryPanel } from './CountryPanel';
+import { DataProvenancePanel } from './DataProvenancePanel';
 import { FieldOverview } from './FieldOverview';
 import { FieldSelector } from './FieldSelector';
 import { FullscreenControl } from './FullscreenControl';
 import { getInstitutionsForGeographicView } from './GeographicEntityMapping';
-import { GlobalViewControl } from './GlobalViewControl';
+import {
+  GuidedExploration,
+  type GuidedAction,
+} from './GuidedExploration';
 import { InstitutionView } from './InstitutionView';
+import { selectMajorInstitutionsForMap } from './InstitutionLayer';
 import { ResearcherProfile } from './ResearcherProfile';
 import { ScienceDomainSelector } from './ScienceDomainSelector';
 import { Timeline } from './Timeline';
@@ -36,14 +49,89 @@ export function AtlasExplorer() {
   const [isFieldOverviewOpen, setIsFieldOverviewOpen] = useState(false);
   const [globalResetToken, setGlobalResetToken] = useState(0);
 
+  const applyNavigationState = useCallback(
+    (navigation: AtlasNavigationState) => {
+      setSelectedDomainId(navigation.selectedDomainId);
+      setSelectedFieldId(navigation.selectedFieldId);
+      setSelectedYear(navigation.selectedYear);
+      setSelectedCountryId(navigation.selectedCountryId);
+      setSelectedInstitutionId(navigation.selectedInstitutionId);
+      setSelectedResearchGroupId(navigation.selectedResearchGroupId);
+      setSelectedResearcherId(navigation.selectedResearcherId);
+      setIsFieldOverviewOpen(navigation.isFieldOverviewOpen);
+    },
+    [],
+  );
+
+  const navigationState = useMemo<AtlasNavigationState>(
+    () => ({
+      selectedDomainId,
+      selectedFieldId,
+      selectedYear,
+      selectedCountryId,
+      selectedInstitutionId,
+      selectedResearchGroupId,
+      selectedResearcherId,
+      isFieldOverviewOpen,
+    }),
+    [
+      isFieldOverviewOpen,
+      selectedCountryId,
+      selectedDomainId,
+      selectedFieldId,
+      selectedInstitutionId,
+      selectedResearchGroupId,
+      selectedResearcherId,
+      selectedYear,
+    ],
+  );
+
+  const navigateTo = useCallback(
+    (navigation: AtlasNavigationState, replace = false) => {
+      applyNavigationState(navigation);
+      if (!dataset || typeof window === 'undefined') {
+        return;
+      }
+      const url = buildAtlasUrl(navigation, dataset);
+      if (url === `${window.location.pathname}${window.location.search}`) {
+        return;
+      }
+      window.history[replace ? 'replaceState' : 'pushState'](null, '', url);
+    },
+    [applyNavigationState, dataset],
+  );
+
+  const searchAtlas = useCallback(
+    (query: string) => atlasRepository.searchEntities(query),
+    [],
+  );
+
   useEffect(() => {
-    atlasRepository
-      .loadDataset()
+    loadAtlasDataset(atlasRepository)
       .then(setDataset)
       .catch(() =>
         setError('The local demonstration dataset could not be loaded.'),
       );
   }, []);
+
+  useEffect(() => {
+    if (!dataset || typeof window === 'undefined') {
+      return;
+    }
+
+    const restoreLocation = () => {
+      const navigation = resolveAtlasLocation(window.location, dataset);
+      applyNavigationState(navigation);
+      const canonicalUrl = buildAtlasUrl(navigation, dataset);
+      if (canonicalUrl !== `${window.location.pathname}${window.location.search}`) {
+        window.history.replaceState(null, '', canonicalUrl);
+      }
+    };
+
+    restoreLocation();
+    window.addEventListener('popstate', restoreLocation);
+    return () => window.removeEventListener('popstate', restoreLocation);
+  }, [applyNavigationState, dataset]);
 
   const availableYears = useMemo(() => {
     if (!dataset) {
@@ -141,20 +229,23 @@ export function AtlasExplorer() {
   const activeField = selectedFieldId
     ? visibleFields.find((field) => field.id === selectedFieldId) ?? null
     : null;
-  const institutionObservationIds = new Set(
-    institutionObservations.map((observation) => observation.entityId),
-  );
   const visibleInstitutions = selectedCountry
-    ? geographicInstitutions.filter(
-        (institution) =>
-          institution.location &&
-          institutionObservationIds.has(institution.id),
+    ? selectMajorInstitutionsForMap(
+        geographicInstitutions,
+        institutionObservations,
       )
     : [];
   const selectedInstitution =
-    visibleInstitutions.find(
+    geographicInstitutions.find(
       (institution) => institution.id === selectedInstitutionId,
     ) ?? null;
+  const mapInstitutions =
+    selectedInstitution &&
+    !visibleInstitutions.some(
+      (institution) => institution.id === selectedInstitution.id,
+    )
+      ? [...visibleInstitutions, selectedInstitution]
+      : visibleInstitutions;
   const selectedInstitutionGroups = selectedInstitution
     ? dataset.researchGroups.filter(
         (group) =>
@@ -213,34 +304,49 @@ export function AtlasExplorer() {
           ? 'country'
           : 'world';
 
-  const clearEntitySelection = () => {
-    setSelectedInstitutionId(null);
-    setSelectedResearchGroupId(null);
-    setSelectedResearcherId(null);
-  };
-
   const selectDomain = (domainId: string) => {
-    setSelectedDomainId(domainId);
-    setSelectedFieldId(null);
-    clearEntitySelection();
-    setIsFieldOverviewOpen(false);
+    navigateTo({
+      ...navigationState,
+      selectedDomainId: domainId,
+      selectedFieldId: null,
+      selectedCountryId: null,
+      selectedInstitutionId: null,
+      selectedResearchGroupId: null,
+      selectedResearcherId: null,
+      isFieldOverviewOpen: false,
+    });
   };
 
   const selectField = (fieldId: string) => {
-    setSelectedFieldId(fieldId);
-    clearEntitySelection();
-    setIsFieldOverviewOpen(false);
+    navigateTo({
+      ...navigationState,
+      selectedFieldId: fieldId,
+      selectedInstitutionId: null,
+      selectedResearchGroupId: null,
+      selectedResearcherId: null,
+      isFieldOverviewOpen: false,
+    });
   };
 
   const selectYear = (year: number) => {
-    setSelectedYear(year);
-    clearEntitySelection();
+    navigateTo({
+      ...navigationState,
+      selectedYear: year,
+      selectedInstitutionId: null,
+      selectedResearchGroupId: null,
+      selectedResearcherId: null,
+    });
   };
 
   const selectCountry = (countryId: string) => {
-    setSelectedCountryId(countryId);
-    clearEntitySelection();
-    setIsFieldOverviewOpen(false);
+    navigateTo({
+      ...navigationState,
+      selectedCountryId: countryId,
+      selectedInstitutionId: null,
+      selectedResearchGroupId: null,
+      selectedResearcherId: null,
+      isFieldOverviewOpen: false,
+    });
   };
 
   const selectInstitution = (institutionId: string) => {
@@ -249,38 +355,226 @@ export function AtlasExplorer() {
         group.institutionId === institutionId &&
         (!selectedFieldId || group.fieldIds.includes(selectedFieldId)),
     );
-    setSelectedInstitutionId(institutionId);
-    setSelectedResearchGroupId(firstGroup?.id ?? null);
-    setSelectedResearcherId(null);
+    navigateTo({
+      ...navigationState,
+      selectedInstitutionId: institutionId,
+      selectedResearchGroupId: firstGroup?.id ?? null,
+      selectedResearcherId: null,
+      isFieldOverviewOpen: false,
+    });
   };
 
   const selectResearchGroup = (groupId: string) => {
-    setSelectedResearchGroupId(groupId);
-    setSelectedResearcherId(null);
+    navigateTo({
+      ...navigationState,
+      selectedResearchGroupId: groupId,
+      selectedResearcherId: null,
+    });
+  };
+
+  const selectResearcher = (researcherId: string) => {
+    navigateTo({
+      ...navigationState,
+      selectedResearcherId: researcherId,
+    });
   };
 
   const returnToWorld = () => {
-    setSelectedCountryId(null);
-    clearEntitySelection();
-    setIsFieldOverviewOpen(false);
+    navigateTo({
+      ...navigationState,
+      selectedCountryId: null,
+      selectedInstitutionId: null,
+      selectedResearchGroupId: null,
+      selectedResearcherId: null,
+      isFieldOverviewOpen: false,
+    });
     setGlobalResetToken((token) => token + 1);
   };
 
   const returnToCountry = () => {
-    clearEntitySelection();
+    navigateTo({
+      ...navigationState,
+      selectedInstitutionId: null,
+      selectedResearchGroupId: null,
+      selectedResearcherId: null,
+    });
   };
 
   const returnToInstitution = () => {
-    setSelectedResearcherId(null);
+    navigateTo({
+      ...navigationState,
+      selectedResearcherId: null,
+    });
   };
 
   const openFieldOverview = () => {
     if (!activeField) {
       return;
     }
-    setSelectedCountryId(null);
-    clearEntitySelection();
-    setIsFieldOverviewOpen(true);
+    navigateTo({
+      ...navigationState,
+      selectedCountryId: null,
+      selectedInstitutionId: null,
+      selectedResearchGroupId: null,
+      selectedResearcherId: null,
+      isFieldOverviewOpen: true,
+    });
+  };
+
+  const selectSearchResult = (result: AtlasSearchResult) => {
+    if (result.entityType === 'science-domain') {
+      selectDomain(result.entityId);
+      return;
+    }
+
+    if (result.entityType === 'research-field') {
+      const domain = dataset.scienceDomains.find((candidate) =>
+        candidate.fieldIds.includes(result.entityId),
+      );
+      navigateTo({
+        ...navigationState,
+        selectedDomainId: domain?.id ?? selectedDomainId,
+        selectedFieldId: result.entityId,
+        selectedCountryId: null,
+        selectedInstitutionId: null,
+        selectedResearchGroupId: null,
+        selectedResearcherId: null,
+        isFieldOverviewOpen: false,
+      });
+      return;
+    }
+
+    if (result.entityType === 'country') {
+      selectCountry(getExplorationCountryId(result.entityId, dataset));
+      return;
+    }
+
+    if (result.entityType === 'institution') {
+      const institution = dataset.institutions.find(
+        (candidate) => candidate.id === result.entityId,
+      );
+      if (!institution) {
+        return;
+      }
+      const firstGroup = dataset.researchGroups.find(
+        (group) => group.institutionId === institution.id,
+      );
+      navigateTo({
+        ...navigationState,
+        selectedFieldId:
+          selectedFieldId && institution.fieldIds.includes(selectedFieldId)
+            ? selectedFieldId
+            : null,
+        selectedCountryId: getExplorationCountryId(
+          institution.countryId,
+          dataset,
+        ),
+        selectedInstitutionId: institution.id,
+        selectedResearchGroupId: firstGroup?.id ?? null,
+        selectedResearcherId: null,
+        isFieldOverviewOpen: false,
+      });
+      return;
+    }
+
+    const researcher = dataset.researchers.find(
+      (candidate) => candidate.id === result.entityId,
+    );
+    const affiliation = dataset.affiliations.find(
+      (candidate) => candidate.researcherId === researcher?.id,
+    );
+    const institution = dataset.institutions.find(
+      (candidate) => candidate.id === affiliation?.institutionId,
+    );
+    if (!researcher || !affiliation || !institution) {
+      return;
+    }
+    navigateTo({
+      ...navigationState,
+      selectedFieldId:
+        selectedFieldId && researcher.fieldIds.includes(selectedFieldId)
+          ? selectedFieldId
+          : null,
+      selectedCountryId: getExplorationCountryId(
+        institution.countryId,
+        dataset,
+      ),
+      selectedInstitutionId: institution.id,
+      selectedResearchGroupId: affiliation.researchGroupId ?? null,
+      selectedResearcherId: researcher.id,
+      isFieldOverviewOpen: false,
+    });
+  };
+
+  const runGuidedAction = (action: GuidedAction) => {
+    const guidedStates: Partial<Record<GuidedAction, AtlasNavigationState>> = {
+      physics: {
+        ...navigationState,
+        selectedDomainId: 'physics',
+        selectedFieldId: null,
+        selectedCountryId: null,
+        selectedInstitutionId: null,
+        selectedResearchGroupId: null,
+        selectedResearcherId: null,
+        isFieldOverviewOpen: false,
+      },
+      'hep-th': {
+        ...navigationState,
+        selectedDomainId: 'physics',
+        selectedFieldId: 'hep-th',
+        selectedCountryId: null,
+        selectedInstitutionId: null,
+        selectedResearchGroupId: null,
+        selectedResearcherId: null,
+        isFieldOverviewOpen: false,
+      },
+      year: { ...navigationState, selectedYear: 2026 },
+      country: {
+        ...navigationState,
+        selectedDomainId: 'physics',
+        selectedFieldId: 'hep-th',
+        selectedYear: 2026,
+        selectedCountryId: 'country-us',
+        selectedInstitutionId: null,
+        selectedResearchGroupId: null,
+        selectedResearcherId: null,
+        isFieldOverviewOpen: false,
+      },
+      institution: {
+        ...navigationState,
+        selectedDomainId: 'physics',
+        selectedFieldId: 'hep-th',
+        selectedYear: 2026,
+        selectedCountryId: 'country-us',
+        selectedInstitutionId: 'institution-mit',
+        selectedResearchGroupId: 'group-mit-fields',
+        selectedResearcherId: null,
+        isFieldOverviewOpen: false,
+      },
+      researcher: {
+        ...navigationState,
+        selectedDomainId: 'physics',
+        selectedFieldId: 'hep-th',
+        selectedYear: 2026,
+        selectedCountryId: 'country-us',
+        selectedInstitutionId: 'institution-mit',
+        selectedResearchGroupId: 'group-mit-fields',
+        selectedResearcherId: 'researcher-jonah-okafor',
+        isFieldOverviewOpen: false,
+      },
+    };
+
+    if (action === 'history') {
+      document
+        .querySelector('.researcher-profile .event-list')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    const navigation = guidedStates[action];
+    if (navigation) {
+      navigateTo(navigation);
+    }
   };
 
   return (
@@ -289,11 +583,12 @@ export function AtlasExplorer() {
         countries={dataset.countries}
         geographicViews={dataset.geographicViews}
         countryObservations={countryObservations}
-        institutions={visibleInstitutions}
+        institutions={mapInstitutions}
         institutionObservations={institutionObservations}
         selectedCountryId={selectedCountryId}
         selectedInstitutionId={selectedInstitutionId}
         globalResetToken={globalResetToken}
+        onGlobalReset={returnToWorld}
         onCountrySelect={selectCountry}
         onInstitutionSelect={selectInstitution}
       />
@@ -306,7 +601,7 @@ export function AtlasExplorer() {
           <p>Tech Echo Collective</p>
           <h1>Physics Atlas</h1>
         </div>
-        <span className="alpha-badge">Entity alpha</span>
+        <span className="alpha-badge">Foundation alpha</span>
       </header>
 
       <nav className="atlas-path" aria-label="Current atlas location">
@@ -365,10 +660,11 @@ export function AtlasExplorer() {
       </nav>
 
       <FullscreenControl targetRef={shellRef} />
-      <GlobalViewControl
-        isGlobalView={atlasView === 'world'}
-        onReturn={returnToWorld}
-      />
+      <div className="atlas-utility-controls" aria-label="Atlas tools">
+        <AtlasSearch onSearch={searchAtlas} onSelect={selectSearchResult} />
+        <GuidedExploration onNavigate={runGuidedAction} />
+        <DataProvenancePanel metadata={dataset.metadata} />
+      </div>
 
       {selectedCountry && !selectedInstitution && (
         <button
@@ -450,7 +746,7 @@ export function AtlasExplorer() {
           activityObservations={selectedInstitutionActivity}
           selectedGroupId={selectedResearchGroup?.id ?? null}
           onGroupSelect={selectResearchGroup}
-          onResearcherSelect={setSelectedResearcherId}
+          onResearcherSelect={selectResearcher}
           onBackToCountry={returnToCountry}
         />
       )}
@@ -478,13 +774,21 @@ export function AtlasExplorer() {
           papers={dataset.papers}
           authorships={dataset.authorships}
           historicalEvents={dataset.historicalEvents}
-          onClose={() => setIsFieldOverviewOpen(false)}
+          onClose={() =>
+            navigateTo({
+              ...navigationState,
+              isFieldOverviewOpen: false,
+            })
+          }
         />
       )}
 
       <section className="map-legend" aria-label="Map legend">
         <div className="legend-header">
-          <span>research_activity_score</span>
+          <span>
+            {selectedCountry ? 'institutions' : 'countries'} ·{' '}
+            research_activity_score
+          </span>
           <span>
             {selectedYear} · {activeField?.id ?? activeDomain?.label}
           </span>

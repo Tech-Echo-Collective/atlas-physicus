@@ -19,7 +19,7 @@ Groups research fields above the field level without changing their identifiers.
 | `description` | Short exploration description |
 | `fieldIds` | References to fields within the domain |
 
-Phase 2.2 contains only `Physics`. The array structure supports future domains, but no non-physics data is included.
+Phase 2.3 contains only `Physics`. The array structure supports future domains, but no non-physics data is included.
 
 ### ResearchField
 
@@ -83,7 +83,7 @@ Represents a research person independently from affiliation records.
 | `fieldIds` | References to research fields |
 | `externalLinks` | Optional validated homepage, personal site, arXiv, or GitHub references |
 
-The optional legacy `institutionId` remains schema-compatible with Phase 2.1 data, but Phase 2.2 fixtures use normalized `Affiliation` records instead.
+The optional legacy `institutionId` remains schema-compatible with Phase 2.1 data, but Phase 2.3 fixtures use normalized `Affiliation` records instead.
 
 ### ResearchGroup
 
@@ -116,7 +116,7 @@ Affiliations are separate records so future metadata can represent multiple inst
 
 ### Paper and Authorship
 
-`Paper` is a normalized preparation record with a title, summary, year, fields, and provenance. `Authorship` is a join record that connects one paper to one researcher and preserves author position.
+`Paper` is a normalized preparation record with a title, summary, year, fields, and provenance. Optional `doi`, `arxivId`, and generic `externalIdentifiers` prepare identifier matching without implementing paper pages, ingestion, citations, or recommendations. `Authorship` is a join record that connects one paper to one researcher and preserves author position.
 
 Papers do not embed researchers, institutions, or countries. Multi-institution collaboration is derived by traversing authorship and affiliation relationships.
 
@@ -134,6 +134,21 @@ Prepares field history and timeline connections.
 | `relatedInstitutionIds` | Institution references |
 | `provenance` | Origin classification |
 
+### DataProvenance
+
+Every validated entity, relationship, historical event, paper, and metric observation carries a structured provenance object.
+
+| Property | Meaning |
+| --- | --- |
+| `source` | Human-readable source name |
+| `sourceType` | Synthetic demo, external API, institutional source, or derived data |
+| `version` | Source or dataset version |
+| `status` | Synthetic, unverified, verified, or deprecated |
+| `confidence` | Optional normalized confidence from 0 to 1 |
+| `retrievedAt` | Optional retrieval timestamp |
+
+Phase 2.3 normalizes the fixture's `synthetic-demo` shorthand into an explicit object with version `v2.3-alpha`. This is source transparency, not a scientific-quality score.
+
 ### MetricObservation
 
 Stores a metric value separately from entity identity and presentation.
@@ -148,9 +163,9 @@ Stores a metric value separately from entity identity and presentation.
 | `metricId` | Metric identity |
 | `period` | Observation year in the alpha |
 | `value` | Provided metric value |
-| `provenance` | Origin classification |
+| `provenance` | Structured source metadata |
 
-Each observation must identify either a science domain or a research field. Phase 2.2 still accepts only `research_activity_score` with `synthetic-demo` provenance. The Physics-domain fixtures are explicit visualization inputs rather than values calculated by summing the four fields. Multiple observations may share an entity and scope while carrying different year values in `period`. This constraint prevents demo values from being mistaken for implemented scientific metrics.
+Each observation must identify either a science domain or a research field. Phase 2.3 still accepts only `research_activity_score` with structured `synthetic-demo` provenance. The Physics-domain fixtures are explicit visualization inputs rather than values calculated by summing the four fields. Multiple observations may share an entity and scope while carrying different year values in `period`. This constraint prevents demo values from being mistaken for implemented scientific metrics.
 
 ## Relationships
 
@@ -166,16 +181,18 @@ Paper ── belongs to ──> ResearchField
 HistoricalEvent ── connects ──> ResearchField / Researcher / Institution
 ```
 
-Phase 2.2 implements these relationships only as synthetic preparation records. Citation edges, researcher identity matching, affiliation disambiguation, and complete publication metadata remain deferred.
+Phase 2.3 implements these relationships only as synthetic preparation records. Citation edges, researcher identity matching, affiliation disambiguation, and complete publication metadata remain deferred.
 
 Country aggregation must be derived from affiliation relationships rather than by assigning a paper to one country. Geographic rendering remains separate from this attribution model, as defined by the [geographic representation policy](geography-policy.md).
 
 ## Validation
 
-Zod schemas verify structure, identifier format, science-domain field references, geographic-view references, institution locations, field references, group-to-institution references, affiliation relationships, authorships, event references, metric scope and period, and demo provenance when the repository loads the dataset.
+Zod schemas verify structure, identifier format, science-domain field references, geographic-view references, institution locations, field references, group-to-institution references, affiliation relationships, authorships, paper identifiers, event references, metric scope and period, and structured provenance when the repository loads the dataset.
 
 The dataset fails closed if required relationships are invalid. Presentation components only receive a validated `AtlasDataset`.
 
 ## Demo-data policy
 
-Country names are geographic references. Phase 2.2 also uses MIT, Caltech, and Princeton as recognizable institution-location examples. All researcher identities, group names, paper records, historical events, relationships, and activity values are synthetic. No displayed value or ordering is a measurement, ranking, or claim about any real organization or person.
+Country names are geographic references. Phase 2.3 also uses MIT, Caltech, and Princeton as recognizable institution-location examples. All researcher identities, group names, paper records, historical events, relationships, and activity values are synthetic. No displayed value or ordering is a measurement, ranking, or claim about any real organization or person.
+
+The institution fixture is a deliberately small, curated set of major map nodes for interaction testing. Inclusion is dataset presentation metadata, not a calculated threshold, ranking, or claim about institutional importance.

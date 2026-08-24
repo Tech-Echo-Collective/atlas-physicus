@@ -6,7 +6,7 @@ The project is a visualization and knowledge-exploration platform. It is not a s
 
 ## Alpha prototype
 
-Physics Atlas is currently an early alpha prototype. Phase 2.2 extends the temporal geographic atlas into a normalized research-entity exploration system:
+Physics Atlas is currently an early alpha prototype. Phase 2.3 strengthens the usability and data foundation of the normalized research-entity atlas:
 
 ```text
 Science domain → Optional research field → Time → World → Country → Institution → Research group → Researcher
@@ -15,17 +15,23 @@ Science domain → Optional research field → Time → World → Country → In
 The current development state provides:
 
 - a dark, interactive MapLibre scientific atlas with a full violet-to-red spectral activity scale;
+- scale-aware map layers: World View shows only country activity, while Country View replaces it with a neutral country canvas and institution activity nodes;
 - an overall Physics domain heatmap and field-specific heatmaps, designed for later domain expansion;
 - field selection for `hep-th`, `gr-qc`, `quant-ph`, and `cond-mat`;
 - a historical timeline with synthetic observations for 1900, 1950, 2000, and 2026;
 - a synthetic country-level `research_activity_score` heatmap;
 - world-to-country camera transitions and activity-scaled institution nodes;
 - configurable geographic-view membership, keeping rendered geometry separate from institution and affiliation metadata;
-- a persistent control that clears entity selection and returns the map to its minimum global zoom;
+- a compact map-native global reset above the zoom controls;
+- URL-addressable domain, field, country, institution, and researcher views with browser back/forward restoration;
+- lightweight search across existing atlas entities;
+- an optional seven-step guided exploration path for first-time visitors;
+- visible, structured data provenance with source, type, version, status, and optional confidence;
 - dedicated institution exploration with historical activity, groups, researchers, and representative papers;
 - synthetic researcher profiles with affiliations, fields, paper connections, and optional external links;
 - field overviews with demo milestones and connected research entities;
 - normalized research-group, affiliation, paper, authorship, and historical-event records;
+- paper identifier preparation for DOI, arXiv, and other external identifier schemes;
 - an immersive fullscreen mode;
 - typed, schema-validated local demo data;
 - an interface boundary that can later be backed by a real metric engine and API.
@@ -69,11 +75,12 @@ npm run build
 ```text
 src/components/atlas/   Map interface and exploration panels
 src/domain/             Domain types and runtime schemas
-src/data/               Repository adapter and synthetic dataset
+src/data/               Query-oriented repository adapter and synthetic dataset
+src/navigation/         URL parsing, canonical links, and hierarchy restoration
 docs/                   Approved architecture and prototype documentation
 ```
 
-The frontend depends on an `AtlasRepository` interface rather than on a transport mechanism. The current implementation reads local JSON; a future implementation can retrieve validated data from an API without coupling the map components to the backend.
+The frontend depends on query-oriented `AtlasRepository` methods rather than on a transport mechanism. The current `StaticAtlasRepository` reads local JSON; a future `APIRepository` can retrieve validated data without changing the exploration components.
 
 ## Documentation
 
@@ -85,4 +92,6 @@ The frontend depends on an `AtlasRepository` interface rather than on a transpor
 
 ## Open source
 
-Physics Atlas is released under the [MIT License](LICENSE). Contributions will be welcomed as the alpha architecture and data provenance process mature.
+Physics Atlas is released under the [Apache License 2.0](LICENSE). Copyright (c) 2026 Tech Echo Collective. Attribution information is preserved in [NOTICE](NOTICE).
+
+If Physics Atlas supports research or teaching work, use the repository's machine-readable [citation metadata](CITATION.cff). Contributions will be welcomed as the alpha architecture and data provenance process mature.

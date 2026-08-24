@@ -16,9 +16,15 @@ import {
 } from './GeographicGeometryLayer';
 import {
   buildInstitutionFeatureCollection,
+  getInstitutionPulseFrame,
   institutionColor,
+  institutionHeatmapColor,
+  institutionHeatmapWeight,
+  institutionPulseDurationMs,
   institutionRadius,
 } from './InstitutionLayer';
+import { GlobalViewControl } from './GlobalViewControl';
+import { getAtlasMapLayerHierarchy } from './MapLayerHierarchy';
 import { researchActivityColor } from './visualScale';
 
 interface WorldMapProps {
@@ -30,6 +36,7 @@ interface WorldMapProps {
   selectedCountryId: string | null;
   selectedInstitutionId: string | null;
   globalResetToken: number;
+  onGlobalReset: () => void;
   onCountrySelect: (countryId: string) => void;
   onInstitutionSelect: (institutionId: string) => void;
 }
@@ -83,11 +90,15 @@ export function WorldMap({
   selectedCountryId,
   selectedInstitutionId,
   globalResetToken,
+  onGlobalReset,
   onCountrySelect,
   onInstitutionSelect,
 }: WorldMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const pulseAnimationFrameRef = useRef<number | null>(null);
+  const institutionLayersVisibleRef = useRef(false);
+  const hoverPopupRef = useRef<maplibregl.Popup | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const onCountrySelectRef = useRef(onCountrySelect);
   const onInstitutionSelectRef = useRef(onInstitutionSelect);
@@ -165,11 +176,13 @@ export function WorldMap({
       attributionControl: false,
       renderWorldCopies: false,
     });
-
-    map.addControl(
-      new maplibregl.NavigationControl({ showCompass: false }),
-      'bottom-left',
-    );
+    const hoverPopup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 18,
+      className: 'institution-map-popup',
+    });
+    hoverPopupRef.current = hoverPopup;
 
     map.on('load', () => {
       map.addSource('countries', {
@@ -255,8 +268,8 @@ export function WorldMap({
         source: 'exploration-canvas',
         layout: { visibility: 'none' },
         paint: {
-          'fill-color': countryFillColor,
-          'fill-opacity': 0.24,
+          'fill-color': '#0b1b28',
+          'fill-opacity': 0.72,
         },
       });
       map.addLayer({
@@ -265,10 +278,10 @@ export function WorldMap({
         source: 'exploration-canvas',
         layout: { visibility: 'none' },
         paint: {
-          'line-color': '#ff9a54',
-          'line-width': 7,
+          'line-color': '#4c7b84',
+          'line-width': 5,
           'line-blur': 3,
-          'line-opacity': 0.5,
+          'line-opacity': 0.3,
         },
       });
       map.addLayer({
@@ -277,8 +290,8 @@ export function WorldMap({
         source: 'exploration-canvas',
         layout: { visibility: 'none' },
         paint: {
-          'line-color': '#ffc078',
-          'line-width': 2.6,
+          'line-color': '#8eb9c2',
+          'line-width': 2.2,
           'line-opacity': 1,
         },
       });
@@ -288,9 +301,78 @@ export function WorldMap({
         data: institutionGeoJsonRef.current,
       });
       map.addLayer({
+        id: 'institution-heatmap',
+        type: 'heatmap',
+        source: 'institutions',
+        layout: { visibility: 'none' },
+        paint: {
+          'heatmap-weight': institutionHeatmapWeight,
+          'heatmap-intensity': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            1,
+            0.85,
+            6,
+            1.25,
+          ],
+          'heatmap-radius': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            1,
+            28,
+            4,
+            46,
+            7,
+            64,
+          ],
+          'heatmap-color': institutionHeatmapColor,
+          'heatmap-opacity': 0.72,
+        },
+      });
+      const initialPulseFrame = getInstitutionPulseFrame(
+        institutionPulseDurationMs * 0.35,
+      );
+      map.addLayer({
+        id: 'institution-pulse-outer',
+        type: 'circle',
+        source: 'institutions',
+        layout: { visibility: 'none' },
+        paint: {
+          'circle-radius': [
+            '+',
+            institutionRadius,
+            initialPulseFrame.outerRadiusOffset,
+          ],
+          'circle-color': 'rgba(0, 0, 0, 0)',
+          'circle-stroke-color': institutionColor,
+          'circle-stroke-width': 1,
+          'circle-stroke-opacity': initialPulseFrame.opacity * 0.72,
+        },
+      });
+      map.addLayer({
+        id: 'institution-pulse-inner',
+        type: 'circle',
+        source: 'institutions',
+        layout: { visibility: 'none' },
+        paint: {
+          'circle-radius': [
+            '+',
+            institutionRadius,
+            initialPulseFrame.innerRadiusOffset,
+          ],
+          'circle-color': 'rgba(0, 0, 0, 0)',
+          'circle-stroke-color': institutionColor,
+          'circle-stroke-width': 1.2,
+          'circle-stroke-opacity': initialPulseFrame.opacity,
+        },
+      });
+      map.addLayer({
         id: 'institution-halo',
         type: 'circle',
         source: 'institutions',
+        layout: { visibility: 'none' },
         paint: {
           'circle-radius': [
             '+',
@@ -306,6 +388,7 @@ export function WorldMap({
         id: 'institution-points',
         type: 'circle',
         source: 'institutions',
+        layout: { visibility: 'none' },
         paint: {
           'circle-radius': institutionRadius,
           'circle-color': institutionColor,
@@ -318,6 +401,7 @@ export function WorldMap({
         id: 'institution-selection',
         type: 'circle',
         source: 'institutions',
+        layout: { visibility: 'none' },
         filter: ['==', ['get', 'institutionId'], ''],
         paint: {
           'circle-radius': [
@@ -331,6 +415,52 @@ export function WorldMap({
           'circle-blur': 0.2,
         },
       });
+
+      const prefersReducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+      ).matches;
+      if (!prefersReducedMotion) {
+        let lastPulseUpdateMs = 0;
+        const animateInstitutionPulses = (elapsedMs: number) => {
+          if (
+            institutionLayersVisibleRef.current &&
+            elapsedMs - lastPulseUpdateMs >= 32 &&
+            map.getLayer('institution-pulse-inner') &&
+            map.getLayer('institution-pulse-outer')
+          ) {
+            lastPulseUpdateMs = elapsedMs;
+            const pulseFrame = getInstitutionPulseFrame(elapsedMs);
+            map.setPaintProperty('institution-pulse-inner', 'circle-radius', [
+              '+',
+              institutionRadius,
+              pulseFrame.innerRadiusOffset,
+            ]);
+            map.setPaintProperty(
+              'institution-pulse-inner',
+              'circle-stroke-opacity',
+              pulseFrame.opacity,
+            );
+            map.setPaintProperty('institution-pulse-outer', 'circle-radius', [
+              '+',
+              institutionRadius,
+              pulseFrame.outerRadiusOffset,
+            ]);
+            map.setPaintProperty(
+              'institution-pulse-outer',
+              'circle-stroke-opacity',
+              pulseFrame.opacity * 0.72,
+            );
+          }
+
+          pulseAnimationFrameRef.current = window.requestAnimationFrame(
+            animateInstitutionPulses,
+          );
+        };
+
+        pulseAnimationFrameRef.current = window.requestAnimationFrame(
+          animateInstitutionPulses,
+        );
+      }
       setMapReady(true);
     });
 
@@ -341,11 +471,45 @@ export function WorldMap({
         onInstitutionSelectRef.current(institutionId);
       }
     });
-    map.on('mouseenter', 'institution-points', () => {
+    map.on('mousemove', 'institution-points', (event) => {
       map.getCanvas().style.cursor = 'pointer';
+      const properties = event.features?.[0]?.properties;
+      if (!properties) {
+        return;
+      }
+
+      const institutionId = String(properties.institutionId ?? '');
+      const activeInstitutionId = hoverPopup
+        .getElement()
+        ?.dataset.institutionId;
+      if (institutionId !== activeInstitutionId) {
+        const content = document.createElement('div');
+        content.className = 'institution-popup-content';
+
+        const name = document.createElement('strong');
+        name.textContent = String(properties.name ?? 'Institution');
+        const location = document.createElement('span');
+        location.textContent = String(
+          properties.city ?? 'Location unavailable',
+        );
+        const score = document.createElement('span');
+        score.textContent = `research_activity_score · ${String(properties.score ?? '—')}`;
+        const status = document.createElement('small');
+        status.textContent = 'Synthetic demo observation';
+
+        content.append(name, location, score, status);
+        hoverPopup.setDOMContent(content);
+      }
+
+      hoverPopup.setLngLat(event.lngLat);
+      if (!hoverPopup.isOpen()) {
+        hoverPopup.addTo(map);
+      }
+      hoverPopup.getElement().dataset.institutionId = institutionId;
     });
     map.on('mouseleave', 'institution-points', () => {
       map.getCanvas().style.cursor = '';
+      hoverPopup.remove();
     });
 
     map.on('click', 'countries-fill', (event) => {
@@ -372,6 +536,12 @@ export function WorldMap({
     mapRef.current = map;
 
     return () => {
+      if (pulseAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(pulseAnimationFrameRef.current);
+        pulseAnimationFrameRef.current = null;
+      }
+      hoverPopup.remove();
+      hoverPopupRef.current = null;
       map.remove();
       mapRef.current = null;
     };
@@ -379,7 +549,7 @@ export function WorldMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map?.isStyleLoaded()) {
+    if (!map) {
       return;
     }
 
@@ -390,7 +560,7 @@ export function WorldMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map?.isStyleLoaded()) {
+    if (!map) {
       return;
     }
 
@@ -401,7 +571,7 @@ export function WorldMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map?.isStyleLoaded()) {
+    if (!map) {
       return;
     }
 
@@ -416,27 +586,80 @@ export function WorldMap({
       return;
     }
 
-    const worldVisibility = selectedCountryId ? 'none' : 'visible';
-    const canvasVisibility = selectedCountryId ? 'visible' : 'none';
+    const layerHierarchy = getAtlasMapLayerHierarchy(
+      selectedCountryId,
+      selectedInstitutionId,
+    );
+    institutionLayersVisibleRef.current =
+      layerHierarchy.institutionHeatmap === 'visible';
+    if (!institutionLayersVisibleRef.current) {
+      hoverPopupRef.current?.remove();
+    }
 
-    map.setLayoutProperty('countries-fill', 'visibility', worldVisibility);
-    map.setLayoutProperty('countries-glow', 'visibility', worldVisibility);
-    map.setLayoutProperty('countries-outline', 'visibility', worldVisibility);
-    map.setLayoutProperty('country-selection', 'visibility', worldVisibility);
+    map.setLayoutProperty(
+      'countries-fill',
+      'visibility',
+      layerHierarchy.countryHeatmap,
+    );
+    map.setLayoutProperty(
+      'countries-glow',
+      'visibility',
+      layerHierarchy.countryHeatmap,
+    );
+    map.setLayoutProperty(
+      'countries-outline',
+      'visibility',
+      layerHierarchy.countryHeatmap,
+    );
+    map.setLayoutProperty(
+      'country-selection',
+      'visibility',
+      layerHierarchy.countryHeatmap,
+    );
     map.setLayoutProperty(
       'exploration-canvas-fill',
       'visibility',
-      canvasVisibility,
+      layerHierarchy.countryCanvas,
     );
     map.setLayoutProperty(
       'exploration-canvas-glow',
       'visibility',
-      canvasVisibility,
+      layerHierarchy.countryCanvas,
     );
     map.setLayoutProperty(
       'exploration-canvas-outline',
       'visibility',
-      canvasVisibility,
+      layerHierarchy.countryCanvas,
+    );
+    map.setLayoutProperty(
+      'institution-heatmap',
+      'visibility',
+      layerHierarchy.institutionHeatmap,
+    );
+    map.setLayoutProperty(
+      'institution-pulse-outer',
+      'visibility',
+      layerHierarchy.institutionHeatmap,
+    );
+    map.setLayoutProperty(
+      'institution-pulse-inner',
+      'visibility',
+      layerHierarchy.institutionHeatmap,
+    );
+    map.setLayoutProperty(
+      'institution-halo',
+      'visibility',
+      layerHierarchy.institutionHeatmap,
+    );
+    map.setLayoutProperty(
+      'institution-points',
+      'visibility',
+      layerHierarchy.institutionHeatmap,
+    );
+    map.setLayoutProperty(
+      'institution-selection',
+      'visibility',
+      layerHierarchy.institutionSelection,
     );
 
     if (!selectedCountryId) {
@@ -508,12 +731,45 @@ export function WorldMap({
     }
   }, [institutions, mapReady, selectedInstitutionId]);
 
+  const zoomMap = (direction: 1 | -1) => {
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+    map.zoomTo(map.getZoom() + direction, { duration: 280 });
+  };
+
   return (
-    <div
-      className="world-map"
-      ref={containerRef}
-      role="application"
-      aria-label="Temporal geographic atlas of synthetic physics research activity"
-    />
+    <>
+      <div
+        className="world-map"
+        ref={containerRef}
+        role="application"
+        aria-label="Temporal geographic atlas of synthetic physics research activity"
+      />
+      <nav className="map-navigation-controls" aria-label="Map navigation">
+        <GlobalViewControl
+          isGlobalView={!selectedCountryId && !selectedInstitutionId}
+          onReturn={onGlobalReset}
+        />
+        <span className="map-control-divider" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={() => zoomMap(1)}
+          aria-label="Zoom in"
+          title="Zoom in"
+        >
+          <span aria-hidden="true">+</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => zoomMap(-1)}
+          aria-label="Zoom out"
+          title="Zoom out"
+        >
+          <span aria-hidden="true">−</span>
+        </button>
+      </nav>
+    </>
   );
 }

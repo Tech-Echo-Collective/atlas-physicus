@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use Physics Atlas in research or teaching, please cite the software using this metadata."
+title: "Physics Atlas"
+type: software
+authors:
+  - name: "Tech Echo Collective"
+version: "v2.3-alpha"
+date-released: 2026-08-24
+repository-code: "https://github.com/Tech-Echo-Collective/Physics-Atlas"
+url: "https://github.com/Tech-Echo-Collective/Physics-Atlas"
+license: Apache-2.0
+abstract: >-
+  Physics Atlas is an open scientific infrastructure prototype for exploring
+  the geographic, temporal, and institutional structure of the global physics
+  research ecosystem.
+keywords:
+  - physics
+  - scientific infrastructure
+  - research ecosystem
+  - geographic visualization
+  - open science

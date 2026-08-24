@@ -68,7 +68,7 @@ export function CountryPanel({
 
       <div className="country-level-meta">
         <span>{selectedYear}</span>
-        <span>{institutions.length} visible institutions</span>
+        <span>{institutions.length} major institution nodes</span>
       </div>
 
       <div className="institution-list">

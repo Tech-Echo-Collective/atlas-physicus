@@ -16,8 +16,7 @@ export function GlobalViewControl({
       aria-label="Return to Global View and reset the map"
       title="Reset map to the global atlas"
     >
-      <span aria-hidden="true">◎</span>
-      Return to Global View
+      <span aria-hidden="true">◯</span>
     </button>
   );
 }

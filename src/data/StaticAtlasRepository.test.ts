@@ -1,4 +1,8 @@
 import { prototypeMetricId } from '../domain/models';
+import {
+  buildInstitutionFeatureCollection,
+  selectMajorInstitutionsForMap,
+} from '../components/atlas/InstitutionLayer';
 import { StaticAtlasRepository } from './StaticAtlasRepository';
 
 describe('StaticAtlasRepository', () => {
@@ -57,5 +61,79 @@ describe('StaticAtlasRepository', () => {
           observation.fieldId === undefined,
       ),
     ).toBe(true);
+  });
+
+  it('provides renderable institution activity when entering a country', async () => {
+    const repository = new StaticAtlasRepository();
+    const institutions = await repository.getInstitutions('country-au');
+    const observations = await repository.findMetricObservations({
+      entityType: 'institution',
+      scienceDomainId: 'physics',
+      metricId: prototypeMetricId,
+      period: '2026',
+    });
+    const visibleInstitutions = selectMajorInstitutionsForMap(
+      institutions,
+      observations,
+    );
+    const collection = buildInstitutionFeatureCollection(
+      visibleInstitutions,
+      observations,
+    );
+
+    expect(visibleInstitutions).toEqual([
+      expect.objectContaining({ id: 'institution-southern-cross' }),
+    ]);
+    expect(collection.features).toEqual([
+      expect.objectContaining({
+        geometry: {
+          type: 'Point',
+          coordinates: [144.9631, -37.8136],
+        },
+        properties: expect.objectContaining({ score: 68 }),
+      }),
+    ]);
+  });
+
+  it('exposes granular entity queries for a future API adapter', async () => {
+    const repository = new StaticAtlasRepository();
+
+    await expect(repository.getCountry('country-us')).resolves.toEqual(
+      expect.objectContaining({ name: 'United States' }),
+    );
+    await expect(
+      repository.getInstitutions('country-us'),
+    ).resolves.toHaveLength(4);
+    await expect(
+      repository.getResearchGroups('institution-mit'),
+    ).resolves.toHaveLength(2);
+    await expect(
+      repository.getResearchers('institution-mit'),
+    ).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'researcher-jonah-okafor' }),
+      ]),
+    );
+    await expect(
+      repository.getPapers('researcher-jonah-okafor'),
+    ).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'paper-boundary-symmetries' }),
+      ]),
+    );
+  });
+
+  it('searches only existing atlas entities and not paper content', async () => {
+    const repository = new StaticAtlasRepository();
+
+    await expect(repository.searchEntities('caltech')).resolves.toEqual([
+      expect.objectContaining({
+        entityId: 'institution-caltech',
+        entityType: 'institution',
+      }),
+    ]);
+    await expect(repository.searchEntities('boundary symmetries')).resolves.toEqual(
+      [],
+    );
   });
 });

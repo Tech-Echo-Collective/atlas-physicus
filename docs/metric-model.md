@@ -2,7 +2,7 @@
 
 ## Status
 
-The Physics Atlas metric model has been defined conceptually but is not implemented in the alpha prototype. Phase 2.2 does not substitute an improvised scientific scoring system.
+The Physics Atlas metric model has been defined conceptually but is not implemented in the alpha prototype. Phase 2.3 does not substitute an improvised scientific scoring system.
 
 The final heatmap model is:
 
@@ -50,7 +50,7 @@ Definitions, normalization methods, provenance rules, uncertainty treatment, and
 
 ## Alpha placeholder
 
-Phase 2.2 continues to expose exactly one placeholder metric:
+Phase 2.3 continues to expose exactly one placeholder metric:
 
 ```text
 research_activity_score
@@ -58,7 +58,9 @@ research_activity_score
 
 Its values are synthetic demo values on a fixed `0–100` display scale. They exist only to prove that selecting the Physics domain or a field and year updates country colors and institution points. Domain-level and field-level observations are separate hand-authored fixtures; the frontend does not calculate Physics activity by adding or averaging field values. Historical values are interface demonstrations, not reconstructed scientific history. The prototype neither derives these values from publications nor claims that they measure research quality, impact, capacity, or influence.
 
-The Phase 2.2 presentation maps supplied values through a continuous reversed spectral scale: violet, blue, cyan, green, yellow, orange, and red. Countries, institution nodes, and the institution activity history use the same low-to-high convention; node size also reflects the supplied value. This is a visualization standard, not a new metric, scientific threshold, or ranking method. Missing observations remain visually separate from a value of zero.
+The Phase 2.3 presentation maps supplied values through a continuous reversed spectral scale: violet, blue, cyan, green, yellow, orange, and red. Countries, institution nodes, and the institution activity history use the same low-to-high convention; node size also reflects the supplied value. This is a visualization standard, not a new metric, scientific threshold, or ranking method. Missing observations remain visually separate from a value of zero.
+
+The active metric layer changes with map scale. World View applies the scale only to countries. Country View removes that choropleth, uses a neutral geographic canvas, and applies the scale only to institution nodes. This presentation change does not recalculate or transfer observations.
 
 ## Replacement boundary
 

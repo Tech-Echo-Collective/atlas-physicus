@@ -2,7 +2,7 @@ import demoData from '../data/demo/atlas.json';
 import { atlasDatasetSchema } from './schemas';
 
 describe('atlasDatasetSchema', () => {
-  it('accepts the Phase 2.2 normalized synthetic entity dataset', () => {
+  it('accepts the Phase 2.3 normalized synthetic entity dataset', () => {
     const dataset = atlasDatasetSchema.parse(demoData);
 
     expect(dataset.metadata.datasetKind).toBe('synthetic-demo');
@@ -40,9 +40,37 @@ describe('atlasDatasetSchema', () => {
     expect(dataset.historicalEvents).toHaveLength(8);
     expect(
       dataset.metricObservations.every(
-        (observation) => observation.provenance === 'synthetic-demo',
+        (observation) =>
+          observation.provenance.sourceType === 'synthetic-demo' &&
+          observation.provenance.version === 'v2.3-alpha',
       ),
     ).toBe(true);
+    expect(dataset.metadata.provenance).toEqual(
+      expect.objectContaining({
+        sourceType: 'synthetic-demo',
+        version: 'v2.3-alpha',
+        status: 'synthetic',
+      }),
+    );
+    expect(dataset.institutions[0].provenance.sourceType).toBe(
+      'synthetic-demo',
+    );
+    expect(dataset.papers[0]).toEqual(
+      expect.objectContaining({
+        doi: '10.0000/physics-atlas.demo.001',
+        arxivId: '2601.00001',
+        externalIdentifiers: [
+          { scheme: 'demo-catalog', value: 'PA-PAPER-001' },
+        ],
+      }),
+    );
+  });
+
+  it('rejects invalid structured provenance confidence', () => {
+    const invalidDataset = structuredClone(demoData);
+    Object.assign(invalidDataset.metadata.provenance, { confidence: 1.5 });
+
+    expect(() => atlasDatasetSchema.parse(invalidDataset)).toThrow();
   });
 
   it('represents collaborative papers through multiple affiliated authors', () => {

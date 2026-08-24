@@ -1,10 +1,16 @@
 {
   "metadata": {
-    "schemaVersion": "0.4.0",
+    "schemaVersion": "0.5.0",
     "datasetKind": "synthetic-demo",
     "period": "2026",
     "generatedAt": "2026-08-24T00:00:00.000Z",
-    "disclaimer": "Synthetic demonstration and historical data for interface evaluation only. It does not represent measured research output, impact, ranking, institutional performance, or historical scientific accuracy."
+    "disclaimer": "Synthetic demonstration and historical data for interface evaluation only. It does not represent measured research output, impact, ranking, institutional performance, or historical scientific accuracy.",
+    "provenance": {
+      "source": "Physics Atlas synthetic demonstration dataset",
+      "sourceType": "synthetic-demo",
+      "version": "v2.3-alpha",
+      "status": "synthetic"
+    }
   },
   "scienceDomains": [
     {
@@ -698,6 +704,14 @@
         "hep-th",
         "gr-qc"
       ],
+      "doi": "10.0000/physics-atlas.demo.001",
+      "arxivId": "2601.00001",
+      "externalIdentifiers": [
+        {
+          "scheme": "demo-catalog",
+          "value": "PA-PAPER-001"
+        }
+      ],
       "provenance": "synthetic-demo"
     },
     {
@@ -707,6 +721,13 @@
       "year": 2023,
       "fieldIds": [
         "quant-ph"
+      ],
+      "arxivId": "2601.00002",
+      "externalIdentifiers": [
+        {
+          "scheme": "demo-catalog",
+          "value": "PA-PAPER-002"
+        }
       ],
       "provenance": "synthetic-demo"
     },

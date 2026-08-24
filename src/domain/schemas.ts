@@ -1,20 +1,52 @@
 import { z } from 'zod';
-import { prototypeMetricId } from './models';
+import { prototypeMetricId, type DataProvenance } from './models';
 
 const entityIdSchema = z.string().min(1).regex(/^[a-z0-9-]+$/);
 const fieldIdSchema = z.string().min(1).regex(/^[a-z0-9-]+$/);
+
+export const syntheticDemoProvenance: DataProvenance = {
+  source: 'Physics Atlas synthetic demonstration dataset',
+  sourceType: 'synthetic-demo',
+  version: 'v2.3-alpha',
+  status: 'synthetic',
+};
+
+export const provenanceSchema = z.object({
+  source: z.string().min(1),
+  sourceType: z.enum([
+    'synthetic-demo',
+    'external-api',
+    'institutional-source',
+    'derived',
+  ]),
+  version: z.string().min(1),
+  status: z.enum(['synthetic', 'unverified', 'verified', 'deprecated']),
+  confidence: z.number().min(0).max(1).optional(),
+  retrievedAt: z.string().datetime().optional(),
+});
+
+const recordProvenanceSchema = z
+  .union([provenanceSchema, z.literal('synthetic-demo')])
+  .transform((provenance) =>
+    provenance === 'synthetic-demo'
+      ? { ...syntheticDemoProvenance }
+      : provenance,
+  )
+  .default(syntheticDemoProvenance);
 
 export const scienceDomainSchema = z.object({
   id: entityIdSchema,
   label: z.string().min(1),
   description: z.string().min(1),
   fieldIds: z.array(fieldIdSchema).min(1),
+  provenance: recordProvenanceSchema,
 });
 
 export const researchFieldSchema = z.object({
   id: fieldIdSchema,
   label: z.string().min(1),
   description: z.string().min(1),
+  provenance: recordProvenanceSchema,
 });
 
 export const countrySchema = z.object({
@@ -23,6 +55,7 @@ export const countrySchema = z.object({
   isoNumeric: z.string().length(3).regex(/^\d{3}$/),
   name: z.string().min(1),
   region: z.string().min(1),
+  provenance: recordProvenanceSchema,
 });
 
 export const geographicViewSchema = z.object({
@@ -32,7 +65,7 @@ export const geographicViewSchema = z.object({
     .array(z.string().length(3).regex(/^\d{3}$/))
     .min(1),
   locationCountryIds: z.array(entityIdSchema).min(1),
-  provenance: z.literal('synthetic-demo'),
+  provenance: recordProvenanceSchema,
 });
 
 export const institutionSchema = z.object({
@@ -47,6 +80,7 @@ export const institutionSchema = z.object({
       latitude: z.number().min(-90).max(90),
     })
     .optional(),
+  provenance: recordProvenanceSchema,
 });
 
 export const researcherSchema = z.object({
@@ -62,6 +96,7 @@ export const researcherSchema = z.object({
       github: z.string().url().optional(),
     })
     .optional(),
+  provenance: recordProvenanceSchema,
 });
 
 export const researchGroupSchema = z.object({
@@ -70,6 +105,7 @@ export const researchGroupSchema = z.object({
   institutionId: entityIdSchema,
   description: z.string().min(1),
   fieldIds: z.array(fieldIdSchema).min(1),
+  provenance: recordProvenanceSchema,
 });
 
 export const affiliationSchema = z.object({
@@ -79,7 +115,7 @@ export const affiliationSchema = z.object({
   researchGroupId: entityIdSchema.optional(),
   startYear: z.number().int().min(1000).max(9999).optional(),
   endYear: z.number().int().min(1000).max(9999).optional(),
-  provenance: z.literal('synthetic-demo'),
+  provenance: recordProvenanceSchema,
 });
 
 export const paperSchema = z.object({
@@ -88,7 +124,21 @@ export const paperSchema = z.object({
   summary: z.string().min(1),
   year: z.number().int().min(1000).max(9999),
   fieldIds: z.array(fieldIdSchema).min(1),
-  provenance: z.literal('synthetic-demo'),
+  doi: z.string().regex(/^10\.\d{4,9}\/\S+$/).optional(),
+  arxivId: z
+    .string()
+    .regex(/^(?:arXiv:)?(?:\d{4}\.\d{4,5}|[a-z-]+\/\d{7})$/i)
+    .optional(),
+  externalIdentifiers: z
+    .array(
+      z.object({
+        scheme: z.string().min(1),
+        value: z.string().min(1),
+        url: z.string().url().optional(),
+      }),
+    )
+    .optional(),
+  provenance: recordProvenanceSchema,
 });
 
 export const authorshipSchema = z.object({
@@ -96,6 +146,7 @@ export const authorshipSchema = z.object({
   paperId: entityIdSchema,
   researcherId: entityIdSchema,
   authorPosition: z.number().int().positive(),
+  provenance: recordProvenanceSchema,
 });
 
 export const historicalEventSchema = z.object({
@@ -106,7 +157,7 @@ export const historicalEventSchema = z.object({
   fieldId: fieldIdSchema,
   relatedResearcherIds: z.array(entityIdSchema),
   relatedInstitutionIds: z.array(entityIdSchema),
-  provenance: z.literal('synthetic-demo'),
+  provenance: recordProvenanceSchema,
 });
 
 export const metricObservationSchema = z.object({
@@ -118,7 +169,7 @@ export const metricObservationSchema = z.object({
   metricId: z.literal(prototypeMetricId),
   period: z.string().regex(/^\d{4}$/),
   value: z.number().min(0).max(100),
-  provenance: z.literal('synthetic-demo'),
+  provenance: recordProvenanceSchema,
 });
 
 export const atlasDatasetSchema = z
@@ -129,6 +180,7 @@ export const atlasDatasetSchema = z
       period: z.string().regex(/^\d{4}$/),
       generatedAt: z.string().datetime(),
       disclaimer: z.string().min(1),
+      provenance: recordProvenanceSchema,
     }),
     scienceDomains: z.array(scienceDomainSchema).default([]),
     fields: z.array(researchFieldSchema).min(1),
