@@ -1,0 +1,99 @@
+{
+  "metadata": {
+    "schemaVersion": "0.1.0",
+    "datasetKind": "synthetic-demo",
+    "period": "2025",
+    "generatedAt": "2026-08-24T00:00:00.000Z",
+    "disclaimer": "Synthetic demonstration data for interface evaluation only. It does not represent measured research output, impact, ranking, or institutional performance."
+  },
+  "fields": [
+    {
+      "id": "hep-th",
+      "label": "High Energy Physics — Theory",
+      "description": "Formal and theoretical aspects of high-energy physics."
+    },
+    {
+      "id": "gr-qc",
+      "label": "General Relativity & Quantum Cosmology",
+      "description": "Gravitation, relativity, cosmology, and quantum gravity."
+    },
+    {
+      "id": "quant-ph",
+      "label": "Quantum Physics",
+      "description": "Quantum information, foundations, optics, and technologies."
+    },
+    {
+      "id": "cond-mat",
+      "label": "Condensed Matter",
+      "description": "Theoretical and experimental physics of matter and materials."
+    }
+  ],
+  "countries": [
+    { "id": "country-us", "isoAlpha3": "USA", "isoNumeric": "840", "name": "United States", "region": "North America" },
+    { "id": "country-gb", "isoAlpha3": "GBR", "isoNumeric": "826", "name": "United Kingdom", "region": "Europe" },
+    { "id": "country-ch", "isoAlpha3": "CHE", "isoNumeric": "756", "name": "Switzerland", "region": "Europe" },
+    { "id": "country-de", "isoAlpha3": "DEU", "isoNumeric": "276", "name": "Germany", "region": "Europe" },
+    { "id": "country-jp", "isoAlpha3": "JPN", "isoNumeric": "392", "name": "Japan", "region": "East Asia" },
+    { "id": "country-cn", "isoAlpha3": "CHN", "isoNumeric": "156", "name": "China", "region": "East Asia" },
+    { "id": "country-ca", "isoAlpha3": "CAN", "isoNumeric": "124", "name": "Canada", "region": "North America" },
+    { "id": "country-au", "isoAlpha3": "AUS", "isoNumeric": "036", "name": "Australia", "region": "Oceania" }
+  ],
+  "institutions": [
+    { "id": "institution-northstar", "name": "Northstar Institute for Fundamental Physics", "countryId": "country-us", "city": "Chicago", "fieldIds": ["hep-th", "gr-qc"] },
+    { "id": "institution-calder", "name": "Calder Research Institute", "countryId": "country-gb", "city": "Cambridge", "fieldIds": ["hep-th", "gr-qc", "quant-ph"] },
+    { "id": "institution-alpine", "name": "Alpine Center for Particle Theory", "countryId": "country-ch", "city": "Geneva", "fieldIds": ["hep-th", "quant-ph"] },
+    { "id": "institution-rhine", "name": "Rhine Institute for Quantum Matter", "countryId": "country-de", "city": "Cologne", "fieldIds": ["quant-ph", "cond-mat"] },
+    { "id": "institution-kansai", "name": "Kansai Center for Fundamental Physics", "countryId": "country-jp", "city": "Kyoto", "fieldIds": ["gr-qc", "cond-mat"] },
+    { "id": "institution-eastern", "name": "Eastern Institute for Quantum Studies", "countryId": "country-cn", "city": "Shanghai", "fieldIds": ["quant-ph", "cond-mat"] },
+    { "id": "institution-laurentian", "name": "Laurentian Physics Network", "countryId": "country-ca", "city": "Toronto", "fieldIds": ["gr-qc", "quant-ph"] },
+    { "id": "institution-southern-cross", "name": "Southern Cross Centre for Condensed Matter", "countryId": "country-au", "city": "Melbourne", "fieldIds": ["cond-mat", "quant-ph"] }
+  ],
+  "researchers": [
+    { "id": "researcher-maya-chen", "name": "Maya Chen", "institutionId": "institution-northstar", "fieldIds": ["hep-th"] },
+    { "id": "researcher-elias-ward", "name": "Elias Ward", "institutionId": "institution-northstar", "fieldIds": ["gr-qc"] },
+    { "id": "researcher-amina-rahman", "name": "Amina Rahman", "institutionId": "institution-calder", "fieldIds": ["hep-th", "gr-qc"] },
+    { "id": "researcher-luca-meier", "name": "Luca Meier", "institutionId": "institution-alpine", "fieldIds": ["hep-th"] },
+    { "id": "researcher-hanna-vogel", "name": "Hanna Vogel", "institutionId": "institution-rhine", "fieldIds": ["quant-ph", "cond-mat"] },
+    { "id": "researcher-ren-ito", "name": "Ren Ito", "institutionId": "institution-kansai", "fieldIds": ["gr-qc", "cond-mat"] },
+    { "id": "researcher-lin-qiao", "name": "Lin Qiao", "institutionId": "institution-eastern", "fieldIds": ["quant-ph"] },
+    { "id": "researcher-sofia-alvarez", "name": "Sofia Alvarez", "institutionId": "institution-laurentian", "fieldIds": ["gr-qc"] },
+    { "id": "researcher-noah-bennett", "name": "Noah Bennett", "institutionId": "institution-southern-cross", "fieldIds": ["cond-mat"] }
+  ],
+  "metricObservations": [
+    { "id": "metric-us-hep-th-2025", "entityType": "country", "entityId": "country-us", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 88, "provenance": "synthetic-demo" },
+    { "id": "metric-gb-hep-th-2025", "entityType": "country", "entityId": "country-gb", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 76, "provenance": "synthetic-demo" },
+    { "id": "metric-ch-hep-th-2025", "entityType": "country", "entityId": "country-ch", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 95, "provenance": "synthetic-demo" },
+    { "id": "metric-de-hep-th-2025", "entityType": "country", "entityId": "country-de", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 72, "provenance": "synthetic-demo" },
+    { "id": "metric-jp-hep-th-2025", "entityType": "country", "entityId": "country-jp", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 64, "provenance": "synthetic-demo" },
+    { "id": "metric-cn-hep-th-2025", "entityType": "country", "entityId": "country-cn", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 81, "provenance": "synthetic-demo" },
+    { "id": "metric-ca-hep-th-2025", "entityType": "country", "entityId": "country-ca", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 55, "provenance": "synthetic-demo" },
+    { "id": "metric-au-hep-th-2025", "entityType": "country", "entityId": "country-au", "fieldId": "hep-th", "metricId": "research_activity_score", "period": "2025", "value": 48, "provenance": "synthetic-demo" },
+
+    { "id": "metric-us-gr-qc-2025", "entityType": "country", "entityId": "country-us", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 84, "provenance": "synthetic-demo" },
+    { "id": "metric-gb-gr-qc-2025", "entityType": "country", "entityId": "country-gb", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 91, "provenance": "synthetic-demo" },
+    { "id": "metric-ch-gr-qc-2025", "entityType": "country", "entityId": "country-ch", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 70, "provenance": "synthetic-demo" },
+    { "id": "metric-de-gr-qc-2025", "entityType": "country", "entityId": "country-de", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 79, "provenance": "synthetic-demo" },
+    { "id": "metric-jp-gr-qc-2025", "entityType": "country", "entityId": "country-jp", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 73, "provenance": "synthetic-demo" },
+    { "id": "metric-cn-gr-qc-2025", "entityType": "country", "entityId": "country-cn", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 68, "provenance": "synthetic-demo" },
+    { "id": "metric-ca-gr-qc-2025", "entityType": "country", "entityId": "country-ca", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 82, "provenance": "synthetic-demo" },
+    { "id": "metric-au-gr-qc-2025", "entityType": "country", "entityId": "country-au", "fieldId": "gr-qc", "metricId": "research_activity_score", "period": "2025", "value": 51, "provenance": "synthetic-demo" },
+
+    { "id": "metric-us-quant-ph-2025", "entityType": "country", "entityId": "country-us", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 96, "provenance": "synthetic-demo" },
+    { "id": "metric-gb-quant-ph-2025", "entityType": "country", "entityId": "country-gb", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 78, "provenance": "synthetic-demo" },
+    { "id": "metric-ch-quant-ph-2025", "entityType": "country", "entityId": "country-ch", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 83, "provenance": "synthetic-demo" },
+    { "id": "metric-de-quant-ph-2025", "entityType": "country", "entityId": "country-de", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 89, "provenance": "synthetic-demo" },
+    { "id": "metric-jp-quant-ph-2025", "entityType": "country", "entityId": "country-jp", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 87, "provenance": "synthetic-demo" },
+    { "id": "metric-cn-quant-ph-2025", "entityType": "country", "entityId": "country-cn", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 93, "provenance": "synthetic-demo" },
+    { "id": "metric-ca-quant-ph-2025", "entityType": "country", "entityId": "country-ca", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 77, "provenance": "synthetic-demo" },
+    { "id": "metric-au-quant-ph-2025", "entityType": "country", "entityId": "country-au", "fieldId": "quant-ph", "metricId": "research_activity_score", "period": "2025", "value": 69, "provenance": "synthetic-demo" },
+
+    { "id": "metric-us-cond-mat-2025", "entityType": "country", "entityId": "country-us", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 92, "provenance": "synthetic-demo" },
+    { "id": "metric-gb-cond-mat-2025", "entityType": "country", "entityId": "country-gb", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 71, "provenance": "synthetic-demo" },
+    { "id": "metric-ch-cond-mat-2025", "entityType": "country", "entityId": "country-ch", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 66, "provenance": "synthetic-demo" },
+    { "id": "metric-de-cond-mat-2025", "entityType": "country", "entityId": "country-de", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 94, "provenance": "synthetic-demo" },
+    { "id": "metric-jp-cond-mat-2025", "entityType": "country", "entityId": "country-jp", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 90, "provenance": "synthetic-demo" },
+    { "id": "metric-cn-cond-mat-2025", "entityType": "country", "entityId": "country-cn", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 88, "provenance": "synthetic-demo" },
+    { "id": "metric-ca-cond-mat-2025", "entityType": "country", "entityId": "country-ca", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 63, "provenance": "synthetic-demo" },
+    { "id": "metric-au-cond-mat-2025", "entityType": "country", "entityId": "country-au", "fieldId": "cond-mat", "metricId": "research_activity_score", "period": "2025", "value": 85, "provenance": "synthetic-demo" }
+  ]
+}
