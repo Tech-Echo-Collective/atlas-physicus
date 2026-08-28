@@ -2,7 +2,7 @@
 
 ## Design goals
 
-The model supports the alpha interaction while keeping source evidence, canonical identity, temporal relationships, profiles, and metrics separate enough for later PostgreSQL and API implementations.
+The model supports the alpha interaction while keeping source evidence, canonical identity, temporal relationships, profiles, and metrics separate across validated frontend contracts and the v3.0.4 PostgreSQL/FastAPI implementation.
 
 The JSON dataset is normalized: countries do not embed duplicated institution or researcher records. Relationships use stable identifiers.
 
@@ -19,7 +19,7 @@ Groups research fields above the field level without changing their identifiers.
 | `description` | Short exploration description |
 | `fieldIds` | References to fields within the domain |
 
-v3.0.3-alpha contains only `Physics`. The array structure supports future domains, but no non-physics data is included.
+v3.0.4-alpha contains only `Physics`. The array structure supports future domains, but no non-physics data is included. The live reference bootstrap expands the Physics field vocabulary without adding non-physics observations.
 
 ### ResearchField
 
@@ -150,12 +150,12 @@ Represents an authority-issued identifier as a scheme/value pair. Examples inclu
 
 ### RawEntityRecord
 
-Preserves an immutable institution or researcher identity input before resolution.
+Preserves an immutable institution, researcher, or paper source input before resolution/canonicalization.
 
 | Property | Meaning |
 | --- | --- |
 | `id` | Stable raw-record identifier |
-| `entityType` | Institution or researcher |
+| `entityType` | Institution, researcher, or paper |
 | `sourceRecordId` | Identifier in the source system |
 | `sourceSnapshotId` | Optional reference to the captured source snapshot |
 | `rawName` | Unchanged source-facing name |
@@ -196,13 +196,15 @@ Associates a canonical institution, research group, researcher, or paper with a 
 | `lastVerifiedAt` | Optional verification timestamp |
 | `provenance` | Source/version record |
 
+The persistent API model additionally records `source`, `sourceRecordId`, `verified`, `verificationMethod`, `lastCheckedAt`, `httpStatus`, `redirectTarget`, `createdAt`, and `updatedAt`. `ResourceCheck` history retains individual reachability, redirect, timeout, and failure outcomes without deleting the resource or rewriting its original provenance.
+
 URLs are deliberately outside canonical entity records so they can be versioned, deprecated, deduplicated, or verified independently.
 
 ### SourceSnapshot and DatasetUpdate
 
 `SourceSnapshot` describes an immutable full or incremental source capture: source, version, capture time, record count, optional parent snapshot, checksum, storage reference, and provenance. `DatasetUpdate` describes a full, incremental, or reprocessing build with source snapshot IDs, previous/new dataset versions, resolver and metric versions, change counts, application time, and provenance.
 
-Dataset metadata can identify its latest update time, source snapshots, and update sequence. These records establish lineage and non-destructive reprocessing; they do not implement a scheduler or database.
+Dataset metadata can identify its latest update time, source snapshots, and update sequence. PostgreSQL persists these records with `SourceCursor` and `UpdateRun`; the worker applies bounded schedules and resumable checkpoints without changing the frontend lineage contract.
 
 ### DataProvenance
 
@@ -217,7 +219,7 @@ Every validated entity, relationship, historical event, paper, and metric observ
 | `confidence` | Optional normalized confidence from 0 to 1 |
 | `retrievedAt` | Optional retrieval timestamp |
 
-v3.0.3-alpha normalizes the fixture's `synthetic-demo` shorthand into an explicit object and preserves separate external-API or derived provenance on pilot records. Pilot provenance includes the INSPIRE snapshot version and retrieval time; identity, affiliation, and search confidence describe different technical decisions and are never scientific-quality scores.
+v3.0.4-alpha normalizes the static fixture's `synthetic-demo` shorthand into an explicit object and preserves separate external-API or derived provenance on pilot records. Deterministic backend connector fixtures are also explicitly labeled synthetic/demo across snapshots, raw records, canonical entities, and dataset metadata. Pilot provenance includes the INSPIRE snapshot version and retrieval time; identity, affiliation, and search confidence describe different technical decisions and are never scientific-quality scores.
 
 ### MetricDefinition
 
@@ -260,9 +262,9 @@ Each observation must identify either a science domain or a research field and r
 
 The synthetic source registers five visualization definitions: Research Activity, Research Impact, Collaboration / Connectivity, Research Diversity, and Research Momentum / Sustainability. The INSPIRE-HEP pilot calculates only Research Activity, Research Impact, Collaboration / Connectivity, and Research Momentum / Sustainability; its Diversity, Talent Ecosystem, and Concentration / Vulnerability definitions remain taxonomy-only. Multiple observations may share an entity and scope while carrying different metric IDs and periods. Neither the synthetic transformations nor the bounded pilot values are validated scientific measurements.
 
-## Pilot canonical records
+## Preserved pilot canonical records
 
-The v3.0.3-alpha pilot maps the preserved 81-record INSPIRE-HEP snapshot through normalization and the canonical identity layer. INSPIRE control numbers identify papers; authority references and external identifiers supply the strongest researcher and institution evidence. Institution address country codes map to ISO country records. `Authorship` and temporal `Affiliation` joins retain participation relationships without embedding authors or institutions inside papers.
+The preserved v3.0.3 pilot maps the 81-record INSPIRE-HEP snapshot through normalization and the canonical identity layer. INSPIRE control numbers identify papers; authority references and external identifiers supply the strongest researcher and institution evidence. Institution address country codes map to ISO country records. `Authorship` and temporal `Affiliation` joins retain participation relationships without embedding authors or institutions inside papers.
 
 The resulting snapshot contains 35 countries, 143 institutions, 178 unique researchers, 187 authorships, and 234 resolved source affiliation mentions. Of the 143 institutions, 126 have coordinates and 17 remain attribution entities that cannot render as map nodes. Every normalized pilot record retains external or derived provenance. These counts describe only the three-record-per-year engineering sample documented in the [pilot study](pilot-study.md).
 
@@ -300,7 +302,7 @@ Country aggregation must be derived from affiliation relationships rather than b
 
 Institution and group paper aggregation checks that an affiliation includes the paper year. These projections are convenient query results, not new sources of truth. See [profile system](profile-system.md).
 
-`ScientificAtlasRepository` extends the existing `AtlasRepository` with queries for raw records, resolution results, external resources, source snapshots, dataset updates, the graph projection, and all three profile read models. `StaticAtlasRepository` provides the in-memory implementation. `AtlasApiTransport` and `CanonicalEntityPersistence` are interface-only preparation for future service and storage adapters.
+`ScientificAtlasRepository` extends the existing `AtlasRepository` with queries for raw records, resolution results, external resources, source snapshots, dataset updates, the graph projection, and all three profile read models. `StaticAtlasRepository` provides the in-memory implementation, while `APIRepository` validates FastAPI responses and loads map/profile data lazily from PostgreSQL-backed read models.
 
 ## Validation
 

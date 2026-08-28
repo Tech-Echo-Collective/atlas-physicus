@@ -1,11 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { atlasRepository } from '../../data/StaticAtlasRepository';
-import { loadAtlasDataset } from '../../data/loadAtlasDataset';
 import {
+  APIRepository,
+  normalizeAtlasApiBaseUrl,
+} from '../../data/APIRepository';
+import { loadAtlasDataset } from '../../data/loadAtlasDataset';
+import { getDatasetPresentation } from '../../data/DatasetPresentation';
+import {
+  AtlasDataSourceRequestGate,
+  assessDataSourceObservations,
   buildDataSourceAwareAtlasUrl,
+  getInitialSourceFallback,
+  mergeMetricObservationsById,
+  neutralLiveMapNotice,
+  reconcileNavigationForDataSource,
   resolveAtlasDataSource,
+  resolveMetricForDataSource,
   type AtlasDataSourceId,
 } from '../../data/AtlasDataSources';
+import {
+  hydrateLiveNavigationDataset,
+  shouldBootstrapLiveWorldMap,
+} from '../../data/LiveNavigationHydration';
 import type {
   AtlasDataset,
   AtlasRepository,
@@ -45,8 +61,23 @@ import { ScienceDomainSelector } from './ScienceDomainSelector';
 import { Timeline } from './Timeline';
 import { WorldMap } from './WorldMap';
 
+function mergeById<T extends { id: string }>(current: T[], incoming: T[]): T[] {
+  const merged = new Map(current.map((item) => [item.id, item]));
+  incoming.forEach((item) => merged.set(item.id, item));
+  return [...merged.values()];
+}
+
+const liveTimelineStartYear = 1900;
+
 export function AtlasExplorer() {
+  const atlasApiUrl = normalizeAtlasApiBaseUrl(
+    import.meta.env.VITE_ATLAS_API_URL,
+  );
+  const liveApiAvailable = atlasApiUrl !== null;
   const shellRef = useRef<HTMLElement>(null);
+  const sourceRequestGateRef = useRef(new AtlasDataSourceRequestGate());
+  const restoreNavigationFromUrlRef = useRef(false);
+  const preserveNextSourceNoticeRef = useRef(false);
   const [dataset, setDataset] = useState<AtlasDataset | null>(null);
   const [repository, setRepository] =
     useState<AtlasRepository>(atlasRepository);
@@ -54,9 +85,26 @@ export function AtlasExplorer() {
     useState<AtlasDataSourceId>(() =>
       typeof window === 'undefined'
         ? 'synthetic-framework'
-        : resolveAtlasDataSource(window.location.search),
+        : resolveAtlasDataSource(
+            window.location.search,
+            liveApiAvailable,
+          ),
     );
-  const [error, setError] = useState<string | null>(null);
+  const [requestedDataSourceId, setRequestedDataSourceId] =
+    useState<AtlasDataSourceId>(selectedDataSourceId);
+  const [isDataSourceLoading, setIsDataSourceLoading] = useState(true);
+  const [sourceError, setSourceError] = useState<string | null>(null);
+  const [sourceNotice, setSourceNotice] = useState<string | null>(null);
+  const [settledLiveWorldRequestKey, setSettledLiveWorldRequestKey] = useState<
+    string | null
+  >(null);
+  const [settledLiveScopeRequestKey, setSettledLiveScopeRequestKey] = useState<
+    string | null
+  >(null);
+  const [settledLiveInstitutionRequestKey, setSettledLiveInstitutionRequestKey] =
+    useState<string | null>(null);
+  const [settledLiveResearcherRequestKey, setSettledLiveResearcherRequestKey] =
+    useState<string | null>(null);
   const [selectedDomainId, setSelectedDomainId] = useState('physics');
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState(2026);
@@ -118,15 +166,39 @@ export function AtlasExplorer() {
       selectedYear,
     ],
   );
+  const navigationStateRef = useRef(navigationState);
+  const datasetRef = useRef(dataset);
+  const selectedMetricIdRef = useRef(selectedMetricId);
+  const selectedDataSourceIdRef = useRef(selectedDataSourceId);
+
+  useEffect(() => {
+    navigationStateRef.current = navigationState;
+  }, [navigationState]);
+
+  useEffect(() => {
+    datasetRef.current = dataset;
+  }, [dataset]);
+
+  useEffect(() => {
+    selectedMetricIdRef.current = selectedMetricId;
+  }, [selectedMetricId]);
+
+  useEffect(() => {
+    selectedDataSourceIdRef.current = selectedDataSourceId;
+  }, [selectedDataSourceId]);
 
   const navigateTo = useCallback(
-    (navigation: AtlasNavigationState, replace = false) => {
+    (
+      navigation: AtlasNavigationState,
+      replace = false,
+      targetDataset: AtlasDataset | null = dataset,
+    ) => {
       applyNavigationState(navigation);
-      if (!dataset || typeof window === 'undefined') {
+      if (!targetDataset || typeof window === 'undefined') {
         return;
       }
       const url = buildDataSourceAwareAtlasUrl(
-        buildAtlasUrl(navigation, dataset),
+        buildAtlasUrl(navigation, targetDataset),
         selectedDataSourceId,
       );
       if (url === `${window.location.pathname}${window.location.search}`) {
@@ -143,38 +215,183 @@ export function AtlasExplorer() {
   );
 
   useEffect(() => {
-    let isActive = true;
+    if (
+      datasetRef.current &&
+      requestedDataSourceId === selectedDataSourceIdRef.current
+    ) {
+      setIsDataSourceLoading(false);
+      return;
+    }
 
-    const repositoryPromise =
-      selectedDataSourceId === 'inspire-hep-pilot'
-        ? import('../../data/PilotAtlasRepository').then(
-            ({ pilotAtlasRepository }) => pilotAtlasRepository,
-          )
-        : Promise.resolve(atlasRepository);
+    const requestId = sourceRequestGateRef.current.begin();
+    let nextRepository: AtlasRepository | null = null;
+    setIsDataSourceLoading(true);
+    setSourceError(null);
+
+    const repositoryPromise: Promise<AtlasRepository> = (() => {
+      if (requestedDataSourceId === 'inspire-hep-pilot') {
+        return import('../../data/PilotAtlasRepository').then(
+          ({ pilotAtlasRepository }) => pilotAtlasRepository,
+        );
+      }
+      if (requestedDataSourceId === 'live-api') {
+        if (!atlasApiUrl) {
+          return Promise.reject(
+            new Error('No Atlas API URL is configured for this deployment.'),
+          );
+        }
+        return Promise.resolve(
+          new APIRepository({
+            baseUrl: atlasApiUrl,
+            bootstrapWorldMap:
+              typeof window === 'undefined' ||
+              shouldBootstrapLiveWorldMap(window.location.pathname),
+          }),
+        );
+      }
+      return Promise.resolve(atlasRepository);
+    })();
 
     repositoryPromise
-      .then((nextRepository) => {
-        if (!isActive) {
-          return null;
-        }
-        setRepository(nextRepository);
-        return loadAtlasDataset(nextRepository);
+      .then((candidateRepository) => {
+        nextRepository = candidateRepository;
+        return loadAtlasDataset(candidateRepository);
       })
-      .then((nextDataset) => {
-        if (isActive && nextDataset) {
-          setDataset(nextDataset);
+      .then(async (loadedDataset) => {
+        if (!sourceRequestGateRef.current.isCurrent(requestId)) {
+          return;
+        }
+
+        let nextDataset = loadedDataset;
+
+        const expectedDatasetKind = {
+          'synthetic-framework': 'synthetic-demo',
+          'inspire-hep-pilot': 'inspire-hep-pilot',
+          'live-api': 'live-api',
+        }[requestedDataSourceId];
+        if (nextDataset.metadata.datasetKind !== expectedDatasetKind) {
+          throw new Error(
+            `The ${requestedDataSourceId} repository returned ${nextDataset.metadata.datasetKind} data.`,
+          );
+        }
+
+        if (
+          requestedDataSourceId === 'live-api' &&
+          nextRepository instanceof APIRepository &&
+          typeof window !== 'undefined'
+        ) {
+          nextDataset = await hydrateLiveNavigationDataset(
+            nextRepository,
+            nextDataset,
+            window.location.pathname,
+          );
+          if (!sourceRequestGateRef.current.isCurrent(requestId)) {
+            return;
+          }
+        }
+
+        const nextMetricId = resolveMetricForDataSource(
+          nextDataset,
+          selectedMetricIdRef.current,
+        );
+        const observationAssessment = assessDataSourceObservations(
+          nextDataset,
+          nextMetricId,
+          requestedDataSourceId,
+        );
+        if (!observationAssessment.canActivate) {
+          throw new Error(
+            'The destination source has no country observations for a renderable metric.',
+          );
+        }
+
+        const previousDataset = datasetRef.current;
+        const navigationFromUrl =
+          typeof window !== 'undefined'
+            ? resolveAtlasLocation(window.location, nextDataset)
+            : navigationStateRef.current;
+        const requestedNavigation =
+          !previousDataset || restoreNavigationFromUrlRef.current
+            ? navigationFromUrl
+            : navigationStateRef.current;
+        const nextNavigation = reconcileNavigationForDataSource(
+          requestedNavigation,
+          nextDataset,
+          nextMetricId,
+          {
+            allowMissingMetricObservations:
+              requestedDataSourceId === 'live-api',
+          },
+        );
+
+        restoreNavigationFromUrlRef.current = false;
+        datasetRef.current = nextDataset;
+        navigationStateRef.current = nextNavigation;
+        selectedMetricIdRef.current = nextMetricId;
+        selectedDataSourceIdRef.current = requestedDataSourceId;
+        setRepository(nextRepository as AtlasRepository);
+        setDataset(nextDataset);
+        setSelectedDataSourceId(requestedDataSourceId);
+        setSelectedMetricId(nextMetricId);
+        setMetricWeightConfiguration(defaultMetricWeightConfiguration);
+        setHasConfirmedMetricProfile(false);
+        applyNavigationState(nextNavigation);
+        setGlobalResetToken((token) => token + 1);
+        setIsDataSourceLoading(false);
+        setSourceError(null);
+        if (preserveNextSourceNoticeRef.current) {
+          preserveNextSourceNoticeRef.current = false;
+        } else {
+          setSourceNotice(observationAssessment.notice);
+        }
+
+        if (typeof window !== 'undefined') {
+          const canonicalUrl = buildDataSourceAwareAtlasUrl(
+            buildAtlasUrl(nextNavigation, nextDataset),
+            requestedDataSourceId,
+          );
+          if (
+            canonicalUrl !==
+            `${window.location.pathname}${window.location.search}`
+          ) {
+            window.history.replaceState(null, '', canonicalUrl);
+          }
         }
       })
-      .catch(() => {
-        if (isActive) {
-          setError('The selected Atlas dataset could not be loaded.');
+      .catch((loadError: unknown) => {
+        if (!sourceRequestGateRef.current.isCurrent(requestId)) {
+          return;
         }
+        setIsDataSourceLoading(false);
+        setRequestedDataSourceId(selectedDataSourceIdRef.current);
+        const reason =
+          loadError instanceof Error && loadError.name !== 'AbortError'
+            ? ` ${loadError.message}`
+            : '';
+        const message = `The selected Atlas dataset could not be loaded.${reason}`;
+        const fallbackSourceId = getInitialSourceFallback(
+          datasetRef.current !== null,
+          requestedDataSourceId,
+        );
+        if (fallbackSourceId) {
+          setSourceNotice(`${message} Showing the synthetic framework instead.`);
+          preserveNextSourceNoticeRef.current = true;
+          setRequestedDataSourceId(fallbackSourceId);
+          return;
+        }
+        setSourceError(message);
       });
 
     return () => {
-      isActive = false;
+      if (nextRepository instanceof APIRepository) {
+        nextRepository.cancelPending();
+      }
     };
-  }, [selectedDataSourceId]);
+  }, [
+    applyNavigationState,
+    atlasApiUrl,
+    requestedDataSourceId,
+  ]);
 
   useEffect(() => {
     if (!dataset || typeof window === 'undefined') {
@@ -182,6 +399,17 @@ export function AtlasExplorer() {
     }
 
     const restoreLocation = () => {
+      const locationSource = resolveAtlasDataSource(
+        window.location.search,
+        liveApiAvailable,
+      );
+      if (locationSource !== selectedDataSourceIdRef.current) {
+        restoreNavigationFromUrlRef.current = true;
+        preserveNextSourceNoticeRef.current = false;
+        setSourceNotice(null);
+        setRequestedDataSourceId(locationSource);
+        return;
+      }
       const resolvedNavigation = resolveAtlasLocation(window.location, dataset);
       const navigation =
         dataset.metadata.datasetKind === 'inspire-hep-pilot' &&
@@ -204,7 +432,388 @@ export function AtlasExplorer() {
     restoreLocation();
     window.addEventListener('popstate', restoreLocation);
     return () => window.removeEventListener('popstate', restoreLocation);
-  }, [applyNavigationState, dataset, selectedDataSourceId]);
+  }, [
+    applyNavigationState,
+    dataset,
+    liveApiAvailable,
+    selectedDataSourceId,
+  ]);
+
+  const datasetVersion = dataset?.metadata.provenance.version ?? null;
+  const geographicViews = dataset?.geographicViews ?? null;
+  const isLiveApiRepository =
+    repository instanceof APIRepository && selectedDataSourceId === 'live-api';
+  const liveMapMetricIds = useMemo<MetricId[]>(
+    () =>
+      selectedMetricId === compositeMetricId
+        ? (Object.keys(metricWeightConfiguration.weights) as MetricId[]).filter(
+            (metricId) =>
+              dataset?.metricDefinitions.some(
+                (definition) =>
+                  definition.id === metricId &&
+                  definition.implementationStatus !== 'taxonomy-only',
+              ),
+          )
+        : dataset?.metricDefinitions.some(
+              (definition) =>
+                definition.id === selectedMetricId &&
+                definition.implementationStatus !== 'taxonomy-only',
+            )
+          ? [selectedMetricId]
+          : [],
+    [dataset?.metricDefinitions, metricWeightConfiguration.weights, selectedMetricId],
+  );
+  const liveWorldRequestKey =
+    datasetVersion &&
+    isLiveApiRepository &&
+    !selectedCountryId &&
+    !isFieldOverviewOpen &&
+    liveMapMetricIds.length > 0
+      ? [
+          datasetVersion,
+          'world',
+          selectedDomainId,
+          selectedFieldId ?? 'domain',
+          liveMapMetricIds.join(','),
+          selectedYear,
+          selectedMetricId === compositeMetricId
+            ? JSON.stringify(metricWeightConfiguration.weights)
+            : 'single',
+        ].join(':')
+      : null;
+  const liveScopeRequestKey =
+    datasetVersion &&
+    geographicViews &&
+    isLiveApiRepository &&
+    selectedCountryId &&
+    liveMapMetricIds.length > 0
+      ? [
+          datasetVersion,
+          selectedCountryId,
+          selectedDomainId,
+          selectedFieldId ?? 'domain',
+          selectedMetricId,
+          selectedYear,
+          JSON.stringify(metricWeightConfiguration.weights),
+        ].join(':')
+      : null;
+  const liveInstitutionRequestKey =
+    datasetVersion && isLiveApiRepository && selectedInstitutionId
+      ? `${datasetVersion}:institution:${selectedInstitutionId}`
+      : null;
+  const liveResearcherRequestKey =
+    datasetVersion && isLiveApiRepository && selectedResearcherId
+      ? `${datasetVersion}:researcher:${selectedResearcherId}`
+      : null;
+  const isLiveWorldLoading =
+    liveWorldRequestKey !== null &&
+    settledLiveWorldRequestKey !== liveWorldRequestKey;
+  const isLiveCountryLoading =
+    liveScopeRequestKey !== null &&
+    settledLiveScopeRequestKey !== liveScopeRequestKey;
+  const isLiveScopeLoading = isLiveWorldLoading || isLiveCountryLoading;
+  const isLiveProfileLoading =
+    (liveInstitutionRequestKey !== null &&
+      settledLiveInstitutionRequestKey !== liveInstitutionRequestKey) ||
+    (liveResearcherRequestKey !== null &&
+      settledLiveResearcherRequestKey !== liveResearcherRequestKey);
+
+  useEffect(() => {
+    if (!liveWorldRequestKey || liveMapMetricIds.length === 0) {
+      return;
+    }
+
+    let active = true;
+    const liveRepository = repository as APIRepository;
+    const requestTimer = window.setTimeout(() => {
+      liveRepository
+        .getCountryMapData({
+          scienceDomainId: selectedDomainId,
+          fieldId: selectedFieldId ?? undefined,
+          metricIds: liveMapMetricIds,
+          period: String(selectedYear),
+        })
+        .then((mapObservations) => {
+          if (!active) return;
+          const observations =
+            selectedMetricId === compositeMetricId
+              ? buildCompositeMetricObservations(
+                  mapObservations,
+                  metricWeightConfiguration,
+                )
+              : mapObservations;
+          setDataset((current) =>
+            current?.metadata.datasetKind === 'live-api'
+              ? {
+                  ...current,
+                  metricObservations: mergeMetricObservationsById(
+                    current.metricObservations,
+                    observations,
+                  ),
+                }
+              : current,
+          );
+          setSourceError(null);
+          setSourceNotice(
+            observations.length > 0 ? null : neutralLiveMapNotice,
+          );
+        })
+        .catch((error: unknown) => {
+          if (!active) return;
+          setSourceError(
+            `World map data could not be loaded.${
+              error instanceof Error ? ` ${error.message}` : ''
+            }`,
+          );
+        })
+        .finally(() => {
+          if (active) setSettledLiveWorldRequestKey(liveWorldRequestKey);
+        });
+    }, 140);
+
+    return () => {
+      active = false;
+      window.clearTimeout(requestTimer);
+    };
+  }, [
+    liveMapMetricIds,
+    liveWorldRequestKey,
+    metricWeightConfiguration,
+    repository,
+    selectedDomainId,
+    selectedFieldId,
+    selectedMetricId,
+    selectedYear,
+  ]);
+
+  useEffect(() => {
+    if (!liveScopeRequestKey || !geographicViews || !selectedCountryId) {
+      return;
+    }
+
+    let active = true;
+    const geographicView = geographicViews.find(
+      (view) => view.countryId === selectedCountryId,
+    );
+    const locationCountryIds = geographicView?.locationCountryIds ?? [
+      selectedCountryId,
+    ];
+    const liveRepository = repository as APIRepository;
+    liveRepository
+      .getInstitutionMapData(locationCountryIds, {
+        scienceDomainId: selectedDomainId,
+        fieldId: selectedFieldId ?? undefined,
+        metricIds: liveMapMetricIds,
+        period: String(selectedYear),
+        limit: 50,
+      })
+      .then((mapData) => {
+        if (!active) return;
+        const observations =
+          selectedMetricId === compositeMetricId
+            ? buildCompositeMetricObservations(
+                mapData.observations,
+                metricWeightConfiguration,
+              )
+            : mapData.observations;
+        setDataset((current) =>
+          current?.metadata.datasetKind === 'live-api'
+            ? {
+                ...current,
+                institutions: mergeById(
+                  current.institutions,
+                  mapData.institutions,
+                ),
+                metricObservations: mergeMetricObservationsById(
+                  current.metricObservations,
+                  observations,
+                ),
+              }
+            : current,
+        );
+        setSourceError(null);
+        setSourceNotice(
+          observations.length > 0 ? null : neutralLiveMapNotice,
+        );
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setSourceError(
+          `Institution map data could not be loaded.${
+            error instanceof Error ? ` ${error.message}` : ''
+          }`,
+        );
+      })
+      .finally(() => {
+        if (active) setSettledLiveScopeRequestKey(liveScopeRequestKey);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    datasetVersion,
+    geographicViews,
+    liveMapMetricIds,
+    liveScopeRequestKey,
+    metricWeightConfiguration,
+    repository,
+    selectedCountryId,
+    selectedDataSourceId,
+    selectedDomainId,
+    selectedFieldId,
+    selectedMetricId,
+    selectedYear,
+  ]);
+
+  useEffect(() => {
+    if (!liveInstitutionRequestKey || !selectedInstitutionId) {
+      return;
+    }
+
+    let active = true;
+    const liveRepository = repository as APIRepository;
+    liveRepository
+      .getInstitutionProfile(selectedInstitutionId)
+      .then(async (profile) => {
+        if (!profile || !active) return;
+        const authorships = (
+          await Promise.all(
+            profile.researchers.map((researcher) =>
+              repository.getAuthorships(researcher.id),
+            ),
+          )
+        ).flat();
+        if (!active) return;
+        setDataset((current) =>
+          current?.metadata.datasetKind === 'live-api'
+            ? {
+                ...current,
+                institutions: mergeById(current.institutions, [
+                  profile.institution,
+                ]),
+                researchGroups: mergeById(
+                  current.researchGroups,
+                  profile.researchGroups,
+                ),
+                affiliations: mergeById(
+                  current.affiliations,
+                  profile.affiliations,
+                ),
+                researchers: mergeById(
+                  current.researchers,
+                  profile.researchers,
+                ),
+                papers: mergeById(current.papers, profile.papers),
+                authorships: mergeById(current.authorships, authorships),
+                externalResources: mergeById(
+                  current.externalResources ?? [],
+                  profile.resources,
+                ),
+                metricObservations: mergeById(
+                  current.metricObservations,
+                  profile.metrics,
+                ),
+              }
+            : current,
+        );
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setSourceError(
+          `Institution profile data could not be loaded.${
+            error instanceof Error ? ` ${error.message}` : ''
+          }`,
+        );
+      })
+      .finally(() => {
+        if (active) {
+          setSettledLiveInstitutionRequestKey(liveInstitutionRequestKey);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    datasetVersion,
+    liveInstitutionRequestKey,
+    repository,
+    selectedDataSourceId,
+    selectedInstitutionId,
+  ]);
+
+  useEffect(() => {
+    if (!liveResearcherRequestKey || !selectedResearcherId) {
+      return;
+    }
+
+    let active = true;
+    const liveRepository = repository as APIRepository;
+    Promise.all([
+      liveRepository.getResearcherProfile(selectedResearcherId),
+      liveRepository.getAuthorships(selectedResearcherId),
+    ])
+      .then(([profile, authorships]) => {
+        if (!profile || !active) return;
+        const affiliations = profile.affiliationHistory.map(
+          (entry) => entry.affiliation,
+        );
+        const institutions = profile.affiliationHistory.map(
+          (entry) => entry.institution,
+        );
+        const groups = profile.affiliationHistory.flatMap((entry) =>
+          entry.researchGroup ? [entry.researchGroup] : [],
+        );
+        setDataset((current) =>
+          current?.metadata.datasetKind === 'live-api'
+            ? {
+                ...current,
+                institutions: mergeById(current.institutions, institutions),
+                researchGroups: mergeById(current.researchGroups, groups),
+                affiliations: mergeById(current.affiliations, affiliations),
+                researchers: mergeById(current.researchers, [
+                  profile.researcher,
+                  ...profile.collaborators,
+                ]),
+                papers: mergeById(current.papers, profile.papers),
+                authorships: mergeById(current.authorships, authorships),
+                externalResources: mergeById(
+                  current.externalResources ?? [],
+                  profile.resources,
+                ),
+                metricObservations: mergeById(
+                  current.metricObservations,
+                  profile.metrics,
+                ),
+              }
+            : current,
+        );
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setSourceError(
+          `Researcher profile data could not be loaded.${
+            error instanceof Error ? ` ${error.message}` : ''
+          }`,
+        );
+      })
+      .finally(() => {
+        if (active) {
+          setSettledLiveResearcherRequestKey(liveResearcherRequestKey);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    datasetVersion,
+    liveResearcherRequestKey,
+    repository,
+    selectedDataSourceId,
+    selectedResearcherId,
+  ]);
 
   const visualizationObservations = useMemo(() => {
     if (!dataset) {
@@ -231,12 +840,30 @@ export function AtlasExplorer() {
         visualizationObservations
           .filter(
             (observation) =>
-              observation.entityType === 'country',
+              observation.entityType === 'country' &&
+              (selectedFieldId
+                ? observation.fieldId === selectedFieldId
+                : observation.scienceDomainId === selectedDomainId &&
+                  observation.fieldId === undefined),
           )
           .map((observation) => Number(observation.period)),
       ),
     ).sort((left, right) => left - right);
-  }, [dataset, visualizationObservations]);
+  }, [
+    dataset,
+    selectedDomainId,
+    selectedFieldId,
+    visualizationObservations,
+  ]);
+  const timelineYears = useMemo(() => {
+    if (dataset?.metadata.datasetKind !== 'live-api') {
+      return availableYears;
+    }
+    const currentDatasetYear = Number(dataset.metadata.period);
+    return [liveTimelineStartYear, currentDatasetYear, selectedYear].filter(
+      Number.isFinite,
+    );
+  }, [availableYears, dataset, selectedYear]);
 
   const countryObservations = useMemo(
     () =>
@@ -302,12 +929,12 @@ export function AtlasExplorer() {
     visualizationObservations,
   ]);
 
-  if (error) {
-    return <main className="state-screen">{error}</main>;
-  }
-
   if (!dataset) {
-    return <main className="state-screen">Loading the atlas…</main>;
+    return (
+      <main className="state-screen" role="status">
+        {sourceError ?? 'Loading the atlas…'}
+      </main>
+    );
   }
 
   const activeDomain =
@@ -331,6 +958,9 @@ export function AtlasExplorer() {
     defaultMetricWeightConfiguration,
   );
   const isPilotDataset = dataset.metadata.datasetKind === 'inspire-hep-pilot';
+  const datasetPresentation = getDatasetPresentation(
+    dataset.metadata.datasetKind,
+  );
   const activeMetricLabel =
     selectedMetricId === compositeMetricId
       ? metricWeightConfiguration.name
@@ -431,38 +1061,13 @@ export function AtlasExplorer() {
           : 'world';
 
   const selectDataSource = (sourceId: AtlasDataSourceId) => {
-    if (sourceId === selectedDataSourceId) {
+    if (sourceId === requestedDataSourceId) {
       return;
     }
-
-    setSelectedDataSourceId(sourceId);
-    setDataset(null);
-    setError(null);
-    setSelectedDomainId('physics');
-    setSelectedFieldId(
-      sourceId === 'inspire-hep-pilot' ? 'hep-th' : null,
-    );
-    setSelectedYear(2026);
-    setSelectedCountryId(null);
-    setSelectedInstitutionId(null);
-    setSelectedResearchGroupId(null);
-    setSelectedResearcherId(null);
-    setIsFieldOverviewOpen(false);
-    setSelectedMetricId(defaultMetricId);
-    setMetricWeightConfiguration(defaultMetricWeightConfiguration);
-    setHasConfirmedMetricProfile(false);
-    setGlobalResetToken((token) => token + 1);
-
-    if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '',
-        buildDataSourceAwareAtlasUrl(
-          sourceId === 'inspire-hep-pilot'
-            ? '/atlas/physics/hep-th?year=2026'
-            : '/atlas/physics?year=2026',
-          sourceId,
-        ),
-      );
-    }
+    setSourceError(null);
+    setSourceNotice(null);
+    preserveNextSourceNoticeRef.current = false;
+    setRequestedDataSourceId(sourceId);
   };
 
   const selectDomain = (domainId: string) => {
@@ -604,14 +1209,123 @@ export function AtlasExplorer() {
     setSelectedMetricId(compositeMetricId);
   };
 
-  const selectSearchResult = (result: AtlasSearchResult) => {
+  const selectSearchResult = async (result: AtlasSearchResult) => {
+    let searchDataset = dataset;
+    if (repository instanceof APIRepository) {
+      try {
+        if (
+          result.entityType === 'institution' &&
+          !searchDataset.institutions.some(
+            (institution) => institution.id === result.entityId,
+          )
+        ) {
+          const institution = await repository.getInstitution(result.entityId);
+          if (!institution) {
+            throw new Error('The institution is no longer available.');
+          }
+          searchDataset = {
+            ...searchDataset,
+            institutions: mergeById(searchDataset.institutions, [institution]),
+          };
+        } else if (
+          result.entityType === 'research-group' &&
+          !searchDataset.researchGroups.some(
+            (group) => group.id === result.entityId,
+          )
+        ) {
+          const profile = await repository.getResearchGroupProfile(
+            result.entityId,
+          );
+          if (!profile) {
+            throw new Error('The research group is no longer available.');
+          }
+          searchDataset = {
+            ...searchDataset,
+            institutions: mergeById(searchDataset.institutions, [
+              profile.institution,
+            ]),
+            researchGroups: mergeById(searchDataset.researchGroups, [
+              profile.researchGroup,
+            ]),
+            affiliations: mergeById(
+              searchDataset.affiliations,
+              profile.affiliations,
+            ),
+            researchers: mergeById(
+              searchDataset.researchers,
+              profile.members,
+            ),
+            papers: mergeById(searchDataset.papers, profile.papers),
+            externalResources: mergeById(
+              searchDataset.externalResources ?? [],
+              profile.resources,
+            ),
+          };
+        } else if (
+          result.entityType === 'researcher' &&
+          !searchDataset.researchers.some(
+            (researcher) => researcher.id === result.entityId,
+          )
+        ) {
+          const profile = await repository.getResearcherProfile(
+            result.entityId,
+          );
+          if (!profile) {
+            throw new Error('The researcher is no longer available.');
+          }
+          searchDataset = {
+            ...searchDataset,
+            institutions: mergeById(
+              searchDataset.institutions,
+              profile.affiliationHistory.map((entry) => entry.institution),
+            ),
+            researchGroups: mergeById(
+              searchDataset.researchGroups,
+              profile.affiliationHistory.flatMap((entry) =>
+                entry.researchGroup ? [entry.researchGroup] : [],
+              ),
+            ),
+            affiliations: mergeById(
+              searchDataset.affiliations,
+              profile.affiliationHistory.map((entry) => entry.affiliation),
+            ),
+            researchers: mergeById(searchDataset.researchers, [
+              profile.researcher,
+              ...profile.collaborators,
+            ]),
+            papers: mergeById(searchDataset.papers, profile.papers),
+            externalResources: mergeById(
+              searchDataset.externalResources ?? [],
+              profile.resources,
+            ),
+            metricObservations: mergeById(
+              searchDataset.metricObservations,
+              profile.metrics,
+            ),
+          };
+        }
+        if (searchDataset !== dataset) {
+          datasetRef.current = searchDataset;
+          setDataset(searchDataset);
+        }
+        setSourceError(null);
+      } catch (error: unknown) {
+        setSourceError(
+          `The selected search result could not be loaded.${
+            error instanceof Error ? ` ${error.message}` : ''
+          }`,
+        );
+        return;
+      }
+    }
+
     if (result.entityType === 'science-domain') {
       selectDomain(result.entityId);
       return;
     }
 
     if (result.entityType === 'research-field') {
-      const domain = dataset.scienceDomains.find((candidate) =>
+      const domain = searchDataset.scienceDomains.find((candidate) =>
         candidate.fieldIds.includes(result.entityId),
       );
       navigateTo({
@@ -628,18 +1342,18 @@ export function AtlasExplorer() {
     }
 
     if (result.entityType === 'country') {
-      selectCountry(getExplorationCountryId(result.entityId, dataset));
+      selectCountry(getExplorationCountryId(result.entityId, searchDataset));
       return;
     }
 
     if (result.entityType === 'institution') {
-      const institution = dataset.institutions.find(
+      const institution = searchDataset.institutions.find(
         (candidate) => candidate.id === result.entityId,
       );
       if (!institution) {
         return;
       }
-      const firstGroup = dataset.researchGroups.find(
+      const firstGroup = searchDataset.researchGroups.find(
         (group) => group.institutionId === institution.id,
       );
       navigateTo({
@@ -650,21 +1364,21 @@ export function AtlasExplorer() {
             : null,
         selectedCountryId: getExplorationCountryId(
           institution.countryId,
-          dataset,
+          searchDataset,
         ),
         selectedInstitutionId: institution.id,
         selectedResearchGroupId: firstGroup?.id ?? null,
         selectedResearcherId: null,
         isFieldOverviewOpen: false,
-      });
+      }, false, searchDataset);
       return;
     }
 
     if (result.entityType === 'research-group') {
-      const group = dataset.researchGroups.find(
+      const group = searchDataset.researchGroups.find(
         (candidate) => candidate.id === result.entityId,
       );
-      const institution = dataset.institutions.find(
+      const institution = searchDataset.institutions.find(
         (candidate) => candidate.id === group?.institutionId,
       );
       if (!group || !institution) {
@@ -678,26 +1392,158 @@ export function AtlasExplorer() {
             : group.fieldIds[0] ?? null,
         selectedCountryId: getExplorationCountryId(
           institution.countryId,
-          dataset,
+          searchDataset,
         ),
         selectedInstitutionId: institution.id,
         selectedResearchGroupId: group.id,
         selectedResearcherId: null,
         isFieldOverviewOpen: false,
-      });
+      }, false, searchDataset);
       return;
     }
 
-    const researcher = dataset.researchers.find(
+    if (result.entityType === 'paper') {
+      let paper = searchDataset.papers.find(
+        (candidate) => candidate.id === result.entityId,
+      );
+      let paperAuthorships = searchDataset.authorships.filter(
+        (authorship) => authorship.paperId === result.entityId,
+      );
+      if (repository instanceof APIRepository) {
+        try {
+          const [loadedPaper, loadedAuthorships] = await Promise.all([
+            paper ? Promise.resolve(paper) : repository.getPaper(result.entityId),
+            paperAuthorships.length
+              ? Promise.resolve(paperAuthorships)
+              : repository.getAuthorships(undefined, result.entityId),
+          ]);
+          if (!loadedPaper) {
+            throw new Error('The paper is no longer available.');
+          }
+          paper = loadedPaper;
+          paperAuthorships = loadedAuthorships;
+          const authorProfiles = (
+            await Promise.all(
+              paperAuthorships
+                .slice(0, 10)
+                .map((authorship) =>
+                  repository.getResearcherProfile(authorship.researcherId),
+                ),
+            )
+          ).flatMap((profile) => (profile ? [profile] : []));
+          searchDataset = {
+            ...searchDataset,
+            papers: mergeById(searchDataset.papers, [paper]),
+            authorships: mergeById(
+              searchDataset.authorships,
+              paperAuthorships,
+            ),
+            institutions: mergeById(
+              searchDataset.institutions,
+              authorProfiles.flatMap((profile) =>
+                profile.affiliationHistory.map((entry) => entry.institution),
+              ),
+            ),
+            researchGroups: mergeById(
+              searchDataset.researchGroups,
+              authorProfiles.flatMap((profile) =>
+                profile.affiliationHistory.flatMap((entry) =>
+                  entry.researchGroup ? [entry.researchGroup] : [],
+                ),
+              ),
+            ),
+            affiliations: mergeById(
+              searchDataset.affiliations,
+              authorProfiles.flatMap((profile) =>
+                profile.affiliationHistory.map((entry) => entry.affiliation),
+              ),
+            ),
+            researchers: mergeById(
+              searchDataset.researchers,
+              authorProfiles.flatMap((profile) => [
+                profile.researcher,
+                ...profile.collaborators,
+              ]),
+            ),
+            externalResources: mergeById(
+              searchDataset.externalResources ?? [],
+              authorProfiles.flatMap((profile) => profile.resources),
+            ),
+            metricObservations: mergeById(
+              searchDataset.metricObservations,
+              authorProfiles.flatMap((profile) => profile.metrics),
+            ),
+          };
+        } catch (error: unknown) {
+          setSourceError(
+            `The selected paper could not be loaded.${
+              error instanceof Error ? ` ${error.message}` : ''
+            }`,
+          );
+          return;
+        }
+      }
+
+      datasetRef.current = searchDataset;
+      setDataset(searchDataset);
+      const authorContext = paperAuthorships
+        .sort((left, right) => left.authorPosition - right.authorPosition)
+        .map((authorship) => {
+          const researcher = searchDataset.researchers.find(
+            (candidate) => candidate.id === authorship.researcherId,
+          );
+          const affiliation = searchDataset.affiliations.find(
+            (candidate) => candidate.researcherId === researcher?.id,
+          );
+          const institution = searchDataset.institutions.find(
+            (candidate) => candidate.id === affiliation?.institutionId,
+          );
+          return researcher && affiliation && institution
+            ? { researcher, affiliation, institution }
+            : null;
+        })
+        .find((context) => context !== null);
+      if (!paper || !authorContext) {
+        setSourceNotice(
+          'The canonical paper was found, but this dataset has no resolved affiliation path for opening it in the Atlas hierarchy.',
+        );
+        return;
+      }
+      setSourceNotice(
+        `Opened the first resolved author context for “${paper.title}”.`,
+      );
+      navigateTo({
+        ...navigationState,
+        selectedFieldId:
+          selectedFieldId && paper.fieldIds.includes(selectedFieldId)
+            ? selectedFieldId
+            : paper.fieldIds[0] ?? null,
+        selectedCountryId: getExplorationCountryId(
+          authorContext.institution.countryId,
+          searchDataset,
+        ),
+        selectedInstitutionId: authorContext.institution.id,
+        selectedResearchGroupId:
+          authorContext.affiliation.researchGroupId ?? null,
+        selectedResearcherId: authorContext.researcher.id,
+        isFieldOverviewOpen: false,
+      }, false, searchDataset);
+      return;
+    }
+
+    const researcher = searchDataset.researchers.find(
       (candidate) => candidate.id === result.entityId,
     );
-    const affiliation = dataset.affiliations.find(
+    const affiliation = searchDataset.affiliations.find(
       (candidate) => candidate.researcherId === researcher?.id,
     );
-    const institution = dataset.institutions.find(
+    const institution = searchDataset.institutions.find(
       (candidate) => candidate.id === affiliation?.institutionId,
     );
     if (!researcher || !affiliation || !institution) {
+      setSourceError(
+        'The canonical researcher has no resolvable affiliation context in this dataset.',
+      );
       return;
     }
     navigateTo({
@@ -708,13 +1554,13 @@ export function AtlasExplorer() {
           : null,
       selectedCountryId: getExplorationCountryId(
         institution.countryId,
-        dataset,
+        searchDataset,
       ),
       selectedInstitutionId: institution.id,
       selectedResearchGroupId: affiliation.researchGroupId ?? null,
       selectedResearcherId: researcher.id,
       isFieldOverviewOpen: false,
-    });
+    }, false, searchDataset);
   };
 
   const runGuidedAction = (action: GuidedAction) => {
@@ -797,7 +1643,7 @@ export function AtlasExplorer() {
         institutions={mapInstitutions}
         institutionObservations={institutionObservations}
         metricLabel={activeMetricLabel}
-        isPilotDataset={isPilotDataset}
+        datasetKind={dataset.metadata.datasetKind}
         selectedCountryId={selectedCountryId}
         selectedInstitutionId={selectedInstitutionId}
         globalResetToken={globalResetToken}
@@ -805,6 +1651,16 @@ export function AtlasExplorer() {
         onCountrySelect={selectCountry}
         onInstitutionSelect={selectInstitution}
       />
+
+      {(isLiveScopeLoading || isLiveProfileLoading) && (
+        <div className="live-data-loading" role="status">
+          {isLiveProfileLoading
+            ? 'Loading scoped entity profile…'
+            : isLiveWorldLoading
+              ? 'Loading country map observations…'
+              : 'Loading institution map nodes…'}
+        </div>
+      )}
 
       <header className="atlas-header">
         <div className="brand-mark" aria-hidden="true">
@@ -814,8 +1670,11 @@ export function AtlasExplorer() {
           <p>Tech Echo Collective</p>
           <h1>Physics Atlas</h1>
         </div>
-        <span className="alpha-badge" data-pilot={isPilotDataset}>
-          {isPilotDataset ? 'INSPIRE-HEP pilot' : 'Metric Engine alpha'}
+        <span
+          className="alpha-badge"
+          data-source={dataset.metadata.datasetKind}
+        >
+          {datasetPresentation.badgeLabel}
         </span>
       </header>
 
@@ -883,11 +1742,14 @@ export function AtlasExplorer() {
           configuration={metricWeightConfiguration}
           hasConfirmedProfile={hasConfirmedMetricProfile}
           compositeAvailable={compositeAvailable}
+          datasetKind={dataset.metadata.datasetKind}
           onMetricSelect={selectMetric}
           onApply={applyMetricProfile}
         />
         <AtlasSearch onSearch={searchAtlas} onSelect={selectSearchResult} />
-        {!isPilotDataset && <GuidedExploration onNavigate={runGuidedAction} />}
+        {datasetPresentation.isSynthetic && (
+          <GuidedExploration onNavigate={runGuidedAction} />
+        )}
         <DataProvenancePanel metadata={dataset.metadata} />
       </div>
 
@@ -912,6 +1774,11 @@ export function AtlasExplorer() {
         </div>
         <DataSourceSelector
           selectedSourceId={selectedDataSourceId}
+          liveApiAvailable={liveApiAvailable}
+          isLoading={isDataSourceLoading}
+          loadingSourceId={requestedDataSourceId}
+          error={sourceError}
+          notice={sourceNotice}
           onSelect={selectDataSource}
         />
         <ScienceDomainSelector
@@ -952,7 +1819,7 @@ export function AtlasExplorer() {
             activeField?.label ?? activeDomain?.label ?? 'Physics'
           }
           selectedYear={selectedYear}
-          isPilotDataset={isPilotDataset}
+          datasetKind={dataset.metadata.datasetKind}
           onBackToWorld={returnToWorld}
           onInstitutionSelect={selectInstitution}
         />
@@ -976,7 +1843,7 @@ export function AtlasExplorer() {
           historicalEvents={dataset.historicalEvents}
           metricObservations={selectedInstitutionMetricObservations}
           metricLabel={activeMetricLabel}
-          isPilotDataset={isPilotDataset}
+          datasetKind={dataset.metadata.datasetKind}
           externalResources={selectedInstitutionProfile?.resources ?? []}
           identityResolutions={selectedInstitutionIdentityResolutions}
           selectedGroupId={selectedResearchGroup?.id ?? null}
@@ -1004,7 +1871,7 @@ export function AtlasExplorer() {
           externalResources={selectedResearcherProfile?.resources ?? []}
           identityResolutions={selectedResearcherIdentityResolutions}
           collaborators={selectedResearcherProfile?.collaborators ?? []}
-          isPilotDataset={isPilotDataset}
+          datasetKind={dataset.metadata.datasetKind}
           onBackToInstitution={returnToInstitution}
         />
       )}
@@ -1018,7 +1885,7 @@ export function AtlasExplorer() {
           papers={dataset.papers}
           authorships={dataset.authorships}
           historicalEvents={dataset.historicalEvents}
-          isPilotDataset={isPilotDataset}
+          datasetKind={dataset.metadata.datasetKind}
           onClose={() =>
             navigateTo({
               ...navigationState,
@@ -1051,16 +1918,15 @@ export function AtlasExplorer() {
           Missing data ≠ zero value
         </div>
         <p className="legend-disclaimer">
-          {isPilotDataset
-            ? 'Bounded INSPIRE-HEP pilot. Not a scientific ranking.'
-            : 'Demo visualization only. Not a scientific ranking.'}
+          {datasetPresentation.disclaimer}
         </p>
       </section>
 
       <Timeline
-        years={availableYears}
+        years={timelineYears}
+        observedYears={availableYears}
         selectedYear={selectedYear}
-        isPilotDataset={isPilotDataset}
+        datasetKind={dataset.metadata.datasetKind}
         onChange={selectYear}
       />
     </main>

@@ -4,3 +4,12 @@ coverage/
 .DS_Store
 *.local
 *.log
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.py[cod]
+backend/.coverage
+backend/htmlcov/

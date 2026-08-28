@@ -1,0 +1,18 @@
+{
+  "message": {
+    "next-cursor": "fixture-cursor-2",
+    "items": [
+      {
+        "DOI": "10.5555/physics-atlas.fixture",
+        "title": ["Synthetic fixture for incremental field evolution"],
+        "author": [{"given": "Ada", "family": "Fixture"}],
+        "issued": {"date-parts": [[2026, 8, 25]]},
+        "indexed": {"date-time": "2026-08-25T12:00:00Z"},
+        "URL": "https://doi.org/10.5555/physics-atlas.fixture",
+        "type": "journal-article",
+        "subject": ["Mathematical Physics"],
+        "alternative-id": ["2608.01234"]
+      }
+    ]
+  }
+}

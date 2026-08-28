@@ -1,0 +1,11 @@
+{
+  "orcid-identifier": {"path": "0000-0002-1825-0097"},
+  "history": {"last-modified-date": {"value": 1787659200000}},
+  "person": {
+    "name": {
+      "given-names": {"value": "Ada"},
+      "family-name": {"value": "Fixture"}
+    },
+    "other-names": {"other-name": [{"content": "A. Fixture"}]}
+  }
+}

@@ -2,8 +2,16 @@ import demoData from '../data/demo/atlas.json';
 import {
   affiliationSchema,
   atlasDatasetSchema,
+  datasetUpdateSchema,
   externalIdentifierSchema,
   identityResolutionSchema,
+  institutionSchema,
+  metricObservationSchema,
+  paperSchema,
+  provenanceSchema,
+  rawEntityRecordSchema,
+  researcherSchema,
+  sourceSnapshotSchema,
 } from './schemas';
 
 describe('atlasDatasetSchema', () => {
@@ -119,6 +127,132 @@ describe('atlasDatasetSchema', () => {
     Object.assign(invalidDataset.metadata.provenance, { confidence: 1.5 });
 
     expect(() => atlasDatasetSchema.parse(invalidDataset)).toThrow();
+  });
+
+  it('accepts sparse live entities and normalizes transport nulls to missing values', () => {
+    const provenance = {
+      source: 'Physics Atlas API contract fixture',
+      sourceType: 'external-api' as const,
+      version: 'fixture-v1',
+      status: 'unverified' as const,
+      confidence: null,
+      retrievedAt: null,
+    };
+
+    const parsedProvenance = provenanceSchema.parse(provenance);
+    const institution = institutionSchema.parse({
+      id: 'institution-sparse',
+      name: 'Sparse Institute',
+      canonicalName: 'Sparse Institute',
+      aliases: [],
+      historicalNames: [],
+      externalIds: [],
+      identityConfidence: null,
+      countryId: 'country-us',
+      city: 'Unknown',
+      fieldIds: [],
+      location: null,
+      provenance,
+    });
+    const researcher = researcherSchema.parse({
+      id: 'researcher-sparse',
+      name: 'Sparse Researcher',
+      canonicalName: 'Sparse Researcher',
+      aliases: [],
+      historicalNames: [],
+      externalIds: [],
+      identityConfidence: null,
+      fieldIds: [],
+      provenance,
+    });
+    const paper = paperSchema.parse({
+      id: 'paper-sparse',
+      title: 'Sparse source record',
+      summary: '',
+      year: 2026,
+      fieldIds: [],
+      doi: null,
+      arxivId: null,
+      provenance,
+    });
+    const affiliation = affiliationSchema.parse({
+      id: 'affiliation-sparse',
+      researcherId: researcher.id,
+      institutionId: institution.id,
+      researchGroupId: null,
+      startDate: null,
+      endDate: null,
+      source: null,
+      confidence: null,
+      provenance,
+    });
+    const observation = metricObservationSchema.parse({
+      id: 'observation-sparse',
+      entityType: 'country',
+      entityId: 'country-us',
+      scienceDomainId: null,
+      fieldId: null,
+      metricId: 'research_activity_score',
+      period: '2026',
+      value: 42,
+      source: 'fixture',
+      algorithmVersion: 'fixture-v1',
+      calculationVersion: 'fixture-v1',
+      calculatedAt: null,
+      provenance,
+    });
+    const snapshot = sourceSnapshotSchema.parse({
+      id: 'snapshot-sparse',
+      source: 'fixture',
+      sourceVersion: 'fixture-v1',
+      capturedAt: '2026-08-28T00:00:00.000Z',
+      updateMode: 'incremental',
+      recordCount: 1,
+      previousSnapshotId: null,
+      contentChecksum: null,
+      storageReference: null,
+      provenance,
+    });
+    const update = datasetUpdateSchema.parse({
+      id: 'update-sparse',
+      appliedAt: '2026-08-28T00:00:00.000Z',
+      updateMode: 'incremental',
+      sourceSnapshotIds: [snapshot.id],
+      previousDatasetVersion: null,
+      datasetVersion: 'fixture-v1',
+      resolverVersion: 'fixture-v1',
+      metricCalculationVersion: null,
+      changes: { created: 1, updated: 0, unchanged: 0, unresolved: 0 },
+      provenance,
+    });
+    const unresolved = identityResolutionSchema.parse({
+      id: 'resolution-sparse',
+      rawEntityRecordId: 'raw-sparse',
+      entityType: 'researcher',
+      status: 'unresolved',
+      canonicalEntityId: null,
+      method: null,
+      confidence: 0,
+      evidence: [],
+      resolverVersion: 'fixture-v1',
+      resolvedAt: '2026-08-28T00:00:00.000Z',
+      provenance,
+    });
+
+    expect(parsedProvenance.confidence).toBeUndefined();
+    expect(parsedProvenance.retrievedAt).toBeUndefined();
+    expect(institution.fieldIds).toEqual([]);
+    expect(institution.location).toBeUndefined();
+    expect(institution.identityConfidence).toBeUndefined();
+    expect(researcher.fieldIds).toEqual([]);
+    expect(paper.summary).toBe('');
+    expect(paper.fieldIds).toEqual([]);
+    expect(paper.doi).toBeUndefined();
+    expect(affiliation.researchGroupId).toBeUndefined();
+    expect(observation.fieldId).toBeUndefined();
+    expect(snapshot.previousSnapshotId).toBeUndefined();
+    expect(update.previousDatasetVersion).toBeUndefined();
+    expect(unresolved.canonicalEntityId).toBeUndefined();
   });
 
   it('represents collaborative papers through multiple affiliated authors', () => {
@@ -316,6 +450,8 @@ describe('atlasDatasetSchema', () => {
       }),
     );
     expect(parsed.externalResources[0].url).toBe('https://www.caltech.edu/');
+    expect(parsed.datasetUpdates[0].changes.failed).toBe(0);
+    expect(parsed.datasetUpdates[0].affectedEntities).toEqual([]);
     expect(parsed.datasetUpdates[0].sourceSnapshotIds).toEqual([
       'snapshot-inspire-one',
     ]);
@@ -350,6 +486,60 @@ describe('atlasDatasetSchema', () => {
         resolvedAt: '2026-08-24T10:00:00.000Z',
       }),
     ).toThrow(/cannot silently reference/);
+  });
+
+  it('preserves missing-metadata quarantine evidence without inventing a canonical paper', () => {
+    const resolution = identityResolutionSchema.parse({
+      id: 'resolution-missing-year',
+      rawEntityRecordId: 'raw-missing-year',
+      entityType: 'paper',
+      status: 'unresolved',
+      canonicalEntityId: null,
+      method: 'insufficient-metadata',
+      confidence: 0,
+      evidence: [
+        {
+          method: 'required-metadata',
+          inputValue: 'publication_year',
+          score: 0,
+        },
+      ],
+      resolverVersion: 'resolver-v1',
+      resolvedAt: '2026-08-28T00:00:00.000Z',
+      provenance: {
+        source: 'test fixture',
+        sourceType: 'synthetic-demo',
+        version: 'test-v1',
+        status: 'synthetic',
+      },
+    });
+
+    expect(resolution.canonicalEntityId).toBeUndefined();
+    expect(resolution.evidence[0]?.method).toBe('required-metadata');
+  });
+
+  it('accepts nested paper evidence without flattening the raw attributes', () => {
+    expect(
+      rawEntityRecordSchema.parse({
+        id: 'raw-paper-one',
+        entityType: 'paper',
+        sourceRecordId: 'source-paper-one',
+        sourceSnapshotId: 'snapshot-one',
+        rawName: 'A paper title',
+        externalIds: [{ scheme: 'doi', value: '10.1000/example' }],
+        attributes: {
+          authors: [{ name: 'Ada Example', ids: [{ scheme: 'orcid' }] }],
+          citationCount: 4,
+        },
+        ingestedAt: '2026-08-28T01:00:00.000Z',
+        provenance: {
+          source: 'test source',
+          sourceType: 'external-api',
+          version: 'test-v1',
+          status: 'unverified',
+        },
+      }),
+    ).toEqual(expect.objectContaining({ entityType: 'paper' }));
   });
 
   it('validates affiliation chronology at date precision', () => {

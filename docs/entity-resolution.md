@@ -2,151 +2,116 @@
 
 ## Purpose and status
 
-Physics Atlas resolves source records before treating them as people or institutions. v3.0.3-alpha establishes the first-class identity contract needed by the static atlas and future data services:
+Physics Atlas resolves source records before treating them as people, institutions, or papers:
 
 ```text
-Raw source entity
-        ↓
-resolution evidence and candidates
-        ↓
-resolved identity decision
-        ↓
-canonical scientific entity
+RawEntityRecord → evidence and candidates → IdentityResolution
+    → canonical entity OR IdentityReview / unresolved
 ```
 
-This boundary answers “which known entity does this source record describe?” It does not judge scientific work, infer contribution, or guarantee real-world identity. Entity resolution is probabilistic data integration, not proof. A low-confidence or ambiguous record remains explicit instead of being silently merged into a canonical entity.
+v3.0.4-alpha persists each layer in PostgreSQL and applies the existing identifier-led resolver during incremental updates. Resolution answers which canonical entity a source record most likely describes. It does not evaluate science, infer contribution, or prove a real-world identity.
 
-## Identity layers
+## Evidence layers
 
-### Raw entity
+### Raw record
 
-A raw entity is the source-specific representation preserved with its original source record. It may contain a spelling variant, abbreviation, historical name, source identifier, or incomplete affiliation. Raw records are immutable evidence: normalization and reprocessing produce new derived records rather than overwriting the captured source.
+A raw record preserves provider, provider record ID, payload, checksum, source snapshot, retrieval/update time, and provenance. It is immutable evidence. Re-normalization or a new source revision creates new derived processing records rather than overwriting the captured input.
 
-### Resolved identity
+### Resolution decision
 
-A resolved identity records the decision between one raw entity and a candidate canonical entity. The decision carries:
+An `IdentityResolution` records entity type, raw record, candidate or matched canonical ID, status, method, evidence, confidence, resolver version, timestamp, and provenance. Only a matched result can reference a canonical entity for traversal.
 
-- entity type;
-- raw record and source identifiers;
-- candidate canonical identifiers in evidence, when available;
-- a canonical entity pointer only when status is `matched`;
-- resolution status;
-- method and evidence;
-- confidence from `0` to `1`;
-- provenance and processing version;
-- resolution timestamp.
-
-Unresolved records remain addressable. They are not inserted into profiles, searches, relationships, or metric attribution as though their identity were known.
+`IdentityReview` stores ambiguity or insufficient evidence persistently. An unresolved item is not inserted into profiles, search, affiliation attribution, or metrics as if its identity were known.
 
 ### Canonical entity
 
-A canonical entity has a stable Physics Atlas identifier and a preferred display name. It retains aliases, historical names where applicable, authoritative external identifiers, structured provenance, and the best available identity confidence. Canonical records are the nodes exposed through profiles, search results, and graph relationships.
+A canonical entity has a stable Physics Atlas ID, preferred name, aliases/historical names where supported, authority identifiers, identity provenance, and confidence. Canonical does not mean eternally correct. A reviewed correction creates a traceable new decision while preserving the source evidence and earlier processing version.
 
-Canonical does not mean eternally correct. A later source snapshot or reviewed rule can create a new version of the derived identity layer while preserving the evidence and prior processing record.
+## Resolution order
 
-## Resolution strategy
+The common policy is:
 
-Resolution is identifier-led and evidence-aware. The intended order is:
-
-1. exact authoritative external identifier;
+1. exact compatible authority identifier;
 2. exact canonical name;
-3. exact recorded alias, including a supplied abbreviation;
-4. exact recorded historical name;
-5. fuzzy name comparison;
-6. explicit ambiguous or unresolved result when evidence is insufficient or conflicting.
+3. exact alias or abbreviation;
+4. exact historical name;
+5. contextual evidence such as institution location, field, affiliation, or coauthor structure;
+6. fuzzy-name candidate only when it clears both a threshold and an ambiguity margin;
+7. `needs_review` or `unresolved` when evidence is insufficient or conflicting.
 
-The current `CanonicalIdentityResolver` uses authority identifiers and canonical name records before its name-similarity fallback. The fallback is thresholded and must clear an ambiguity margin over the next candidate. Future contextual resolvers can add location for institutions and affiliation, field, or coauthor evidence for researchers. String similarity alone must not create an unqualified high-confidence match.
+Preferred identifiers include:
 
-Confidence communicates the strength of the identity decision only. It is not a metric, rank, probability of research quality, or guarantee that every source fact associated with the identity is correct.
+- institution: ROR and other authoritative organization IDs;
+- researcher: ORCID and INSPIRE author ID;
+- paper: DOI, arXiv ID, and INSPIRE literature ID.
 
-The schema reserves `manual-review` as a resolution method so a future reviewed correction can retain the same evidence contract. v3.0.3-alpha has no human-review UI and does not present automated ambiguity as manual verification.
+Authority evidence dominates only when the identifier is valid and belongs to a compatible entity type. Provider mistakes, deprecated IDs, or conflicting IDs remain reviewable. String similarity alone cannot silently merge researchers.
 
-## Institution resolution
+Resolution confidence describes the identity decision. Search confidence describes a user's query-to-canonical-result match. Neither is a scientific metric, quality score, or probability that every associated source fact is correct.
 
-A canonical institution identity can contain:
+## Institutions
 
-- stable Physics Atlas institution ID;
-- official name;
-- aliases and abbreviations;
-- historical names;
-- external identifiers such as ROR, INSPIRE, or Wikidata when available;
-- location metadata;
-- provenance and confidence.
+A canonical institution may contain official name, aliases, historical names, ROR/INSPIRE/Wikidata identifiers where sourced, and location metadata. ROR is the preferred organization authority when available, but stronger or conflicting evidence is not overwritten without provenance.
 
-For example, “Caltech,” “California Inst. of Technology,” and “CIT” can resolve to the same canonical institution when identifier and contextual evidence support that decision. The source labels remain available as aliases or raw evidence.
+Identity is independent from map rendering. Institution coordinates determine research-location display; `GeographicView` determines the exploration canvas; temporal affiliations determine attribution. Resolving an institution never rewrites political geometry or assigns exclusive country ownership to collaborative work.
 
-Institution identity is separate from geographic rendering. Resolving a name does not rewrite map geometry, research attribution, or affiliation history. An institution without renderable coordinates can remain a valid canonical and attribution entity.
+## Researchers
 
-## Researcher resolution
+A canonical researcher can contain name variants and explicitly sourced ORCID or INSPIRE identifiers. Not every researcher has an ORCID, and absence is not evidence against an identity.
 
-A canonical researcher identity can contain:
+Person-name matching is especially risky because of initials, ordering, diacritics, transliteration, common names, and changing affiliations. An approximate name is therefore candidate evidence only. The live pipeline persists ambiguous people for review instead of promoting them to canonical search results.
 
-- stable Physics Atlas researcher ID;
-- canonical display name and name variants;
-- external identifiers such as ORCID or an INSPIRE author identifier;
-- associated research fields;
-- provenance and confidence.
+## Papers
 
-Affiliations are not embedded as one permanent institution field. They are traversed through dated `Affiliation` relationships. This allows one person to move between institutions, hold concurrent affiliations, or have gaps in the known record without changing their identity.
+Paper identity is led by DOI, arXiv ID, or INSPIRE ID. Titles and author lists can support a candidate but are insufficient when strong identifiers conflict. Provider category mapping is a separate scientific-classification decision and does not determine paper identity.
 
-Name-only matches are especially unsafe for people. Initials, ordering, diacritics, transliteration, common names, and changing affiliations can produce collisions. A fuzzy match such as “E. Witten” is therefore a candidate signal, not sufficient evidence by itself.
+Cross-provider records may contribute complementary metadata to one canonical paper only after identity evidence supports the merge. Source-specific payloads and provenance remain available after canonicalization.
 
 ## Temporal affiliations
 
-The relationship model is:
-
 ```text
 Researcher ── Affiliation ── Institution
-                         └── Research group (optional)
+                         └── ResearchGroup (optional)
 ```
 
-Each affiliation carries temporal bounds, source provenance, and confidence. An open end represents an affiliation still current or a source that supplied no end. A missing bound means unknown, not all time.
+Each affiliation carries start/end bounds, source, confidence, and provenance. Concurrent and historical affiliations can coexist. An unknown bound remains unknown, not “all time.” A newer affiliation cannot replace an older one.
 
-The INSPIRE pilot usually has evidence that an affiliation appeared on a publication, not a verified employment interval. It therefore records a dated affiliation observation at the paper date. That point-in-time assertion must not be expanded into continuous employment before or after the observation.
+Publication metadata often supports only the statement that an affiliation appeared on a paper at a point in time. Physics Atlas records that dated observation and does not inflate it into continuous employment. Historical profile and paper-attribution queries must evaluate the edge for the relevant period.
 
-Queries must respect affiliation time when deriving historical relationships. The current `ProfileService` checks affiliation validity against a paper’s year and exposes a researcher’s full ordered affiliation history. Historical movement is preserved as multiple relationship records; a newer affiliation must not destructively replace an older one. Scientific collaboration and country attribution follow affiliations supported for the relevant period rather than a person’s current profile location.
+Collaborative papers can appear in every institution profile with a supported author affiliation. This is participation attribution, not contribution share or exclusive country ownership.
+
+## Incremental pipeline and review
+
+For each changed source record, the update engine stores the raw evidence, normalizes syntax, runs the resolver version recorded on the update, and then either:
+
+- updates or creates a supported canonical record;
+- records a matched resolution to an existing entity;
+- creates a `needs_review` item with candidates/evidence;
+- records unresolved evidence without a canonical pointer.
+
+The source cursor advances only after the complete batch succeeds. Replaying an identical snapshot is idempotent. A source temporarily omitting an entity never triggers silent canonical deletion.
+
+`/api/identity-resolutions` exposes auditable decisions, and `/api/updates/status` reports the number of open review items. v3.0.4 has a persistent review queue but no reviewer UI, authentication, or automated approval policy.
 
 ## Search integration
 
-Entity-aware search resolves the user’s text against canonical names, aliases, historical names, abbreviations, and stable external identifiers. Its flow is:
+Search indexes only canonical entities and supported identifiers/names. Results identify entity type, match method/value, query confidence, and available identity confidence. Aliases, abbreviations, historical names, ROR, ORCID, INSPIRE, DOI, and arXiv identifiers can be matched where present.
 
-```text
-User query
-        ↓
-normalized candidate retrieval
-        ↓
-identity-aware scoring
-        ↓
-canonical entity result
-        ↓
-canonical Atlas profile route
-```
+Adding a canonical name, alias, or external identifier through an update changes the canonical search evidence. Unresolved raw records are never exposed as canonical results, and selecting a search result never mutates identity data.
 
-Results identify the canonical entity, entity type, matched text or reason, and confidence where appropriate. Search confidence describes the query-to-entity match; it is distinct from the underlying entity-resolution confidence. Search does not create new identities or mutate canonical records.
+## Provenance requirements
 
-## Provenance, versioning, and review
+Every automated decision must be reproducible from source snapshot/record, provider identifier, resolver/rule version, evidence, method, confidence, status, and processing time. Provider field mappings keep their own rule version and uncertainty; they are not identity evidence by default.
 
-Every automated decision must remain reproducible from:
-
-- the preserved source snapshot;
-- source and external identifiers;
-- resolver and rule version;
-- evidence and match method;
-- confidence and status;
-- calculation or resolution time.
-
-Incremental ingestion appends a new raw snapshot and derives a new versioned resolution result. Reprocessing can improve canonical mappings without deleting the input or silently rewriting past output. Conflicting identifiers, ambiguous candidates, and missing evidence should be surfaced for future review queues rather than forced into the graph.
-
-Snapshot-specific counts and methods are stored in `pipeline/data/reports/entity-resolution.json`. The checked-in pilot happens to report no unresolved affiliation mentions, but that is a property of its 81 selected records and authoritative INSPIRE references—not evidence of perfect resolver accuracy or an expected result for broader ingestion.
+Historical pilot reports remain reproducible from checked-in snapshots. Live fixture results demonstrate the persistent flow only. A truly live deployment must publish current source/update status and must not imply that its resolver has complete or perfect coverage.
 
 ## Limitations
 
-- v3.0.3-alpha provides an identity and search foundation, not comprehensive multi-source reconciliation.
-- External identifiers can be absent, duplicated, mistyped, deprecated, or linked incorrectly by a source.
-- Alias and fuzzy matching can produce false positives and false negatives.
-- Historical names and affiliation dates are incomplete in many scientific metadata sources.
-- Confidence is heuristic and is not yet statistically calibrated against a reviewed truth set.
-- No automated resolver can claim perfect identity matching. High-impact ambiguous merges require human review and reversible corrections.
-- Unresolved records are intentionally excluded from canonical traversal unless a consumer explicitly requests unresolved evidence.
+- Authority identifiers can be absent, wrong, duplicated, deprecated, or conflicting.
+- Name/alias matching can produce false positives and false negatives.
+- Historical names, affiliation dates, and cross-provider coverage are incomplete.
+- Confidence is heuristic and not calibrated against a representative reviewed truth set.
+- The alpha review queue has no operational adjudication UI or correction-approval workflow.
+- Broader ingestion needs sampled expert review, reversible merge/split procedures, and explicit conflict policy.
 
-These limitations are design constraints. Physics Atlas must prefer a visible unresolved record over a confident-looking but unsupported merge.
+Physics Atlas must prefer visible uncertainty and a reviewable raw record over an unsupported canonical merge.

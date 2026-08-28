@@ -1,0 +1,60 @@
+# Scientific data sources
+
+## Source policy
+
+Physics Atlas prefers official APIs, stores source provenance, and separates provider metadata from canonical interpretation. A source record is evidence to resolve, not permission to copy all provider content or proof that an entity match is correct. Code is licensed under the repository license; upstream data and linked content retain their own terms.
+
+Production operators must review current provider documentation before enabling ingestion because API terms, schemas, and limits can change.
+
+## Implemented connectors
+
+| Provider | Official interface | Atlas use | Default cadence and request policy | Reuse and attribution notes |
+| --- | --- | --- | --- | --- |
+| INSPIRE-HEP | [INSPIRE REST API](https://github.com/inspirehep/rest-api-doc) | HEP literature, authors, affiliations, identifiers, citations when supplied | Daily incremental modified-date query with provider-native `YYYY-MM-DD` bounds; bounded batches; connector minimum interval 1 s | Public INSPIRE metadata is generally intended for reuse and much is CC0, but restricted fields and linked content require their own review. Retain INSPIRE provenance and do not harvest personal contact data. |
+| arXiv | [API documentation](https://info.arxiv.org/help/api/index.html), [user manual](https://info.arxiv.org/help/api/user-manual.html), and [terms](https://info.arxiv.org/help/api/tou.html) | Broad physics preprints, raw categories, identifiers, authors, abstracts | Daily new-submission query using minute-resolution `submittedDate`; at least 3 s between requests; this connector limits a batch to 100 even though arXiv documents larger sliced queries | Identify arXiv as the source and link to records. Metadata access does not transfer copyright in papers or abstracts; redistribution must follow arXiv terms and author rights. The Query API stream is not represented as complete revision coverage. |
+| ROR | [REST API](https://ror.readme.io/docs/rest-api), [API versions](https://ror.readme.io/docs/api-versions), and [schema 2.1](https://ror.readme.io/docs/schema-v2-1) | Preferred organization IDs, canonical names, aliases, location, external IDs, authoritative websites | Weekly modified-record check with provider-native `YYYY-MM-DD` bounds; v2/schema 2.1 connector; bounded batches | ROR data is released under CC0; attribution remains good scientific practice. See the [ROR terms](https://ror.org/about/terms/). |
+| ORCID | [Public API terms](https://info.orcid.org/public-client-terms-of-service/) | Authority identifier and explicit researcher-profile enrichment | Targeted `fetch_record` only after an ORCID iD is already known; access token required outside fixture mode; no global or scheduled people polling | Display ORCID iDs according to ORCID guidance. Do not infer an ORCID, copy private data, or treat absence as evidence. Respect visibility and public-client terms. |
+| Crossref | [REST API documentation](https://www.crossref.org/documentation/retrieve-metadata/rest-api/) and [API tips](https://www.crossref.org/documentation/retrieve-metadata/rest-api/tips-and-tricks/) | DOI, publication metadata, type, subjects, and landing-page links | Targeted `fetch_record` only after a physics source supplies a DOI; no unscoped scheduled works crawl; configure `mailto` for polite requests | Many bibliographic facts are reusable, but deposited abstracts or other fields may retain copyright. Preserve Crossref/DOI provenance and redistribute only fields whose rights permit it. |
+
+Deterministic response fixtures for all five connectors are included in `backend/fixtures`. The standard automated test suite uses them without depending on provider uptime. End-to-end scheduled fixture ingestion covers INSPIRE, arXiv, and ROR; ORCID and Crossref fixtures exercise record-scoped normalization and enrichment. Fixture snapshots, raw records, canonical provenance, and dataset metadata are labeled synthetic/demo and must never be presented as official provider-backed live data.
+
+## Normalization boundary
+
+All connectors emit a common `SourceRecord` and `NormalizedRecord` contract. Normalization can standardize IDs, dates, names, and provider syntax, but it does not choose a canonical identity. Each fetched JSON or Atom page is retained as an exact provider envelope in `SourceSnapshot`; normalized record evidence remains separately available in `RawEntityRecord`.
+
+Authority identifiers dominate only when valid:
+
+- institutions: ROR and other authoritative organization IDs;
+- researchers: ORCID and INSPIRE author IDs;
+- papers: DOI, arXiv ID, and INSPIRE literature ID.
+
+Similar names alone do not justify a researcher merge. Conflicts and close candidates become `needs_review` or `unresolved` evidence.
+
+## Physics field mapping
+
+Provider categories are retained verbatim and mapped through `connectors/field_mapping.py`. They are acquisition/classification hints, not equivalent to the Atlas taxonomy. Every mapping result records the rule version, candidates, confidence, and an uncertainty note.
+
+The foundation supports at least:
+
+- High Energy Theory (`hep-th`);
+- High Energy Phenomenology (`hep-ph`);
+- High Energy Experiment (`hep-ex`);
+- General Relativity / Quantum Cosmology (`gr-qc`);
+- Quantum Information (`quant-ph`);
+- Astrophysics (`astro-ph`);
+- Condensed Matter (`cond-mat`);
+- Atomic / Molecular / Optical Physics (`amo`);
+- Nuclear Theory and Experiment (`nucl-th`, `nucl-ex`);
+- Plasma Physics (`plasma`);
+- Biophysics (`biophysics`);
+- Mathematical Physics (`math-ph`).
+
+One provider category can map to multiple Atlas fields, and some categories remain unmapped. For example, a broad Crossref subject or an arXiv cross-list is not evidence of one exclusive field. Mapping uncertainty must survive ingestion rather than being collapsed into a confident label.
+
+## Freshness and limitations
+
+Physics Atlas describes provider-backed operation as continuously refreshed or near-real-time metadata, never as realtime scientific truth. The effective update time is visible through `/api/updates/status` and depends on provider publication cadence, service limits, worker uptime, retries, and identity review.
+
+INSPIRE and ROR pagination uses closed, inclusive `YYYY-MM-DD` windows. arXiv uses closed, minute-resolution `submittedDate` windows for new submissions. A persisted page checkpoint is resumed immediately after interruption, and the source high-water cursor moves to `until` only after the last page succeeds. Inclusive boundary replays are made safe by content-addressed snapshots and identifier-led upserts.
+
+The connectors are a production-oriented foundation, not a complete global corpus. In particular, the arXiv Query API `submittedDate` path does not guarantee complete discovery of later revisions; a reviewed OAI-PMH or equivalent revision strategy remains future work. Coverage bias, missing affiliations, incomplete identifiers, missing publication dates, corrections, retractions, duplicate records, and delayed deposits remain possible. New papers without an explicit publication year are retained as unresolved raw evidence rather than assigned the ingestion year. INSPIRE affiliation, reference, and citation structures remain preserved in raw evidence; only relationships supported by the current authority-gated materializer become canonical graph edges. No provider supplies a scientifically validated Physics Atlas metric by itself.

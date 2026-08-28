@@ -2,133 +2,92 @@
 
 ## Purpose
 
-Profiles are read models assembled from canonical entities and graph relationships. They give the Atlas a coherent entity view without copying papers, affiliations, resources, or metrics into the entity record itself.
+Profiles are bounded read models assembled from canonical entities and supported graph relationships. They do not copy papers, affiliations, resources, or metrics into an identity record.
 
 ```text
-Canonical entity
-        + time-scoped relationships
-        + external resources
-        + metric observations
-        + provenance
-        ↓
-versioned profile read model
+canonical entity
+    + time-scoped relationships
+    + external resources and health state
+    + versioned metric observations
+    + provenance
+    → profile read model
 ```
 
-Profiles do not perform entity resolution, calculate scientific metrics, rank entities, or recommend researchers. They expose the best currently resolved evidence and keep gaps visible.
+Profiles do not resolve identities, calculate scientific metrics, rank entities, or recommend researchers. They expose the selected dataset's supported evidence and keep gaps visible.
+
+## Data modes and transport
+
+The same conceptual profile contract is available through:
+
+- `ProfileService` and `StaticAtlasRepository` for validated synthetic and historical pilot snapshots;
+- FastAPI `/api/profiles/institutions/{id}`, `/api/profiles/researchers/{id}`, and `/api/profiles/groups/{id}` for PostgreSQL canonical data;
+- frontend `APIRepository`, which validates responses and loads selected profiles lazily.
+
+Switching source replaces the repository boundary. A profile never silently combines synthetic, pilot, fixture, and provider-backed records. Fixture-backed API profiles retain explicit synthetic/demo provenance.
 
 ## Aggregation rules
 
-Profile aggregation follows these rules:
+Profile assembly must:
 
 - begin from one canonical entity ID;
-- traverse only validated relationships that reference canonical IDs;
-- use an affiliation valid for the paper year when deriving institution or group paper connections;
-- expose the complete ordered affiliation history for a researcher instead of selecting one permanent institution;
-- include historical affiliations separately from active affiliations;
-- retrieve typed external resources through the resource layer;
-- retrieve metric observations through the existing Metric Engine/repository boundary;
-- preserve source and resolution provenance;
-- omit or label unresolved evidence rather than silently attaching it;
-- avoid interpreting a missing relationship as evidence that no relationship exists.
-
-The same rules apply whether records come from the synthetic fixture, a versioned pilot export, or a future API-backed repository.
+- traverse only canonical, validated relationships;
+- respect affiliation dates when connecting a paper to an institution/group;
+- expose ordered current and historical affiliations rather than one permanent institution;
+- retrieve typed links through `ExternalResource` and preserve their check/provenance state;
+- retrieve metrics through the Metric Engine/repository boundary;
+- preserve source, update, resolution, and calculation provenance;
+- omit or label unresolved evidence rather than attaching it by guess;
+- keep missing relationships missing;
+- bound or paginate large collections.
 
 ## Institution profile
 
-An institution profile can aggregate:
+An institution profile can provide canonical/alias/historical names, authority identifiers, location, resources, hosted groups, time-scoped researchers, connected fields and papers, supplied metric observations, and provenance.
 
-- canonical official name, aliases, and historical names;
-- location and geographic context;
-- official and department websites;
-- associated research groups;
-- researchers connected by time-scoped affiliations;
-- relevant research fields;
-- papers connected through resolved authorships and affiliations;
-- supplied metric observations and history;
-- external identifiers, provenance, and identity confidence.
-
-“Associated” does not mean exclusive ownership. A collaborative paper can appear in multiple institution profiles because each resolved participant receives affiliation-based attribution.
+“Connected” is not exclusive ownership. A collaborative paper can appear for every institution with a supported participating affiliation. A node's inclusion or metric display is not an institutional ranking.
 
 ## Researcher profile
 
-A researcher profile can aggregate:
+A researcher profile can provide canonical name variants, supported identifiers/resources, ordered affiliation history, fields, authored papers, collaborators derived from shared authorship, supplied observations, and provenance.
 
-- canonical name and name variants;
-- ORCID, INSPIRE, arXiv, and homepage resources when available;
-- historical and current affiliations with dates and confidence;
-- research fields;
-- papers connected through authorship;
-- collaboration relationships derived from shared papers;
-- supplied researcher metric observations when available;
-- provenance and identity confidence.
-
-The profile must not collapse affiliation history into one permanent institution. A collaboration edge means only that the selected data contains a supported shared-work relationship; it is not a recommendation, endorsement, or contribution assessment.
+An ORCID or INSPIRE link appears only when explicitly supported. Not having an ORCID is not negative evidence. A collaboration edge records shared work in the selected source; it is not contribution allocation, endorsement, or recommendation.
 
 ## Research-group profile
 
-A research-group profile can aggregate:
-
-- group name and canonical host institution;
-- associated research field;
-- official group website;
-- members connected by time-scoped affiliations;
-- papers connected through those resolved relationships;
-- available provenance and source version.
-
-Group membership is relationship data. It is not an embedded, permanent member list, and incomplete metadata must be disclosed rather than completed by assumption.
+A group profile can provide its host institution, fields, resources, dated members, and connected papers. Group membership is relationship data, not an embedded permanent list. Live group coverage depends on source evidence and may be sparse.
 
 ## External resources
 
-Profiles request resources by canonical entity ID and resource type. They do not store arbitrary URLs on institution, researcher, or group objects. This supports multiple links of one type, historical links, independent verification status, and later link maintenance.
+Profiles request resources by canonical entity and type. Active verified authority links can be preferred for display while older/failing resources and check history remain auditable. Reachability does not verify ownership or scientific accuracy, and linked page content is not copied into the profile as scientific truth.
 
-Resource display should prefer an authoritative identifier or official site when provenance supports it. Physics Atlas does not scrape linked pages as its primary data source and does not guarantee availability, ownership, completeness, or current content of external websites.
+The resource monitor uses an operator host allowlist, public-address validation, bounded `HEAD` or one-byte range `GET`, retries/backoff, timeouts, and cached check history. Temporary failures do not delete a link or revoke earlier provenance.
 
-## Entity-aware search to profiles
+## Search to profile
 
-Search is the entry point to a canonical profile:
+Canonical search indexes supported names, aliases, historical names, token variants, abbreviations, authority IDs, paper titles, DOI, arXiv IDs, and INSPIRE IDs. A result reports matching evidence and resolves to one canonical entity. Institution, group, and researcher results open their canonical Atlas context. Because v3.0.4 has no dedicated paper route, a paper result loads the canonical paper and authorships, then opens the first resolved author affiliation context; when none exists, the UI states that no navigable context is available. Selecting a result never changes identity data.
 
-```text
-query text
-        ↓
-canonical/alias/identifier candidates
-        ↓
-scored entity-aware matches
-        ↓
-selected canonical entity ID
-        ↓
-Atlas route and profile aggregation
-```
+Search confidence measures query matching; identity confidence records a resolution decision. Neither measures scientific quality. Unresolved raw records never appear as canonical profile destinations.
 
-For example, an institution abbreviation can lead to the institution’s canonical profile, and a researcher name variant can lead to the canonical researcher profile when the resolution evidence is sufficient. Results identify entity type and confidence where appropriate so similarly named entities are not flattened into one answer.
+## Frontend behavior
 
-Search matching and entity resolution are related but separate:
+The Atlas stays map-first:
 
-- entity resolution maps source records into the canonical graph during data processing;
-- search matching maps a user query to an already-canonical entity at interaction time.
+1. global startup loads only map vocabulary/country observations;
+2. country entry loads bounded major-institution nodes;
+3. institution selection lazily requests its profile and scoped authorships;
+4. researcher selection lazily requests the researcher profile and authorships;
+5. paper search selection lazily requests one paper and its bounded authorships instead of loading the publication graph globally.
 
-Selecting a search result never changes the canonical graph.
-
-## Repository and future API contract
-
-Profile composition belongs behind repository/query services, not inside visual components. `ProfileService` aggregates validated records in memory, and `ScientificAtlasRepository` exposes `getInstitutionProfile`, `getResearcherProfile`, and `getResearchGroupProfile`. Its `AtlasApiTransport` and `CanonicalEntityPersistence` seams allow a future PostgreSQL/FastAPI adapter to provide equivalent projections without redesigning the Atlas interface; no such backend is implemented in this alpha.
-
-Future API responses should remain explicit about:
-
-- canonical entity and profile version;
-- requested temporal scope;
-- included relationship types;
-- unresolved or omitted evidence;
-- provenance and source timestamps;
-- pagination or truncation for large paper, member, and collaboration collections.
+The UI preserves source context, loading/error state, and compatible URL selection. A stale request cannot replace a newer source/entity selection.
 
 ## Limitations
 
-- Profiles are only as complete and current as the selected dataset version.
-- Identity confidence and search confidence are not guarantees of identity.
-- Current source records can lack historical affiliations, resource links, coordinates, papers, or group membership.
-- Profile paper and collaboration coverage is incomplete in the bounded pilot.
-- External links can move, expire, or contain information not verified by Physics Atlas.
-- Aggregated metrics retain all limitations of their source observations and do not create rankings.
-- The alpha has no user-editable profile claims, review workflow, account system, or live institutional verification.
+- Profile completeness is bounded by the selected dataset and resolution coverage.
+- Scheduled ingestion currently covers INSPIRE, arXiv, and ROR; ORCID/Crossref are record-scoped enrichers.
+- Live paper authors without authority identifiers remain review evidence and are not silently promoted to profiles.
+- Historical affiliations, groups, citations, coordinates, and resources are often incomplete.
+- The alpha has no user-editable claims, authenticated correction flow, or human identity/resource-review UI.
+- Collection endpoints are paginated. Alpha profile payloads use fixed upper bounds (affiliations/entities 500, papers 200, metrics 500, resources 100), so a profile response is not guaranteed to be an exhaustive scholarly bibliography.
+- No public production backend is supplied, so GitHub Pages uses the static/pilot fallback unless separately configured.
 
-A concise but incomplete profile is preferable to a richly populated profile built from silent guesses.
+A concise, traceable profile is preferable to a complete-looking profile built from silent inference.

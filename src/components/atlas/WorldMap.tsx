@@ -11,8 +11,13 @@ import type {
   MetricObservation,
 } from '../../domain/models';
 import {
+  getDatasetPresentation,
+  type AtlasDatasetKind,
+} from '../../data/DatasetPresentation';
+import {
   buildCountryFeatureCollection,
   buildExplorationCanvasFeatureCollection,
+  geometryUsesUnwrappedWorldCopy,
 } from './GeographicGeometryLayer';
 import {
   buildInstitutionFeatureCollection,
@@ -35,7 +40,7 @@ interface WorldMapProps {
   institutions: Institution[];
   institutionObservations: MetricObservation[];
   metricLabel: string;
-  isPilotDataset: boolean;
+  datasetKind: AtlasDatasetKind;
   selectedCountryId: string | null;
   selectedInstitutionId: string | null;
   globalResetToken: number;
@@ -91,7 +96,7 @@ export function WorldMap({
   institutions,
   institutionObservations,
   metricLabel,
-  isPilotDataset,
+  datasetKind,
   selectedCountryId,
   selectedInstitutionId,
   globalResetToken,
@@ -108,7 +113,8 @@ export function WorldMap({
   const onCountrySelectRef = useRef(onCountrySelect);
   const onInstitutionSelectRef = useRef(onInstitutionSelect);
   const metricLabelRef = useRef(metricLabel);
-  const isPilotDatasetRef = useRef(isPilotDataset);
+  const datasetPresentation = getDatasetPresentation(datasetKind);
+  const observationLabelRef = useRef(datasetPresentation.observationLabel);
   const countryGeoJson = useMemo(
     () =>
       buildCountryFeatureCollection(
@@ -133,6 +139,13 @@ export function WorldMap({
         selectedCountryId,
       ),
     [countryGeoJson, selectedCountryId],
+  );
+  const explorationCanvasUsesWorldCopy = useMemo(
+    () =>
+      explorationCanvasGeoJson.features.some((feature) =>
+        geometryUsesUnwrappedWorldCopy(feature.geometry),
+      ),
+    [explorationCanvasGeoJson],
   );
   const countryGeoJsonRef = useRef(countryGeoJson);
   const explorationCanvasGeoJsonRef = useRef(explorationCanvasGeoJson);
@@ -163,8 +176,8 @@ export function WorldMap({
   }, [metricLabel]);
 
   useEffect(() => {
-    isPilotDatasetRef.current = isPilotDataset;
-  }, [isPilotDataset]);
+    observationLabelRef.current = datasetPresentation.observationLabel;
+  }, [datasetPresentation.observationLabel]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
@@ -510,9 +523,7 @@ export function WorldMap({
         const value = document.createElement('span');
         value.textContent = `${metricLabelRef.current} · ${String(properties.metricValue ?? '—')}`;
         const status = document.createElement('small');
-        status.textContent = isPilotDatasetRef.current
-          ? 'INSPIRE-HEP pilot observation'
-          : 'Synthetic demo observation';
+        status.textContent = observationLabelRef.current;
 
         content.append(name, location, value, status);
         hoverPopup.setDOMContent(content);
@@ -609,6 +620,10 @@ export function WorldMap({
     );
     institutionLayersVisibleRef.current =
       layerHierarchy.institutionHeatmap === 'visible';
+    // Antimeridian country canvases intentionally use the nearest unwrapped
+    // world copy. Enable copies only for that focused view so MapLibre renders
+    // +180° components without duplicating the minimum global map.
+    map.setRenderWorldCopies(explorationCanvasUsesWorldCopy);
     if (!institutionLayersVisibleRef.current) {
       hoverPopupRef.current?.remove();
     }
@@ -711,6 +726,7 @@ export function WorldMap({
   }, [
     countryGeoJson,
     explorationCanvasGeoJson,
+    explorationCanvasUsesWorldCopy,
     globalResetToken,
     mapReady,
     selectedCountryId,
@@ -762,11 +778,7 @@ export function WorldMap({
         className="world-map"
         ref={containerRef}
         role="application"
-        aria-label={
-          isPilotDataset
-            ? 'Temporal geographic atlas of INSPIRE-HEP pilot metric values'
-            : 'Temporal geographic atlas of synthetic physics metric values'
-        }
+        aria-label={datasetPresentation.mapAriaLabel}
       />
       <nav className="map-navigation-controls" aria-label="Map navigation">
         <GlobalViewControl

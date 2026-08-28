@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "id": "https://ror.org/03yrm5c26",
+      "names": [
+        {"value": "Physics Atlas Fixture Institute", "types": ["ror_display"]},
+        {"value": "PAFI", "types": ["acronym"]}
+      ],
+      "locations": [{"geonames_details": {"name": "Geneva", "country_code": "CH", "lat": 46.2044, "lng": 6.1432}}],
+      "links": [{"type": "website", "types": ["website"], "value": "https://example.edu/physics"}],
+      "external_ids": [],
+      "admin": {"last_modified": {"date": "2026-08-24T00:00:00Z"}}
+    }
+  ]
+}

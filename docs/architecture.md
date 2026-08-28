@@ -2,198 +2,158 @@
 
 ## Purpose
 
-Physics Atlas is an interactive atlas of the global physics research ecosystem. Its primary interface is a map that lets users move from the world level through research fields, countries, institutions, and researchers.
-
-Physics Atlas is a visualization and knowledge-exploration system. It is not a ranking system, prediction system, recommendation engine, or replacement for scientific literature services.
-
-## Alpha architecture
-
-The v3.0.3-alpha prototype remains a static client application and adds canonical identity, graph-profile, entity-search, and incremental-update foundations to the optional development-time pilot pipeline:
+Physics Atlas is an open-source scientific exploration system for visualizing the structure and evolution of physics research ecosystems. Its map-first path remains:
 
 ```text
-Synthetic JSON dataset ───────────────────────────────┐
-                                                     │
-INSPIRE-HEP REST API                                 │
-        ↓                                            │
-bounded acquisition → preserved raw snapshot         │
-        ↓                                            │
-normalization → identity resolution                  │
-        ↓                                            │
-canonical entities + temporal graph relationships   │
-        ↓                                            │
-profile enrichment → pilot metrics                  │
-        ↓                                            │
-versioned local pilot export + update manifest ──────┤
-                                                     ↓
-                                          Zod runtime validation
-                                                     ↓
-                                          StaticAtlasRepository
-        ↓
-MetricRegistry + MetricCalculator / MetricEngine
-        ↓
-query-oriented AtlasRepository interface
-        ↓
-React application + URL navigation state
-        ↓
-MapLibre geographic layers, timeline, and entity exploration layers
+Physics domain → research field → year → world → country
+    → institution → group → researcher / papers
 ```
+
+It is not a university or researcher ranking system, prediction system, recommendation engine, or replacement for scholarly databases.
+
+## v3.0.4-alpha architecture
+
+v3.0.4 moves the application from a static/pilot prototype to a continuously updateable platform foundation:
+
+```text
+Official scientific APIs
+        ↓
+source connectors + checkpoints
+        ↓
+raw snapshots and records
+        ↓
+normalization + field mapping
+        ↓
+canonical identity resolution
+        ↓
+PostgreSQL knowledge graph
+        ↓
+affected metric partitions
+        ↓
+FastAPI read service
+        ↓
+APIRepository
+        ↓
+React + MapLibre Atlas
+```
+
+External-resource enrichment and bounded health monitoring run alongside the canonical graph and feed profile read models. See [live data architecture](live-data-architecture.md), [database](database.md), and [backend](backend.md).
 
 Technology choices:
 
-- React for component-based interface construction;
-- TypeScript for explicit domain and component contracts;
-- Vite for development and static production builds;
-- MapLibre GL JS for open-source WebGL map rendering;
-- Zod for validating data at the application boundary;
-- Vitest for focused domain and repository tests.
+- React, TypeScript, Vite, MapLibre GL JS, and Zod for the frontend;
+- PostgreSQL, SQLAlchemy, Alembic, FastAPI, and Pydantic for persistence and transport;
+- a cron-compatible Python worker for incremental ingestion and resource checks;
+- Vitest for frontend/domain tests and pytest with deterministic fixtures for backend/pipeline tests;
+- Docker Compose for PostgreSQL, migration, API, and worker development.
 
-The prototype uses local geographic data from the `world-atlas` package. It does not require a map API key or remote tile service. Historical observations and synthetic institution coordinates remain part of the validated fixture. The second repository reads a checked-in, versioned INSPIRE-HEP pilot export; the browser never contacts INSPIRE at runtime.
+The repository includes deployment-ready live infrastructure, not a claim that a public live backend is hosted. The public GitHub Pages application remains functional with its local synthetic and historical pilot datasets when no API URL is configured.
+
+## Data modes and isolation
+
+| Mode | Runtime boundary |
+| --- | --- |
+| Synthetic demo | Validated, hand-authored local JSON; visualization/framework demonstration only |
+| INSPIRE pilot | Preserved bounded INSPIRE snapshot and versioned derived export; real but incomplete metadata |
+| Live API fixture | FastAPI/PostgreSQL using deterministic connector fixtures; integration and operational testing |
+| Provider-backed live | FastAPI/PostgreSQL/worker using official APIs; truly live only when separately hosted and operated |
+
+A data-source switch replaces the complete repository boundary. Observations and entities from two sources are never silently combined. The selected domain, field, year, and entity chain is preserved only where the destination contains compatible identifiers; incompatible descendants are cleared together with a consistent URL update.
 
 ## Module boundaries
 
-### Domain
+### Domain and validation
 
-`src/domain` contains the stable product vocabulary and validation rules. It does not depend on React, MapLibre, or a backend transport.
+`src/domain` defines the stable frontend vocabulary, Zod schemas, provenance, identity, temporal relationships, metrics, dataset metadata, and source kinds. It has no React, MapLibre, SQL, or provider dependencies.
 
-### Data access
+Backend Pydantic schemas provide an explicitly transport-oriented contract. SQLAlchemy records are not returned directly, and the browser validates API responses again before using them.
 
-`src/data` retains the base `AtlasRepository` interface and adds `ScientificAtlasRepository` as its knowledge-graph read-side extension. `StaticAtlasRepository` implements the extended contract: it validates local JSON once and exposes granular queries for domains, fields, countries, institutions, groups, researchers, papers, relationships, events, metrics, raw identity evidence, resolution results, external resources, source/update lineage, graph projection, and profiles. Separate repository instances provide the synthetic framework dataset and the INSPIRE-HEP pilot export. `loadAtlasDataset` assembles either snapshot through the same boundary; visualization components never depend on source-specific records.
+### Repository and transport
 
-`ScientificAtlasRepository.ts` also defines deliberately small `AtlasApiTransport` and `CanonicalEntityPersistence` boundaries. They prepare a future FastAPI client or PostgreSQL adapter without providing a network client, database implementation, or backend in this alpha.
+`AtlasRepository` and `ScientificAtlasRepository` remain the application-facing query contracts. `StaticAtlasRepository` supplies synthetic and pilot data. `APIRepository` supplies server data through the same conceptual boundary, including cancellation, stale-response protection, pagination, caching, loading/error behavior, and deterministic dataset replacement.
 
-Structured provenance is normalized at this boundary. Every validated entity and metric observation receives `source`, `sourceType`, `version`, `status`, and optional confidence/retrieval metadata. Metric observations also identify their source, algorithm version, and calculation version.
+Large collections are scoped. Global map requests need countries and country observations; country requests need the selected canvas, major institutions, and institution observations; papers, researchers, relationships, resources, and profiles are entity-scoped and paginated. The bounded `/api/knowledge-graph` route is diagnostic, not a browser bootstrap payload.
 
-### Identity and graph
+### Persistent storage
 
-`src/identity` contains the conservative `CanonicalIdentityResolver`. It consumes immutable `RawEntityRecord` inputs, tries authoritative external identifiers before exact canonical/alias/historical names, gates fuzzy candidates by threshold and ambiguity margin, and returns an auditable `IdentityResolution`. The statuses `matched`, `ambiguous`, and `unresolved` remain explicit; only a matched result can reference a canonical institution or researcher.
+PostgreSQL stores canonical entities and typed relationships plus raw evidence, identity decisions, review items, resources, check history, metric observations, and update metadata. Important relationships and query dimensions remain relational; variable provider payloads and structured provenance use JSON/JSONB.
 
-Canonical institutions and researchers hold stable Atlas identifiers, preferred names, aliases, historical names where applicable, external identifiers, provenance, and identity confidence. URLs are isolated in typed `ExternalResource` records. `Affiliation` is a time-dependent edge with optional start/end dates, source, and confidence. See [entity resolution](entity-resolution.md) and the [scientific knowledge graph](knowledge-graph.md).
+`Affiliation` is a dated relationship between researcher, institution, and optional group. No permanent researcher-to-institution field is introduced. URLs remain `ExternalResource` records. Alembic migrations own schema evolution; application startup does not silently create production tables.
 
-`src/knowledge/KnowledgeGraph.ts` exposes `KnowledgeGraphService`, which projects the validated dataset into typed canonical nodes and edges. Every edge must reference an existing node. Raw records and resolution decisions remain outside the node set; an `identityResolutionBoundary` reports the matched, ambiguous, and unresolved raw IDs without promoting unresolved evidence into the graph.
+### Connectors and updates
 
-### Profiles and search
+`backend/src/physics_atlas_api/connectors` implements one common `SourceConnector` boundary. INSPIRE, arXiv, and ROR support scheduled incremental batches. ORCID and Crossref intentionally support only targeted `fetch_record` enrichment for an already-known ORCID iD or DOI; they are not global polling sources. Connector code fetches and normalizes source syntax but does not resolve identities or calculate scientific metrics. Raw provider categories are preserved separately from the uncertainty-bearing Atlas field mapping.
 
-`src/profiles` assembles read-only institution, researcher, and research-group profiles from canonical entities, resources, affiliations, authorships, papers, fields, collaborators, and existing metric observations. `ProfileService` filters paper-to-institution or group connections through the affiliation valid for the paper year. `ScientificAtlasRepository` exposes the same projections for transport-neutral consumers. The service does not copy profile data into entity records or calculate metrics.
+The update engine processes a bounded batch from the last successful cursor, writes an immutable snapshot, resolves changed entities, updates the canonical graph, plans affected metric partitions, and records a new dataset version. Scheduled connectors hold a closed acquisition window while paging and persist page checkpoints; the high-water cursor advances only after the final page succeeds. Repeated content is idempotent, and ambiguous identity evidence enters a persistent review queue. See [data sources](data-sources.md) and the [update engine](update-engine.md).
 
-`src/search` builds an `EntitySearchIndex` over canonical entities. It recognizes canonical names, aliases, historical names, abbreviations, stable identifiers, and fuzzy spelling variants, then returns entity type, match method, matched value, search confidence, and available identity confidence. Search maps a query to an existing canonical entity; it never resolves source records or mutates identity data.
+### Identity and knowledge graph
 
-### Metrics
-
-`src/metrics` contains the metric registry, calculator contract, engine orchestration, synthetic alpha calculators, and composite-weighting framework. The registry resolves definitions independently from observations. The engine invokes calculators and returns versioned observations through the repository boundary. React can request or combine supplied layers but cannot contain scientific calculation logic.
-
-The custom-weighting module accepts nonnegative numeric weights that total exactly 100% and emits derived composite observations only after explicit user confirmation. It leaves every raw observation unchanged. Four named demonstration presets provide transparent starting points. Because the real pilot does not calculate Research Diversity, its five-metric composite is disabled rather than filled with synthetic data. A future validated calculator or API can replace the pilot or synthetic implementation while preserving the domain and repository contracts.
-
-### Pilot pipeline
-
-`pipeline` contains development-time acquisition, normalization, entity-resolution, update, metric, and export modules. Acquisition makes bounded, year-sharded INSPIRE queries and preserves the raw responses. Normalization produces the existing Physics Atlas entities and relationship records. Entity resolution produces canonical identities, temporal affiliations, external resources, and reports that distinguish matched, ambiguous, and unresolved evidence with method, confidence, and provenance. Metric calculation emits already-calculated country and institution observations. Export produces a standalone dataset accepted by the normal schema and repository boundary.
-
-`pipeline/updates` creates an append-only snapshot manifest, plans an explicit overlapping incremental query, merges newer source revisions by authoritative source key into a new snapshot object, and never mutates the base snapshot. `pipeline/reprocess.mjs` rebuilds any preserved raw snapshot into its own `data/versions/<snapshot-id>/` directory. This is an update foundation, not a scheduler, production synchronizer, or cloud deployment.
-
-The pipeline is not bundled as browser application logic and is not a backend. Its scope and uncertainty are documented in the [pilot study](pilot-study.md).
-
-### Navigation
-
-`src/navigation` owns canonical URL creation and restoration. It maps shareable domain/field paths and country, institution, or researcher paths into the existing normalized hierarchy. Browser history remains the navigation source of truth after startup; back and forward events restore all dependent entity selections. URL resolution uses normalized relationships and geographic-view membership rather than duplicating scientific data inside routes.
-
-### Presentation
-
-`src/components/atlas` contains the exploration interface. `AtlasExplorer` coordinates repository data, URL state, search, and the optional guided path. `WorldMap` owns MapLibre lifecycle and geographic navigation, `GeographicGeometryLayer` joins packaged GeoJSON features to configured views and composes a dedicated country-mode canvas, `GeographicEntityMapping` resolves geometry and location membership, and `InstitutionLayer` converts already-provided institution observations into points. Dedicated institution, researcher, and field layers resolve normalized entity relationships without embedding records inside UI state.
-
-The map only converts a provided normalized prototype value into fixed color and point-size scales. Its GeoJSON contract uses the generic `metricValue` property. It does not interpret scientific quality, derive historical values, or create rankings.
-
-Map information density follows the exploration hierarchy. World View enables only the global country choropleth. Country View disables every global country layer, renders only the configured country canvas with a neutral geographic fill, and enables the curated institution heat layer. Institution View retains that geographic context while the entity panel becomes the primary surface for groups, researchers, papers, and fields. `MapLayerHierarchy` defines and tests these layer transitions independently from MapLibre lifecycle code.
-
-World-layer colors resolve through `GeographicView` membership rather than assuming a one-to-one relationship between a source polygon and a metric entity. The native geometry/location identifier is retained alongside the visualization metric identifier, keeping rendering decisions separate from scientific attribution.
-
-Geographic geometry and scientific attribution are independent inputs. Map boundaries provide exploration context, while institution locations and future collaboration attribution follow institutional and affiliation metadata. The governing rules are documented in the [geographic representation policy](geography-policy.md).
-
-## v3.0.3 interaction architecture
+The canonical resolver is identifier-led and ambiguity-gated:
 
 ```text
-ScienceDomain (Physics)
-        ├── domain observations ────────────────┐
-        └── optional ResearchField              │
-                    └── field observations ─────┤
-                                                ↓
-MetricDefinition → MetricRegistry → MetricEngine
-                         ↓
-             versioned MetricObservation
-                         ↓
-              raw layer or user-defined composite
-                         ↓
-                  period and entity scope
-                                                ↓
-country observations → world heatmap
-        ↓ country selection
-institution observations + location → institution points
-        ↓ institution selection
-InstitutionView
-        ↓ research-group affiliation
-ResearcherProfile
-
-ResearchField → HistoricalEvent + Institution + Researcher + Paper
-Paper ← Authorship → Researcher ← temporal Affiliation → Institution / ResearchGroup
-
-RawEntityRecord → IdentityResolution → canonical Institution / Researcher
-Canonical entity → typed ExternalResource
-Canonical graph relationships → ProfileService → entity profile
-
-GeographicView → source geometry membership + institution-location membership
-
-URL route ↔ AtlasNavigationState → existing hierarchy
-Entity-aware search → canonical entity + match evidence → canonical route
-Guided exploration → canonical state transitions (optional)
-Entity / MetricDefinition / MetricObservation → DataProvenance
+authority ID → canonical/alias/historical name → contextual evidence
+    → gated fuzzy candidate → matched / needs_review / unresolved
 ```
 
-Time is represented by the existing `MetricObservation.period` field. This avoids introducing a parallel historical metric type and keeps the repository query boundary compatible with the Phase 1 model. Switching sources swaps repository instances and resets incompatible field or entity state; it does not create a second visualization system.
+Authority IDs include ROR for institutions, ORCID/INSPIRE for researchers, and DOI/arXiv/INSPIRE for papers. Search confidence remains distinct from resolution confidence. Raw/unresolved records never become canonical search or profile results.
 
-## Future architecture
+Canonical nodes include domains, fields, countries, institutions, groups, researchers, papers, and resources. Authorship, temporal affiliation, paper-field classification, citations, location, and hosting remain normalized edges. PostgreSQL is used as a relational graph store; a separate graph database is not justified by current queries.
 
-The intended long-term system is:
+### Profiles, search, and resources
 
-```text
-External scientific APIs
-        ↓
-incremental data acquisition
-        ↓
-raw snapshot storage
-        ↓
-normalization + canonical identity resolution
-        ↓
-PostgreSQL knowledge-graph storage
-        ↓
-Metric engine
-        ↓
-FastAPI service
-        ↓
-Frontend repository adapter
-        ↓
-Visualization interface
-```
+Profile services assemble institution, researcher, and group read models from canonical entities, time-scoped relationships, papers, fields, metrics, and external resources. FastAPI exposes equivalent scoped profile routes. Entity-aware search queries canonical names, aliases, historical names, abbreviations, and authority identifiers, returns matching evidence, and excludes unresolved raw records.
 
-The v3.0.3-alpha engineering pilot exercises the identity and graph path through local export with INSPIRE-HEP metadata. It provides validated canonical graph records and query services in memory, but no production database, continuous ingestion, multi-source reconciliation, backend API, or validated methodology. Potential later sources include OpenAlex, arXiv, INSPIRE, Crossref, ROR, and ORCID under their applicable access and licensing terms.
+The resource monitor validates public HTTP(S) targets, uses bounded `HEAD`/minimal `GET`, retry/backoff, timeouts, and check caching, and records status history. It does not crawl sites or delete a resource after a temporary failure. See [resource enrichment](resource-enrichment.md).
 
-The future `APIRepository` should implement the same application contract used by the static prototype. PostgreSQL can store canonical nodes, typed joins, temporal affiliation bounds, resource records, provenance, and version lineage; FastAPI can expose versioned lookup, search, profile, relationship, and metric endpoints. These are prepared boundaries, not alpha runtime dependencies. Their adoption should follow demonstrated query and operational requirements rather than precede them.
+### Metric Engine
+
+`MetricRegistry`, calculator contracts, versioned `MetricObservation`, and confirmed composite weighting remain unchanged. Presentation code never invents formulas. Provider updates create affected partition plans across entity, field, country, institution, year, and metric; the v3.0.4 default `NoFormulaMetricRecalculator` intentionally writes no new scientific values until a reviewed calculator is supplied.
+
+Existing synthetic calculations and bounded pilot signals remain reproducible and source-separated. Missing observations remain missing, not zero. Every calculated value retains definition, algorithm, dataset, and calculation versions. See the [Metric Engine](metric-engine.md).
+
+### Presentation and navigation
+
+`AtlasExplorer` coordinates repository choice and canonical URL state. `WorldMap` owns MapLibre lifecycle; geographic and institution layers consume already-prepared geometry and observations. The layer hierarchy remains:
+
+- World: country heatmap only;
+- Country: selected geographic canvas plus major institution heat/nodes;
+- Institution: selected country context plus group, researcher, paper, field, metric, and resource details;
+- Researcher: identity, affiliation history, papers, collaborators, metrics, and resources.
+
+The global reset clears selected country/institution/researcher state and restores the minimum world camera. Browser back/forward restores the same hierarchy.
+
+## Geographic geometry and attribution
+
+Map geometry is exploration context; institution metadata and temporal affiliations determine scientific location/attribution. `GeographicView` can group multiple geometry components and location-country memberships without embedding geopolitical rules in research relationships.
+
+Country geometry processing supports polygon/multipolygon components, islands, exclaves, and antimeridian crossings. Rings are unwrapped and split into local components before rendering and camera bounds are calculated from that local canvas. This prevents Russia's far-east geometry from drawing across the map, retains disconnected Kaliningrad, and uses the same general abstraction as the China/Taiwan view. It does not create fake polygons or alter contribution logic. See the [geography policy](geography-policy.md).
+
+## Time, color, and missing data
+
+The timeline presents a continuous interaction over discrete historical observations. The selected year appears above the track; sparse major labels adapt to width; pointer, touch, click, and keyboard input are supported. A year without data is missing. The UI performs no scientific interpolation unless a future method is explicitly defined and labeled.
+
+The active heat scale remains violet → blue → cyan → green → yellow → orange → red. Missing values use a dark neutral treatment distinct from low activity. Institution cores and both decorative pulse rings inherit the same computed color; pulse timing and size are constant and encode no metric.
+
+## Deployment and operational boundaries
+
+`docker-compose.yml` starts PostgreSQL, migrates the schema, and runs the API and worker. `/api/health` reports service/database status. `/api/updates/status` reports source freshness/failure, unresolved review count, resource failures, and metric-recalculation state. Structured logs record HTTP and worker/update events without introducing a large monitoring platform.
+
+Provider-backed production requires separately supplied HTTPS hosting, credentials where required, provider-policy configuration, CORS, backups, database isolation, rate protection, and operator monitoring. GitHub Pages cannot host FastAPI/PostgreSQL; it only hosts the frontend and static fallback.
 
 ## Architectural constraints
 
-- Scientific methodology remains outside presentation components.
-- Data entering the frontend is validated at a boundary.
-- Missing observations are distinct from zero-valued observations.
-- World, country, and institution views expose only the geographic layers appropriate to their scale.
-- Synthetic data and real-metadata pilot data are explicitly distinguished.
-- Structured provenance travels with every entity and metric observation.
-- Raw source records remain distinct from resolution decisions and canonical entities.
-- Ambiguous and unresolved records cannot silently reference a canonical entity.
-- Search operates on canonical entities and reports match confidence; it does not mutate resolution state.
-- Temporal affiliation edges replace permanent researcher-to-institution ownership.
-- External URLs remain typed resource records rather than canonical identity fields.
-- A newer snapshot or derived build cannot destructively replace preserved raw evidence.
-- Geographic rendering does not determine exclusive ownership of scientific activity.
-- Domain and field observations are separate validated inputs; the frontend does not aggregate one into the other.
-- Every metric layer is registered and every observation identifies its algorithm and calculation version.
-- User composites preserve raw observations and are explicitly non-authoritative.
-- Global reset clears geographic/entity state and restores the minimum world camera without leaving fullscreen.
-- URL state contains identifiers and exploration context only; scientific records remain in the repository layer.
-- Browser-time external access, PostgreSQL/FastAPI deployment, scheduling, authentication, representative ingestion, and multi-source reconciliation remain out of v3.0.3-alpha.
+- Scientific methods remain outside presentation and provider connectors.
+- Geographic rendering and scientific attribution remain separate.
+- Raw source records, resolution decisions, and canonical entities remain distinct.
+- Ambiguous evidence is reviewable and never silently merged.
+- Temporal affiliations replace permanent ownership fields.
+- External URLs remain typed, monitored resources rather than scraped truth.
+- Source, identity, dataset, and metric provenance remain inspectable.
+- A source update cannot silently erase raw evidence or historical metric versions.
+- Synthetic, pilot, fixture-live, and provider-live modes remain explicitly labeled and isolated.
+- The browser does not contact providers, load the entire graph, or calculate all metrics on request.
+- No source or composite is presented as an authoritative scientific ranking.
+
+## Current limitations
+
+The source connectors and scheduler are not a complete all-physics corpus, the identity confidence model is not calibrated against a representative reviewed truth set, and final live metric formulas are not implemented. No public review UI, hosted queue, database backup service, or production backend is supplied by the repository. Provider-backed freshness and coverage therefore must be reported from actual deployment status, never inferred from the existence of this code.

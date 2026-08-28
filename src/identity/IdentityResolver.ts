@@ -13,7 +13,7 @@ type CanonicalIdentity = Institution | Researcher;
 
 interface CandidateMatch {
   entity: CanonicalIdentity;
-  evidence: IdentityEvidence;
+  evidence: IdentityEvidence & { method: IdentityResolutionMethod };
 }
 
 export interface IdentityResolverOptions {
@@ -204,7 +204,11 @@ export class CanonicalIdentityResolver {
     researchers: Researcher[],
     options: IdentityResolverOptions,
   ) {
-    this.entitiesByType = { institution: institutions, researcher: researchers };
+    this.entitiesByType = {
+      institution: institutions,
+      researcher: researchers,
+      paper: [],
+    };
     this.options = {
       resolverVersion: options.resolverVersion,
       fuzzyThreshold: options.fuzzyThreshold ?? defaultFuzzyThreshold,

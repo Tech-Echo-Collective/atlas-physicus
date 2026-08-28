@@ -1,11 +1,15 @@
 import type { CSSProperties } from 'react';
+import {
+  getDatasetPresentation,
+  type AtlasDatasetKind,
+} from '../../data/DatasetPresentation';
 import type { MetricObservation } from '../../domain/models';
 import { getMetricValueCssColor } from './visualScale';
 
 interface InstitutionActivityHistoryProps {
   observations: MetricObservation[];
   metricLabel: string;
-  isPilotDataset: boolean;
+  datasetKind: AtlasDatasetKind;
 }
 
 type ActivityBarStyle = CSSProperties & {
@@ -16,8 +20,9 @@ type ActivityBarStyle = CSSProperties & {
 export function InstitutionActivityHistory({
   observations,
   metricLabel,
-  isPilotDataset,
+  datasetKind,
 }: InstitutionActivityHistoryProps) {
+  const presentation = getDatasetPresentation(datasetKind);
   const orderedObservations = [...observations].sort(
     (left, right) => Number(left.period) - Number(right.period),
   );
@@ -29,13 +34,13 @@ export function InstitutionActivityHistory({
           <p className="section-kicker">Metric history</p>
           <h3>{metricLabel} over time</h3>
         </div>
-        <span>{isPilotDataset ? 'Pilot values' : 'Synthetic values'}</span>
+        <span>{presentation.valuesLabel}</span>
       </div>
 
       {orderedObservations.length > 0 ? (
         <ol
           className="activity-bars"
-          aria-label={`${isPilotDataset ? 'Pilot' : 'Synthetic'} ${metricLabel} history`}
+          aria-label={`${presentation.dataLabel} ${metricLabel} history`}
         >
           {orderedObservations.map((observation) => (
             <li key={observation.id}>
@@ -59,7 +64,7 @@ export function InstitutionActivityHistory({
         </ol>
       ) : (
         <p className="muted-copy">
-          No {isPilotDataset ? 'pilot' : 'demo'} metric history for this scope.
+          No {presentation.recordLabel} metric history for this scope.
         </p>
       )}
     </section>

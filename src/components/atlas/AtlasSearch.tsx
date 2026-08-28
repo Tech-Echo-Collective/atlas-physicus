@@ -3,7 +3,7 @@ import type { AtlasSearchResult } from '../../domain/models';
 
 interface AtlasSearchProps {
   onSearch: (query: string) => Promise<AtlasSearchResult[]>;
-  onSelect: (result: AtlasSearchResult) => void;
+  onSelect: (result: AtlasSearchResult) => void | Promise<void>;
 }
 
 export function AtlasSearch({ onSearch, onSelect }: AtlasSearchProps) {
@@ -42,7 +42,7 @@ export function AtlasSearch({ onSearch, onSelect }: AtlasSearchProps) {
   };
 
   const chooseResult = (result: AtlasSearchResult) => {
-    onSelect(result);
+    void onSelect(result);
     setQuery('');
     setResults([]);
     setSearchedQuery('');
@@ -87,8 +87,8 @@ export function AtlasSearch({ onSearch, onSelect }: AtlasSearchProps) {
                   chooseResult(results[0]);
                 }
               }}
-              placeholder="Find a field, country, institution…"
-              aria-label="Search science domains, fields, countries, institutions, and researchers"
+              placeholder="Find a field, institution, researcher, paper…"
+              aria-label="Search science domains, fields, countries, institutions, researchers, and papers"
               aria-controls="atlas-search-results"
             />
             <button

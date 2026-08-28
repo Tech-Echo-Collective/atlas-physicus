@@ -12,6 +12,10 @@ import type {
   ResearchField,
   ResearchGroup,
 } from '../../domain/models';
+import {
+  getDatasetPresentation,
+  type AtlasDatasetKind,
+} from '../../data/DatasetPresentation';
 import { InstitutionActivityHistory } from './InstitutionActivityHistory';
 
 interface InstitutionViewProps {
@@ -28,7 +32,7 @@ interface InstitutionViewProps {
   historicalEvents: HistoricalEvent[];
   metricObservations: MetricObservation[];
   metricLabel: string;
-  isPilotDataset: boolean;
+  datasetKind: AtlasDatasetKind;
   externalResources: ExternalResource[];
   identityResolutions: IdentityResolution[];
   selectedGroupId: string | null;
@@ -51,7 +55,7 @@ export function InstitutionView({
   historicalEvents,
   metricObservations,
   metricLabel,
-  isPilotDataset,
+  datasetKind,
   externalResources,
   identityResolutions,
   selectedGroupId,
@@ -59,6 +63,7 @@ export function InstitutionView({
   onResearcherSelect,
   onBackToCountry,
 }: InstitutionViewProps) {
+  const presentation = getDatasetPresentation(datasetKind);
   const activeGroup =
     groups.find((group) => group.id === selectedGroupId) ?? groups[0] ?? null;
   const activeAffiliations = affiliations.filter(
@@ -125,7 +130,7 @@ export function InstitutionView({
           ← Back to {explorationCountry.name}
         </button>
         <p className="section-kicker">
-          Institution ecosystem · {isPilotDataset ? 'INSPIRE-HEP pilot' : 'demo'}
+          Institution ecosystem · {presentation.dataLabel}
         </p>
         <h2>{institution.canonicalName ?? institution.name}</h2>
         <p>
@@ -209,7 +214,7 @@ export function InstitutionView({
         <InstitutionActivityHistory
           observations={metricObservations}
           metricLabel={metricLabel}
-          isPilotDataset={isPilotDataset}
+          datasetKind={datasetKind}
         />
 
         <section className="entity-section">
@@ -219,7 +224,7 @@ export function InstitutionView({
               <h3>Community structure</h3>
             </div>
             <span>
-              {groups.length} {isPilotDataset ? 'resolved' : 'demo'} groups
+              {groups.length} {presentation.recordLabel} groups
             </span>
           </div>
           {groups.length > 0 ? (
@@ -238,7 +243,7 @@ export function InstitutionView({
             </div>
           ) : (
             <p className="muted-copy">
-              No {isPilotDataset ? 'resolved' : 'demo'} research groups are
+              No {presentation.recordLabel} research groups are
               connected.
             </p>
           )}
@@ -276,7 +281,7 @@ export function InstitutionView({
             </div>
           ) : (
             <p className="muted-copy">
-              No affiliated {isPilotDataset ? 'pilot' : 'demo'} researcher is
+              No affiliated {presentation.recordLabel} researcher is
               connected to this group and scope.
             </p>
           )}
@@ -310,7 +315,7 @@ export function InstitutionView({
             <div>
               <p className="section-kicker">Representative papers</p>
               <h3>
-                {isPilotDataset ? 'Pilot' : 'Demo'} publication connections
+                {presentation.dataLabel} publication connections
               </h3>
             </div>
             <span>Incomplete sample</span>
@@ -321,7 +326,7 @@ export function InstitutionView({
                 <li key={paper.id}>
                   <div>
                     <time>{paper.year}</time>
-                    <span>{isPilotDataset ? 'INSPIRE-HEP' : 'synthetic'}</span>
+                    <span>{presentation.sourceLabel}</span>
                   </div>
                   <strong>{paper.title}</strong>
                   <p>{authorsByPaperId.get(paper.id)?.join(', ')}</p>
@@ -330,16 +335,16 @@ export function InstitutionView({
             </ol>
           ) : (
             <p className="muted-copy">
-              No representative {isPilotDataset ? 'pilot' : 'demo'} papers for
+              No representative {presentation.recordLabel} papers for
               this scope.
             </p>
           )}
         </section>
 
         <p className="entity-disclaimer">
-          {isPilotDataset
-            ? 'This bounded INSPIRE-HEP pilot is incomplete and selection-biased. Ordering does not express scientific value.'
-            : 'All people, groups, papers, events, and metric values shown here are synthetic interface data. Ordering does not express scientific value.'}
+          {presentation.isSynthetic
+            ? 'All people, groups, papers, events, and metric values shown here are synthetic interface data. Ordering does not express scientific value.'
+            : `${presentation.disclaimer} Ordering does not express scientific value.`}
         </p>
       </div>
     </aside>

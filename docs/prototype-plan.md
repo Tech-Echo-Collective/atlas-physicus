@@ -1,113 +1,81 @@
-# Alpha prototype plan
+# v3.0.4-alpha implementation plan
 
 ## Objective
 
-v3.0.3-alpha turns the v3.0.2 bounded metric pilot into the first scientific knowledge-graph foundation. It introduces explicit source evidence, canonical identity, temporal affiliations, external resources, entity-aware search, profile aggregation, and non-destructive update lineage while retaining the existing Atlas frontend, `AtlasRepository`, Metric Engine, provenance, and visualization hierarchy.
-
-The central processing order is:
+v3.0.4-alpha turns the preserved static/pilot prototype into a continuously updateable platform foundation while keeping the public Atlas map-first and keeping the synthetic and INSPIRE pilot datasets reproducible.
 
 ```text
-Scientific source
-    → Preserved raw snapshot
-    → Raw entity record
-    → Identity resolution
-    → Canonical entity and graph relationships
-    → Profile enrichment
-    → Metric Engine
-    → AtlasRepository
-    → Atlas visualization
+official source APIs
+    → resumable source connectors
+    → immutable snapshots/raw records
+    → normalization and field mapping
+    → identity resolution/review
+    → PostgreSQL canonical graph
+    → affected metric partitions
+    → FastAPI and APIRepository
+    → World → Country → Institution → Researcher exploration
 ```
 
-The product path remains:
+Deployment-ready is not the same as publicly live. A truly live mode additionally requires an operated database, HTTPS API, scheduled worker, source-policy configuration, backups, and monitoring.
 
-```text
-Science domain
-    → Optional research field
-    → Time
-    → World
-    → Country
-    → Institution
-    → Research group
-    → Researcher
-```
+## Included scope
 
-Paper and historical-event records remain connection layers rather than new destinations.
+v3.0.4-alpha includes:
 
-## v3.0.3 scope
+- PostgreSQL models for canonical entities, normalized relationships, metrics, raw evidence, identity review, resources/checks, update cursors/runs, and dataset state;
+- Alembic migration and non-observational reference bootstrap;
+- typed, bounded FastAPI queries, profiles, search, provenance, health, and update status;
+- frontend `APIRepository` with validation, caching/cancellation, lazy profile/map loading, and source-transition reconciliation;
+- scheduled closed-window incremental connectors for INSPIRE, arXiv, and ROR;
+- targeted ORCID and Crossref record enrichment for already-known identifiers;
+- deterministic provider fixtures whose provenance remains explicitly synthetic;
+- idempotent/resumable update orchestration, persistent ambiguity review, search-index refresh, and affected metric-partition planning;
+- resource enrichment and bounded, allowlisted link health monitoring;
+- broader Physics field taxonomy and uncertainty-bearing provider mapping;
+- Docker Compose for PostgreSQL, migrations, FastAPI, and the worker;
+- Russia/multipolygon/antimeridian geometry repair, continuous accessible timeline, source-switch race handling, and pulse-color inheritance;
+- explicit separation among synthetic demo, historical pilot, fixture API, and provider-backed live modes;
+- a minimal Physics Atlas entry in the Tech Echo Collective website without duplicating the Atlas code.
 
-v3.0.3-alpha includes:
+## Deliberate exclusions
 
-- the complete v3.0.2 metric pilot, numeric weighting profiles, source separation, and map hierarchy;
-- immutable `RawEntityRecord`, auditable `IdentityResolution`, and canonical institution/researcher identity contracts;
-- `matched`, `ambiguous`, and `unresolved` states with method, evidence, confidence, resolver version, timestamp, and provenance;
-- identifier-first resolution, exact canonical/alias/historical-name matching, and an ambiguity-gated fuzzy fallback;
-- canonical names, aliases, historical institution names, external identifiers, and identity confidence;
-- time-dependent affiliations with start/end dates, source, confidence, and legacy-year compatibility;
-- typed `ExternalResource` records for official websites, department/group pages, researcher homepages, ORCID, INSPIRE, arXiv, and DOI links;
-- entity-aware canonical search across names, aliases, historical names, abbreviations, external identifiers, and spelling variations;
-- search results with entity type, matched method/value, search confidence, and available identity confidence;
-- read-only institution, researcher, and research-group profile projections over normalized graph relationships;
-- `ScientificAtlasRepository` read methods plus interface-only `AtlasApiTransport` and `CanonicalEntityPersistence` seams;
-- source-snapshot and dataset-update lineage in the validated domain model;
-- an append-only pilot snapshot manifest, explicit incremental query planner, source-key merge into a new snapshot, and isolated versioned reprocessing;
-- preparation boundaries for a future PostgreSQL store, FastAPI service, and `APIRepository` implementation;
-- documentation of resolution, graph, profile, update, and uncertainty rules;
-- focused schema, identity, search, profile, pipeline, metric, repository, and map-layer tests.
+v3.0.4-alpha does not include:
 
-## v3.0.3 exclusions
-
-v3.0.3-alpha deliberately excludes:
-
-- a deployed PostgreSQL database, FastAPI backend, cloud service, scheduler, queue, authentication, or moderation system;
-- browser-time scientific API access or automatic continuous ingestion;
-- complete or representative INSPIRE coverage;
-- automatic OpenAlex, Crossref, ROR, ORCID, institutional-site, or multi-source reconciliation;
-- perfect researcher or institution matching, calibrated confidence, or a human resolution-review workflow;
-- authoritative historical affiliation verification;
-- website scraping as a primary source;
-- new paper destinations, full-text search, citation-graph visualization, or recommendations;
-- university rankings, researcher recommendations, prediction, evaluation, or admission prediction;
-- validated scientific formulas, normalization, uncertainty propagation, or methodology;
-- authoritative or optimized metric weights.
+- final scientific metric formulas, validated normalization, or uncertainty propagation;
+- a public hosted backend, production credentials, managed database, backup service, or uptime claim;
+- complete all-physics ingestion or historical backfill;
+- global scheduled ORCID or Crossref crawling;
+- automatic resolution of name-only researchers or ambiguous institutions;
+- a reviewer UI, merge/split workflow, authentication, or write API;
+- complete affiliations, groups, citations, resources, retractions, or tombstones;
+- a graph database, Kubernetes, recommendation, ranking, or prediction system.
 
 ## Acceptance criteria
 
-A user can:
+The frontend must pass type checking, lint, tests, and production build while preserving:
 
-1. continue exploring synthetic and INSPIRE pilot sources through the existing hierarchy;
-2. search canonical institutions and researchers by supported canonical names, aliases, abbreviations, external identifiers, and reasonable spelling variants;
-3. see match confidence and identity confidence as distinct technical signals where available;
-4. navigate a selected search result to the existing canonical Atlas route;
-5. continue exploring institution, group, researcher, paper, field, and metric connections without synthetic/pilot mixing;
-6. inspect clear source, uncertainty, identity, and no-ranking communication.
+- global country heatmap, country institution nodes, and lazy profile navigation;
+- synthetic/pilot isolation and API fallback behavior;
+- continuous timeline selection with missing-not-zero semantics;
+- Russia/antimeridian, Kaliningrad, China/Taiwan, reset, country isolation, and pulse-color regressions.
 
-The data system can:
+The backend must pass static validation, unit/integration tests, migrations, API startup, deterministic fixture ingestion/update, and resource-monitor tests. PostgreSQL/Compose behavior must be validated in an environment where Docker is available.
 
-1. keep raw source evidence separate from resolution decisions and canonical records;
-2. reject invalid canonical references and silent unresolved merges at schema validation;
-3. preserve concurrent and historical affiliations as dated edges;
-4. aggregate institution, researcher, and group profiles without embedding copies in canonical entities;
-5. plan an incremental refresh without modifying the base snapshot;
-6. reprocess a preserved snapshot into an isolated version directory;
-7. retain source, resolver, metric, and dataset version lineage.
+Release requires a clean commit, preserved prior tags, successful validation, a new `v3.0.4-alpha` tag without force movement, and a working pinned-submodule GitHub Pages fallback.
 
-Engineering acceptance requires successful type checking, unit and pipeline tests, linting, and a production build.
+## Operational rules
 
-## Known prototype limitations
+- INSPIRE and arXiv default to daily checks; ROR defaults to weekly checks.
+- Incomplete page checkpoints resume immediately inside the same closed window.
+- ORCID and Crossref accept targeted known-ID lookups only and have no global cadence.
+- Source omission never silently deletes a canonical entity.
+- Fixture data remains synthetic through snapshots, canonical provenance, and dataset metadata.
+- Metric partition planning does not write an observation without an explicitly registered, reviewed calculator.
+- Missing data remains missing and is never converted to zero.
+- External URLs remain references; monitoring never crawls or treats page content as scientific truth.
 
-- The repository boundary is query-oriented, but the static alpha still validates and loads a local snapshot into memory.
-- Canonical resolution is conservative but heuristic. Authority IDs and sources can be wrong, aliases can collide, and fuzzy matching can produce false positives or false negatives.
-- Confidence values are not statistically calibrated and are not scientific metrics.
-- An ambiguous or unresolved source record is intentionally kept outside canonical traversal; no review UI exists yet.
-- Historical institution names, affiliation dates, group membership, resource links, coordinates, and paper coverage are incomplete.
-- Profile paper and collaboration connections reflect only the selected dataset and source coverage.
-- External resources can move or expire and are not continuously verified.
-- The update planner and merge functions are development foundations; they do not poll sources, schedule jobs, promote snapshots automatically, or deploy infrastructure.
-- The preserved pilot still contains only three records per year, and 2026 is year-to-date.
-- The four pilot calculations remain sample-relative engineering signals, not scientific formulas or complete field measurements.
-- Research Diversity, Talent Ecosystem, and Concentration / Vulnerability remain uncalculated for the pilot; real-data composite profiles remain disabled.
-- Production hosting must provide a single-page-app fallback for direct `/atlas/*` requests.
-- The selected metric and custom weights are session state and are not yet encoded in shareable URLs or persisted.
-- Geographic-view membership remains a small validated fixture, not a comprehensive global registry.
+## Known limitations and next minimum action
 
-Broader ingestion should proceed only after source policy, resolver behavior, ambiguity handling, historical affiliation rules, sampling bias, uncertainty communication, and scientific methodology have been reviewed. A visible unresolved entity is preferable to an unsupported canonical merge.
+The identity model is conservative but not calibrated against a representative truth set. Source coverage, field mapping, affiliation history, citations, resources, and search/profile completeness remain partial. Link validation cannot replace production egress controls. The API/search/database have not been benchmarked on a full corpus, and the public Pages deployment does not itself host FastAPI.
+
+After release, the smallest responsible next step is a bounded staging deployment: operate PostgreSQL/API/worker, run fixture then limited provider-backed updates, measure resolver precision and scoped API performance, test backup/restore, and review provider/data-retention policy before any large backfill.

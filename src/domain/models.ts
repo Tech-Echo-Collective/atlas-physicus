@@ -10,7 +10,7 @@ export type EntityType =
   | 'research-group'
   | 'researcher';
 
-export type IdentityEntityType = 'institution' | 'researcher';
+export type IdentityEntityType = 'institution' | 'researcher' | 'paper';
 
 export type CanonicalEntityType =
   | EntityType
@@ -64,7 +64,8 @@ export type RawEntityAttribute =
   | number
   | boolean
   | null
-  | string[];
+  | RawEntityAttribute[]
+  | { [key: string]: RawEntityAttribute };
 
 /** Immutable source-facing input to identity resolution. */
 export interface RawEntityRecord extends Provenanced {
@@ -89,10 +90,16 @@ export type IdentityResolutionMethod =
   | 'alias'
   | 'historical-name'
   | 'fuzzy-name'
-  | 'manual-review';
+  | 'source-record-identifier'
+  | 'manual-review'
+  | 'insufficient-metadata';
+
+export type IdentityEvidenceMethod =
+  | IdentityResolutionMethod
+  | 'required-metadata';
 
 export interface IdentityEvidence {
-  method: IdentityResolutionMethod;
+  method: IdentityEvidenceMethod;
   inputValue: string;
   candidateEntityId?: string;
   canonicalValue?: string;
@@ -194,11 +201,15 @@ export type ExternalResourceType =
   | 'official-institution-website'
   | 'department-website'
   | 'research-group-website'
+  | 'institutional-profile'
   | 'researcher-homepage'
+  | 'ror'
+  | 'wikidata'
   | 'orcid'
   | 'inspire'
   | 'arxiv'
-  | 'doi';
+  | 'doi'
+  | 'publisher-landing-page';
 
 /** URLs are isolated here so canonical entities remain source-independent. */
 export interface ExternalResource extends Provenanced {
@@ -255,6 +266,7 @@ export interface MetricDefinition extends Provenanced {
   implementationStatus:
     | 'synthetic-demo'
     | 'pilot-calculated'
+    | 'live-calculated'
     | 'taxonomy-only';
 }
 
@@ -281,7 +293,7 @@ export interface MetricWeightConfiguration {
 
 export interface DatasetMetadata extends Provenanced {
   schemaVersion: string;
-  datasetKind: 'synthetic-demo' | 'inspire-hep-pilot';
+  datasetKind: 'synthetic-demo' | 'inspire-hep-pilot' | 'live-api';
   period: string;
   generatedAt: string;
   latestUpdateAt?: string;
@@ -310,6 +322,7 @@ export interface EntityChangeSummary {
   updated: number;
   unchanged: number;
   unresolved: number;
+  failed: number;
 }
 
 /** Append-only record of a dataset update or deterministic reprocessing run. */
@@ -323,6 +336,10 @@ export interface DatasetUpdate extends Provenanced {
   resolverVersion: string;
   metricCalculationVersion?: string;
   changes: EntityChangeSummary;
+  affectedEntities: Array<{
+    entityType: IdentityEntityType;
+    entityId: string;
+  }>;
 }
 
 export interface AtlasDataset {
@@ -356,6 +373,8 @@ export interface MetricQuery {
 }
 
 export interface AtlasRepository {
+  /** Optional efficient snapshot load used by static and API-backed adapters. */
+  loadDataset?(): Promise<AtlasDataset>;
   getMetadata(): Promise<DatasetMetadata>;
   getScienceDomains(): Promise<ScienceDomain[]>;
   getResearchFields(scienceDomainId?: string): Promise<ResearchField[]>;
@@ -387,7 +406,8 @@ export type AtlasSearchEntityType =
   | 'country'
   | 'institution'
   | 'research-group'
-  | 'researcher';
+  | 'researcher'
+  | 'paper';
 
 export type AtlasSearchMatchMethod =
   | 'external-identifier'

@@ -7,6 +7,10 @@ import type {
   Researcher,
   ResearchField,
 } from '../../domain/models';
+import {
+  getDatasetPresentation,
+  type AtlasDatasetKind,
+} from '../../data/DatasetPresentation';
 
 interface FieldOverviewProps {
   field: ResearchField;
@@ -16,7 +20,7 @@ interface FieldOverviewProps {
   papers: Paper[];
   authorships: Authorship[];
   historicalEvents: HistoricalEvent[];
-  isPilotDataset: boolean;
+  datasetKind: AtlasDatasetKind;
   onClose: () => void;
 }
 
@@ -28,9 +32,10 @@ export function FieldOverview({
   papers,
   authorships,
   historicalEvents,
-  isPilotDataset,
+  datasetKind,
   onClose,
 }: FieldOverviewProps) {
+  const presentation = getDatasetPresentation(datasetKind);
   const fieldInstitutions = institutions
     .filter((institution) => institution.fieldIds.includes(field.id))
     .slice(0, 6);
@@ -64,7 +69,7 @@ export function FieldOverview({
           ← Back to Atlas
         </button>
         <p className="section-kicker">
-          Research field overview · {isPilotDataset ? 'INSPIRE-HEP pilot' : 'demo'}
+          Research field overview · {presentation.dataLabel}
         </p>
         <span className="field-overview-code">{field.id}</span>
         <h2>{field.label}</h2>
@@ -76,7 +81,7 @@ export function FieldOverview({
           <div className="entity-section-heading">
             <div>
               <p className="section-kicker">Historical milestones</p>
-              <h3>{isPilotDataset ? 'Pilot' : 'Demo'} chronology</h3>
+              <h3>{presentation.dataLabel} chronology</h3>
             </div>
             <span>Not comprehensive</span>
           </div>
@@ -94,7 +99,7 @@ export function FieldOverview({
             </ol>
           ) : (
             <p className="muted-copy">
-              No {isPilotDataset ? 'pilot' : 'synthetic'} milestones are
+              No {presentation.recordLabel} milestones are
               connected.
             </p>
           )}
@@ -104,7 +109,7 @@ export function FieldOverview({
           <div className="entity-section-heading">
             <div>
               <p className="section-kicker">Institutions</p>
-              <h3>Major nodes in this {isPilotDataset ? 'pilot' : 'demo'}</h3>
+              <h3>Major nodes in this {presentation.recordLabel} dataset</h3>
             </div>
             <span>Unranked sample</span>
           </div>
@@ -122,7 +127,7 @@ export function FieldOverview({
           <div className="entity-section-heading">
             <div>
               <p className="section-kicker">Researchers</p>
-              <h3>Associated {isPilotDataset ? 'pilot' : 'demo'} community</h3>
+              <h3>Associated {presentation.recordLabel} community</h3>
             </div>
             <span>Not ranked</span>
           </div>
@@ -149,7 +154,7 @@ export function FieldOverview({
               <p className="section-kicker">Representative papers</p>
               <h3>Preparation records</h3>
             </div>
-            <span>{isPilotDataset ? 'Pilot sample' : 'Synthetic sample'}</span>
+            <span>{presentation.sampleLabel}</span>
           </div>
           <ol className="paper-list">
             {fieldPapers.map((paper) => (
@@ -159,7 +164,7 @@ export function FieldOverview({
                   <span>{authorCountByPaperId.get(paper.id) ?? 0} authors</span>
                 </div>
                 <strong>{paper.title}</strong>
-                <p>{paper.summary}</p>
+                <p>{paper.summary || 'Summary unavailable in this source.'}</p>
               </li>
             ))}
           </ol>
@@ -167,9 +172,9 @@ export function FieldOverview({
       </div>
 
       <p className="entity-disclaimer field-overview-disclaimer">
-        {isPilotDataset
-          ? 'This bounded INSPIRE-HEP overview is incomplete and selection-biased. It does not claim historical or community completeness.'
-          : 'This overview uses incomplete synthetic content to prepare the field exploration model. It does not claim historical or community completeness.'}
+        {presentation.isSynthetic
+          ? 'This overview uses incomplete synthetic content to prepare the field exploration model. It does not claim historical or community completeness.'
+          : `${presentation.disclaimer} It does not claim historical or community completeness.`}
       </p>
     </aside>
   );

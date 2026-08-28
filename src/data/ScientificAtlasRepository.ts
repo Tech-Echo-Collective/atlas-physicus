@@ -37,7 +37,7 @@ export interface ScientificAtlasRepository extends AtlasRepository {
 }
 
 /**
- * Network boundary for a future API client. It deliberately transports
+ * Network boundary implemented by APIRepository. It deliberately transports
  * versioned resources rather than exposing database details to the frontend.
  */
 export interface AtlasApiTransport {
@@ -47,8 +47,9 @@ export interface AtlasApiTransport {
 }
 
 /**
- * Persistence boundary for a future PostgreSQL adapter. This alpha provides
- * only an in-memory implementation through StaticAtlasRepository.
+ * Persistence-facing read boundary. The static repository implements it in
+ * memory, while the FastAPI/PostgreSQL service implements the live equivalent
+ * without exposing SQL details to UI code.
  */
 export interface CanonicalEntityPersistence {
   readRepositorySnapshot(version?: string): Promise<unknown>;

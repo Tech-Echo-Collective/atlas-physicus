@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { DataProvenance } from './models';
+import type { DataProvenance, RawEntityAttribute } from './models';
 
 const entityIdSchema = z.string().min(1).regex(/^[a-z0-9-]+$/);
 const fieldIdSchema = z.string().min(1).regex(/^[a-z0-9-]+$/);
@@ -7,6 +7,18 @@ const metricIdSchema = z.string().min(1).regex(/^[a-z0-9_-]+$/);
 const temporalDateSchema = z
   .string()
   .regex(/^\d{4}(?:-(?:0[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01]))?)?$/);
+
+/**
+ * Static JSON omits unknown optional values, while the FastAPI transport uses
+ * explicit JSON nulls. Normalize both representations to the domain model's
+ * undefined value without touching meaningful nulls inside raw source evidence.
+ */
+export function optionalFromNullable<T extends z.ZodType>(schema: T) {
+  return z.preprocess(
+    (value) => (value === null ? undefined : value),
+    schema.optional(),
+  );
+}
 
 function temporalLowerBound(value: string): string {
   const segments = value.split('-');
@@ -35,8 +47,8 @@ export const provenanceSchema = z.object({
   ]),
   version: z.string().min(1),
   status: z.enum(['synthetic', 'unverified', 'verified', 'deprecated']),
-  confidence: z.number().min(0).max(1).optional(),
-  retrievedAt: z.string().datetime().optional(),
+  confidence: optionalFromNullable(z.number().min(0).max(1)),
+  retrievedAt: optionalFromNullable(z.string().datetime({ offset: true })),
 });
 
 export const externalIdentifierSchema = z.object({
@@ -45,11 +57,11 @@ export const externalIdentifierSchema = z.object({
 });
 
 const canonicalIdentityFieldsShape = {
-  canonicalName: z.string().trim().min(1).optional(),
+  canonicalName: optionalFromNullable(z.string().trim().min(1)),
   aliases: z.array(z.string().trim().min(1)).default([]),
   historicalNames: z.array(z.string().trim().min(1)).default([]),
   externalIds: z.array(externalIdentifierSchema).default([]),
-  identityConfidence: z.number().min(0).max(1).optional(),
+  identityConfidence: optionalFromNullable(z.number().min(0).max(1)),
 };
 
 const recordProvenanceSchema = z
@@ -102,13 +114,13 @@ export const institutionSchema = z
     ...canonicalIdentityFieldsShape,
     countryId: entityIdSchema,
     city: z.string().min(1),
-    fieldIds: z.array(fieldIdSchema).min(1),
-    location: z
-      .object({
+    fieldIds: z.array(fieldIdSchema),
+    location: optionalFromNullable(
+      z.object({
         longitude: z.number().min(-180).max(180),
         latitude: z.number().min(-90).max(90),
-      })
-      .optional(),
+      }),
+    ),
     provenance: recordProvenanceSchema,
   })
   .transform((institution) => ({
@@ -121,7 +133,7 @@ export const researcherSchema = z
     id: entityIdSchema,
     name: z.string().min(1),
     ...canonicalIdentityFieldsShape,
-    fieldIds: z.array(fieldIdSchema).min(1),
+    fieldIds: z.array(fieldIdSchema),
     provenance: recordProvenanceSchema,
   })
   .transform((researcher) => ({
@@ -134,7 +146,7 @@ export const researchGroupSchema = z.object({
   name: z.string().min(1),
   institutionId: entityIdSchema,
   description: z.string().min(1),
-  fieldIds: z.array(fieldIdSchema).min(1),
+  fieldIds: z.array(fieldIdSchema),
   provenance: recordProvenanceSchema,
 });
 
@@ -143,13 +155,13 @@ export const affiliationSchema = z
     id: entityIdSchema,
     researcherId: entityIdSchema,
     institutionId: entityIdSchema,
-    researchGroupId: entityIdSchema.optional(),
-    startDate: temporalDateSchema.optional(),
-    endDate: temporalDateSchema.optional(),
-    source: z.string().min(1).optional(),
-    confidence: z.number().min(0).max(1).optional(),
-    startYear: z.number().int().min(1000).max(9999).optional(),
-    endYear: z.number().int().min(1000).max(9999).optional(),
+    researchGroupId: optionalFromNullable(entityIdSchema),
+    startDate: optionalFromNullable(temporalDateSchema),
+    endDate: optionalFromNullable(temporalDateSchema),
+    source: optionalFromNullable(z.string().min(1)),
+    confidence: optionalFromNullable(z.number().min(0).max(1)),
+    startYear: optionalFromNullable(z.number().int().min(1000).max(9999)),
+    endYear: optionalFromNullable(z.number().int().min(1000).max(9999)),
     provenance: recordProvenanceSchema,
   })
   .superRefine((affiliation, context) => {
@@ -182,19 +194,23 @@ export const externalResourceSchema = z
       'official-institution-website',
       'department-website',
       'research-group-website',
+      'institutional-profile',
       'researcher-homepage',
+      'ror',
+      'wikidata',
       'orcid',
       'inspire',
       'arxiv',
       'doi',
+      'publisher-landing-page',
     ]),
     label: z.string().min(1),
     url: z.string().url(),
-    externalId: externalIdentifierSchema.optional(),
+    externalId: optionalFromNullable(externalIdentifierSchema),
     isPrimary: z.boolean().default(false),
-    validFrom: temporalDateSchema.optional(),
-    validTo: temporalDateSchema.optional(),
-    lastVerifiedAt: z.string().datetime().optional(),
+    validFrom: optionalFromNullable(temporalDateSchema),
+    validTo: optionalFromNullable(temporalDateSchema),
+    lastVerifiedAt: optionalFromNullable(z.string().datetime({ offset: true })),
     provenance: recordProvenanceSchema,
   })
   .superRefine((resource, context) => {
@@ -213,26 +229,26 @@ export const externalResourceSchema = z
     }
   });
 
+const rawEntityAttributeSchema: z.ZodType<RawEntityAttribute> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(rawEntityAttributeSchema),
+    z.record(z.string(), rawEntityAttributeSchema),
+  ]),
+);
+
 export const rawEntityRecordSchema = z.object({
   id: entityIdSchema,
-  entityType: z.enum(['institution', 'researcher']),
+  entityType: z.enum(['institution', 'researcher', 'paper']),
   sourceRecordId: z.string().min(1),
-  sourceSnapshotId: entityIdSchema.optional(),
+  sourceSnapshotId: optionalFromNullable(entityIdSchema),
   rawName: z.string().min(1),
   externalIds: z.array(externalIdentifierSchema).default([]),
-  attributes: z
-    .record(
-      z.string(),
-      z.union([
-        z.string(),
-        z.number(),
-        z.boolean(),
-        z.null(),
-        z.array(z.string()),
-      ]),
-    )
-    .default({}),
-  ingestedAt: z.string().datetime(),
+  attributes: z.record(z.string(), rawEntityAttributeSchema).default({}),
+  ingestedAt: z.string().datetime({ offset: true }),
   provenance: recordProvenanceSchema,
 });
 
@@ -242,14 +258,21 @@ const identityResolutionMethodSchema = z.enum([
   'alias',
   'historical-name',
   'fuzzy-name',
+  'source-record-identifier',
   'manual-review',
+  'insufficient-metadata',
+]);
+
+const identityEvidenceMethodSchema = z.union([
+  identityResolutionMethodSchema,
+  z.literal('required-metadata'),
 ]);
 
 export const identityEvidenceSchema = z.object({
-  method: identityResolutionMethodSchema,
+  method: identityEvidenceMethodSchema,
   inputValue: z.string().min(1),
-  candidateEntityId: entityIdSchema.optional(),
-  canonicalValue: z.string().min(1).optional(),
+  candidateEntityId: optionalFromNullable(entityIdSchema),
+  canonicalValue: optionalFromNullable(z.string().min(1)),
   score: z.number().min(0).max(1),
 });
 
@@ -257,14 +280,14 @@ export const identityResolutionSchema = z
   .object({
     id: entityIdSchema,
     rawEntityRecordId: entityIdSchema,
-    entityType: z.enum(['institution', 'researcher']),
+    entityType: z.enum(['institution', 'researcher', 'paper']),
     status: z.enum(['matched', 'unresolved', 'ambiguous']),
-    canonicalEntityId: entityIdSchema.optional(),
-    method: identityResolutionMethodSchema.optional(),
+    canonicalEntityId: optionalFromNullable(entityIdSchema),
+    method: optionalFromNullable(identityResolutionMethodSchema),
     confidence: z.number().min(0).max(1),
     evidence: z.array(identityEvidenceSchema),
     resolverVersion: z.string().min(1),
-    resolvedAt: z.string().datetime(),
+    resolvedAt: z.string().datetime({ offset: true }),
     provenance: recordProvenanceSchema,
   })
   .superRefine((resolution, context) => {
@@ -298,47 +321,55 @@ export const sourceSnapshotSchema = z.object({
   id: entityIdSchema,
   source: z.string().min(1),
   sourceVersion: z.string().min(1),
-  capturedAt: z.string().datetime(),
+  capturedAt: z.string().datetime({ offset: true }),
   updateMode: z.enum(['full-snapshot', 'incremental']),
   recordCount: z.number().int().min(0),
-  previousSnapshotId: entityIdSchema.optional(),
-  contentChecksum: z.string().min(1).optional(),
-  storageReference: z.string().min(1).optional(),
+  previousSnapshotId: optionalFromNullable(entityIdSchema),
+  contentChecksum: optionalFromNullable(z.string().min(1)),
+  storageReference: optionalFromNullable(z.string().min(1)),
   provenance: recordProvenanceSchema,
 });
 
 export const datasetUpdateSchema = z.object({
   id: entityIdSchema,
-  appliedAt: z.string().datetime(),
+  appliedAt: z.string().datetime({ offset: true }),
   updateMode: z.enum(['full-snapshot', 'incremental', 'reprocess']),
   sourceSnapshotIds: z.array(entityIdSchema).min(1),
-  previousDatasetVersion: z.string().min(1).optional(),
+  previousDatasetVersion: optionalFromNullable(z.string().min(1)),
   datasetVersion: z.string().min(1),
   resolverVersion: z.string().min(1),
-  metricCalculationVersion: z.string().min(1).optional(),
+  metricCalculationVersion: optionalFromNullable(z.string().min(1)),
   changes: z.object({
     created: z.number().int().min(0),
     updated: z.number().int().min(0),
     unchanged: z.number().int().min(0),
     unresolved: z.number().int().min(0),
+    failed: z.number().int().min(0).default(0),
   }),
+  affectedEntities: z
+    .array(
+      z.object({
+        entityType: z.enum(['institution', 'researcher', 'paper']),
+        entityId: entityIdSchema,
+      }),
+    )
+    .default([]),
   provenance: recordProvenanceSchema,
 });
 
 export const paperSchema = z.object({
   id: entityIdSchema,
   title: z.string().min(1),
-  summary: z.string().min(1),
+  summary: z.string(),
   year: z.number().int().min(1000).max(9999),
-  fieldIds: z.array(fieldIdSchema).min(1),
-  doi: z.string().regex(/^10\.\d{4,9}\/\S+$/).optional(),
-  arxivId: z
-    .string()
-    .regex(/^(?:arXiv:)?(?:\d{4}\.\d{4,5}|[a-z-]+\/\d{7})$/i)
-    .optional(),
-  externalIdentifiers: z
-    .array(externalIdentifierSchema)
-    .optional(),
+  fieldIds: z.array(fieldIdSchema),
+  doi: optionalFromNullable(z.string().regex(/^10\.\d{4,9}\/\S+$/)),
+  arxivId: optionalFromNullable(
+    z
+      .string()
+      .regex(/^(?:arXiv:)?(?:\d{4}\.\d{4,5}|[a-z-]+\/\d{7})$/i),
+  ),
+  externalIdentifiers: optionalFromNullable(z.array(externalIdentifierSchema)),
   provenance: recordProvenanceSchema,
 });
 
@@ -373,6 +404,7 @@ export const metricDefinitionSchema = z.object({
   implementationStatus: z.enum([
     'synthetic-demo',
     'pilot-calculated',
+    'live-calculated',
     'taxonomy-only',
   ]),
   provenance: recordProvenanceSchema,
@@ -389,15 +421,15 @@ export const metricObservationSchema = z.object({
     'researcher',
   ]),
   entityId: entityIdSchema,
-  scienceDomainId: entityIdSchema.optional(),
-  fieldId: fieldIdSchema.optional(),
+  scienceDomainId: optionalFromNullable(entityIdSchema),
+  fieldId: optionalFromNullable(fieldIdSchema),
   metricId: metricIdSchema,
   period: z.string().regex(/^\d{4}$/),
   value: z.number().min(0).max(100),
   source: z.string().min(1).default('synthetic-demo'),
   algorithmVersion: z.string().min(1).default('metric-engine-v1'),
   calculationVersion: z.string().min(1).default('v3.0.1-alpha'),
-  calculatedAt: z.string().datetime().optional(),
+  calculatedAt: optionalFromNullable(z.string().datetime({ offset: true })),
   provenance: recordProvenanceSchema,
 });
 
@@ -428,19 +460,25 @@ export const metricWeightConfigurationSchema = z
     }
   });
 
+export const datasetMetadataSchema = z.object({
+  schemaVersion: z.string().min(1),
+  datasetKind: z.enum([
+    'synthetic-demo',
+    'inspire-hep-pilot',
+    'live-api',
+  ]),
+  period: z.string().regex(/^\d{4}$/),
+  generatedAt: z.string().datetime({ offset: true }),
+  latestUpdateAt: optionalFromNullable(z.string().datetime({ offset: true })),
+  sourceSnapshotIds: z.array(entityIdSchema).default([]),
+  updateSequence: z.number().int().min(0).default(0),
+  disclaimer: z.string().min(1),
+  provenance: recordProvenanceSchema,
+});
+
 export const atlasDatasetSchema = z
   .object({
-    metadata: z.object({
-      schemaVersion: z.string().min(1),
-      datasetKind: z.enum(['synthetic-demo', 'inspire-hep-pilot']),
-      period: z.string().regex(/^\d{4}$/),
-      generatedAt: z.string().datetime(),
-      latestUpdateAt: z.string().datetime().optional(),
-      sourceSnapshotIds: z.array(entityIdSchema).default([]),
-      updateSequence: z.number().int().min(0).default(0),
-      disclaimer: z.string().min(1),
-      provenance: recordProvenanceSchema,
-    }),
+    metadata: datasetMetadataSchema,
     scienceDomains: z.array(scienceDomainSchema).default([]),
     fields: z.array(researchFieldSchema).min(1),
     countries: z.array(countrySchema).min(1),

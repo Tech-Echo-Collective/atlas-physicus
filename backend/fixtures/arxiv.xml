@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <id>https://export.arxiv.org/api/fixture</id>
+  <updated>2026-08-25T11:00:00Z</updated>
+  <entry>
+    <id>http://arxiv.org/abs/2608.01234v1</id>
+    <updated>2026-08-25T11:00:00Z</updated>
+    <published>2026-08-25T11:00:00Z</published>
+    <title>Synthetic fixture for incremental field evolution</title>
+    <summary>Deterministic metadata fixture; not a scientific claim.</summary>
+    <author><name>Ada Fixture</name></author>
+    <category term="hep-th" />
+    <arxiv:doi>10.5555/physics-atlas.fixture</arxiv:doi>
+  </entry>
+</feed>

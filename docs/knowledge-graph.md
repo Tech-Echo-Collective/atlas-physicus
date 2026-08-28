@@ -1,164 +1,110 @@
 # Scientific knowledge graph
 
-## Purpose and scope
+## Purpose and status
 
-Physics Atlas v3.0.3-alpha introduces a scientific knowledge-graph model above the existing repository and metric boundaries. The graph connects canonical entities and evidence-backed relationships so the application can answer questions such as:
+Physics Atlas uses a canonical scientific knowledge graph to connect source evidence to institutions, researchers, papers, fields, affiliations, authorships, groups, places, metrics, and external resources. The graph exists to support transparent exploration; it is not a university or researcher ranking, recommendation engine, or claim that source coverage is complete.
 
-- Which canonical institution does this source affiliation reference?
-- Which institutions was a researcher affiliated with during a selected period?
-- Which papers, fields, groups, and metrics connect to an institution?
-- Which external resource belongs to a canonical entity?
-
-The alpha graph is a validated static data model and query layer. It is not yet a graph database, live public API, complete scientific index, citation graph, ranking system, or recommendation engine.
-
-## Processing architecture
+v3.0.4-alpha adds a persistent PostgreSQL representation and FastAPI read layer alongside the preserved validated static and pilot graph. PostgreSQL is a relational graph store for the current query shapes. A separate graph database is not justified yet.
 
 ```text
-Scientific data sources
-        ↓
-append-only raw snapshots
-        ↓
-normalization into source records
-        ↓
-entity resolution
-        ↓
-canonical scientific entities
-        ↓
-profile enrichment and graph relationships
-        ↓
-Metric Engine
-        ↓
-AtlasRepository
-        ↓
-Atlas visualization
+official source record
+    → immutable snapshot and raw record
+    → normalization and field-mapping evidence
+    → identifier-led identity resolution
+    → canonical node or persistent review item
+    → normalized graph relationships
+    → profile/search/map read models
 ```
 
-Identity precedes profile aggregation and metric attribution. Presentation components consume canonical records and already-resolved relationships; they do not decide whether two names represent the same person or institution.
+The repository supplies deployment-ready infrastructure, not a claim that the public GitHub Pages instance is connected to a hosted live graph.
 
-## Nodes
+## Canonical nodes
 
-`KnowledgeGraphService.build()` creates the following canonical node types:
+The canonical vocabulary includes:
 
-- `ScienceDomain`;
-- `ResearchField`;
-- `Country`;
-- `Institution`;
-- `ResearchGroup`;
-- `Researcher`;
-- `Paper`;
-- `ExternalResource`.
+- `ScienceDomain` and `ResearchField`;
+- `Country` and `GeographicView`;
+- `Institution` and `ResearchGroup`;
+- `Researcher` and `Paper`;
+- `MetricDefinition` and versioned `MetricObservation`;
+- `HistoricalEvent` and `ExternalResource`.
 
-Stable internal identifiers are independent from display labels and source-system identifiers. Renaming an institution or adding an ORCID therefore does not require changing graph edges or routes.
+Stable Atlas IDs are distinct from provider identifiers and display names. `AuthorityIdentifier` maps ROR, ORCID, INSPIRE, DOI, and arXiv identifiers to supported canonical entities. Renaming an institution or adding an authority ID therefore does not require changing routes or unrelated relationships.
 
-Raw source records and identity-resolution decisions deliberately do not become graph nodes. The graph exposes an `identityResolutionBoundary` containing the raw-record IDs classified as matched, ambiguous, or unresolved, so evidence status remains inspectable without turning unresolved records into canonical entities. Historical events, metric definitions, and versioned metric observations remain validated Atlas records outside this alpha graph projection and continue through their established repository boundaries.
+`SourceSnapshot`, `RawEntityRecord`, `IdentityResolution`, and `IdentityReview` are evidence/audit records, not canonical graph nodes. Unresolved records remain outside canonical traversal, search, profiles, attribution, and metrics.
 
 ## Relationships
 
 ```text
-Researcher <── Authorship ──> Paper ── classified as ──> ResearchField
+Researcher <── Authorship ──> Paper ── PaperField ──> ResearchField
      │
-     └── Affiliation ──> Institution ── located in ──> Country
-                    └──> ResearchGroup (optional)
+     └── temporal Affiliation ──> Institution ── located in ──> Country
+                              └──> ResearchGroup (optional)
 
 Institution ── hosts ──> ResearchGroup
+Paper ── Citation ──> Paper
 Canonical entity ── has ──> ExternalResource
 ```
 
-The implemented graph edge vocabulary covers domain-to-field membership, institution location and field activity, group hosting and field activity, researcher field activity, temporal institution/group affiliation, authorship, paper classification, and resource ownership. Every edge references an existing canonical node or the graph build fails.
+Relationships are normalized records rather than embedded copies. This permits multiple/concurrent affiliations, many authors, multiple field classifications, repeated external resources, and versioned observations without duplicating canonical entities.
 
-Relationships remain normalized records rather than embedded copies. This supports multiple affiliations, multiple authors, multiple external resources, and versioned observations without duplicating entities.
+Affiliation is time-dependent and keeps start/end bounds, source, confidence, and provenance. A researcher does not have one permanent institution field. An unknown date remains unknown. Paper metadata can support an affiliation observed for a publication, but it must not be inflated into an uninterrupted employment interval.
 
-### Temporal relationships
+Authorship preserves author position; it does not express contribution share, employment, endorsement, or exclusive geographic ownership. Collaborative work can be attributed to every supported participating affiliation.
 
-Affiliation is time-dependent. Its start and end bounds, source, provenance, and confidence belong to the edge. A researcher does not have one permanent institution relationship. Concurrent and historical affiliations can coexist, and an unknown date remains unknown instead of being interpreted as permanent.
+The live ingestion engine currently materializes papers, paper-field classifications, resources, and authorships only for authors carrying authority evidence such as an ORCID or INSPIRE author ID. Name-only authors become review evidence rather than silent canonical people. INSPIRE affiliation, reference, and citation structures are retained in the exact snapshot and raw-record evidence, but v3.0.4 does not yet promote them to canonical `Affiliation` or `Citation` edges. That promotion needs reviewed institution resolution plus temporal/conflict rules; the alpha does not infer missing edges.
 
-The current pilot derives point-in-time affiliation evidence from paper metadata. These dated observations support the paper connection but do not assert an employment interval between publications.
+## Geographic separation
 
-Authorship identifies a paper-person relationship and preserves author order. It does not establish employment, contribution share, or exclusive geographic ownership. Country and institution participation are derived from supported affiliation relationships under the project’s [geographic representation policy](geography-policy.md).
+Geographic rendering and scientific attribution are separate layers:
 
-### External resources
+- institution coordinates and location metadata determine where an entity appears;
+- `GeographicView` determines the geometry components and location memberships shown in a country canvas;
+- temporal affiliation relationships determine research participation;
+- metric observations remain scoped evidence and never rewrite geography.
 
-URLs are represented as `ExternalResource` records rather than fields scattered across entity objects. Each record associates one canonical entity with a typed resource, label, URL, provenance, and optional source-specific identifiers or timestamps.
+This separation supports disconnected components, islands, antimeridian geometry, and the China/Taiwan exploration canvas without hard-coding geopolitical assumptions into research relationships. See the [geographic representation policy](geography-policy.md).
 
-Supported resource vocabulary includes:
+## Identity and provenance boundary
 
-- official institution website;
-- department website;
-- research-group website;
-- researcher homepage;
-- ORCID;
-- INSPIRE;
-- arXiv;
-- DOI.
+Resolution follows authority ID, canonical/alias/historical-name evidence, contextual evidence, and ambiguity-gated fuzzy candidates. Only a supported match or authority-backed creation enters the canonical graph. Conflicts become `needs_review` or `unresolved`; the persistent queue has no automated approval.
 
-This separation allows resources to be updated, deprecated, deduplicated, or verified without changing canonical identity. A link is supporting metadata, not evidence that every page statement has been verified by Physics Atlas.
+Every live evidence chain retains, where applicable:
 
-## Graph invariants
+- provider, record ID, snapshot, and retrieval time;
+- normalization/field-mapping version and uncertainty;
+- resolution method, confidence, version, and timestamp;
+- dataset/update version;
+- metric definition, algorithm, calculation version, and timestamp.
 
-- Only canonical entity IDs are used by profile, search-result, and metric relationships.
-- Raw and unresolved source records are never silently presented as canonical entities.
-- Every derived node or edge retains provenance and a source or processing version.
-- Missing relationships remain missing; they are not inferred as negative facts.
-- Geographic rendering and scientific attribution are separate graph concerns.
-- Metric observations remain outside entity identity and keep their algorithm and calculation versions.
-- User-defined metric composites never rewrite source observations or graph edges.
+Deterministic connector fixtures traverse the same persistence path but remain labeled synthetic/demo in snapshots, raw records, canonical provenance, and dataset metadata. They are never evidence that a provider-backed graph is live.
 
-## Repository boundary
+## Repository and API boundary
 
-`AtlasRepository` remains the base application-facing boundary. `ScientificAtlasRepository` extends it with raw-evidence, identity-resolution, external-resource, snapshot/update, knowledge-graph, and profile queries. `StaticAtlasRepository` implements that extended contract for both validated synthetic and pilot snapshots.
+`ScientificAtlasRepository` remains the application-facing conceptual contract. `StaticAtlasRepository` serves validated synthetic/pilot snapshots; `APIRepository` consumes typed FastAPI read models without exposing SQLAlchemy details to React.
 
-The frontend asks for canonical entities and relationships; it does not depend on whether the implementation reads validated JSON or, in a future release, a service. `AtlasApiTransport` and `CanonicalEntityPersistence` name future transport and storage seams without implementing FastAPI or PostgreSQL. This preserves the existing World → Country → Institution → Researcher exploration architecture.
+The API provides canonical entity, relationship, profile, provenance, search, update-status, and bounded diagnostic graph routes. Map startup intentionally does not send the entire graph: it loads vocabulary and country observations, then fetches scoped institution nodes for the selected country. Institution and researcher profiles and relationships are loaded lazily and remain bounded/paginated.
+
+`EntitySearchTerm` stores canonical names, aliases, historical names, token variants, and authority identifiers. It refreshes when supported canonical evidence changes. Search returns canonical entities with match evidence; identity confidence and query-match confidence remain separate technical signals.
 
 ## Incremental and non-destructive updates
 
-The update foundation treats each explicit acquisition as a versioned event:
+INSPIRE, arXiv, and ROR scheduled connectors use closed acquisition windows with resumable page checkpoints. A batch records raw evidence before canonicalization, updates supported canonical nodes and edges, refreshes search terms/resources, plans affected metric partitions, and advances the high-water cursor only after the final page succeeds.
 
-```text
-previous raw snapshots ───────────────┐
-new source snapshot                   │
-        ↓                             │
-incremental normalization             │
-        ↓                             │
-identity re-resolution                │
-        ↓                             │
-versioned canonical graph build  ←────┘
-        ↓
-affected metric recalculation
-        ↓
-versioned export
-```
+Canonical records are not deleted because a provider temporarily omits them. Replayed content is idempotent where possible, earlier snapshots and decisions remain auditable, and a source correction creates a new update chain instead of silently erasing history. ORCID and Crossref are targeted enrichers for known identifiers, not globally scheduled graph crawls.
 
-Raw snapshots are append-only inputs. A new build writes a new manifest and derived output instead of destructively replacing prior evidence. `pipeline/data/manifests/inspire-hep-hep-th-snapshots.json` records the active snapshot, parent, source/version, timestamps, coverage, canonical content SHA-256 digest, record counts, processing versions, and output paths. The checked-in `incremental-update-plan.json` refreshes the overlapping 2025–2026 boundary and requires explicit ingestion; it does not run by itself.
+## Metric boundary
 
-`pipeline/reprocess.mjs` rebuilds a preserved raw snapshot beneath `pipeline/data/versions/<snapshot-id>/` without modifying the raw input. `pipeline/rebuild.mjs` refreshes the current compatibility outputs from the checked-in raw snapshot.
-
-The alpha does not run a production scheduler or cloud service. Its update interfaces establish idempotent stages and version boundaries for later orchestration.
-
-## Future PostgreSQL and FastAPI boundaries
-
-A future PostgreSQL implementation can map canonical nodes to typed tables and relationship edges to join tables with temporal columns, provenance foreign keys, and version or validity ranges. JSON/JSONB can retain source payload references or less-stable external metadata, but canonical identifiers and important joins should remain relationally constrained.
-
-A future FastAPI service can implement `AtlasRepository`-equivalent endpoints for:
-
-- canonical entity lookup;
-- entity-aware search;
-- time-scoped affiliations and relationships;
-- aggregated institution, group, and researcher profiles;
-- metric definitions and observations;
-- external-resource lookup;
-- provenance and dataset-version inspection.
-
-The API must return the same validated domain shapes or an explicitly versioned transport schema. Neither PostgreSQL nor FastAPI belongs inside React components, metric calculators, or resolution rules. Authentication, access policy, pagination, caching, migrations, background jobs, and operational monitoring remain future deployment work.
+Metrics are observations about a graph scope, not identity attributes or graph-edge weights. The update engine records affected entity/field/country/institution/year/metric partitions. The default live recalculator intentionally produces no new scientific values until reviewed formulas exist. Missing observations remain missing, and earlier versioned observations remain reproducible.
 
 ## Limitations
 
-- The alpha graph is bounded by the synthetic fixture and the small INSPIRE-HEP pilot snapshot.
-- It does not contain a complete citation, collaboration, topic, funding, or career graph.
-- Identity and relationship confidence is not a measure of scientific quality.
-- Some source entities, affiliations, dates, coordinates, and external resources are missing or unresolved.
-- The graph does not infer exclusive country ownership for collaborative science.
-- The current manifest contains one baseline snapshot; no production database, API, scheduler, queue, promotion/rollback UI, review interface, or continuous update service is deployed.
-- The manifest digest hashes canonicalized JSON content, not the source file's exact bytes.
-- Graph traversal can reveal source-data bias; a connected path is not proof of causation, endorsement, contribution magnitude, or institutional superiority.
+- The live graph has not been operated or benchmarked on a complete all-physics corpus.
+- Provider coverage, affiliations, authority identifiers, citation edges, groups, dates, and coordinates are incomplete.
+- Name-only paper authors remain review evidence until stronger identity support is available.
+- Targeted ORCID/Crossref enrichment is not yet automatically orchestrated for every discovered identifier.
+- No human review UI, merge/split workflow, hosted queue, or public production database is included.
+- The bounded `/api/knowledge-graph` projection is diagnostic and not a general graph-query language.
+- Graph connectivity reflects selected source evidence and can expose source bias; it is not proof of quality, causation, contribution magnitude, or institutional superiority.
 
-The knowledge graph is infrastructure for transparent exploration. It must not be repurposed as a university ranking or researcher recommendation system.
+Visible incompleteness is preferable to a richly connected graph built from unsupported merges.

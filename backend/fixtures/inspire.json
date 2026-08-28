@@ -1,0 +1,21 @@
+{
+  "hits": {
+    "hits": [
+      {
+        "id": "3141592",
+        "metadata": {
+          "control_number": 3141592,
+          "last_updated": "2026-08-25T10:00:00+00:00",
+          "titles": [{"title": "Synthetic fixture for incremental field evolution"}],
+          "abstracts": [{"value": "Deterministic metadata fixture; not a scientific claim."}],
+          "arxiv_eprints": [{"value": "2608.01234"}],
+          "dois": [{"value": "10.5555/physics-atlas.fixture"}],
+          "publication_info": [{"year": 2026}],
+          "inspire_categories": [{"term": "Theory-HEP"}],
+          "authors": [{"full_name": "Fixture, Ada", "recid": 271828}],
+          "citation_count": 0
+        }
+      }
+    ]
+  }
+}

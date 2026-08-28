@@ -10,6 +10,10 @@ import type {
   ResearchField,
   ResearchGroup,
 } from '../../domain/models';
+import {
+  getDatasetPresentation,
+  type AtlasDatasetKind,
+} from '../../data/DatasetPresentation';
 
 interface ResearcherProfileProps {
   researcher: Researcher;
@@ -24,7 +28,7 @@ interface ResearcherProfileProps {
   externalResources: ExternalResource[];
   identityResolutions: IdentityResolution[];
   collaborators: Researcher[];
-  isPilotDataset: boolean;
+  datasetKind: AtlasDatasetKind;
   onBackToInstitution: () => void;
 }
 
@@ -41,9 +45,10 @@ export function ResearcherProfile({
   externalResources,
   identityResolutions,
   collaborators,
-  isPilotDataset,
+  datasetKind,
   onBackToInstitution,
 }: ResearcherProfileProps) {
+  const presentation = getDatasetPresentation(datasetKind);
   const researcherPaperIds = new Set(
     authorships
       .filter((authorship) => authorship.researcherId === researcher.id)
@@ -72,7 +77,7 @@ export function ResearcherProfile({
           ← Back to Institution
         </button>
         <p className="section-kicker">
-          Researcher profile · {isPilotDataset ? 'INSPIRE-HEP pilot' : 'synthetic demo'}
+          Researcher profile · {presentation.dataLabel}
         </p>
         <div className="researcher-identity">
           <span className="researcher-avatar researcher-avatar--large" aria-hidden="true">
@@ -177,7 +182,7 @@ export function ResearcherProfile({
                 <p className="section-kicker">External links</p>
                 <h3>Available references</h3>
               </div>
-              <span>{isPilotDataset ? 'Pilot metadata' : 'Demo metadata'}</span>
+              <span>{presentation.dataLabel}</span>
             </div>
             <div className="external-link-list">
               {externalResources.map((resource) => (
@@ -224,7 +229,7 @@ export function ResearcherProfile({
             <div>
               <p className="section-kicker">Paper connections</p>
               <h3>
-                Representative {isPilotDataset ? 'pilot' : 'demo'} records
+                Representative {presentation.recordLabel} records
               </h3>
             </div>
             <span>Not a performance list</span>
@@ -235,16 +240,16 @@ export function ResearcherProfile({
                 <li key={paper.id}>
                   <div>
                     <time>{paper.year}</time>
-                    <span>{isPilotDataset ? 'INSPIRE-HEP' : 'synthetic'}</span>
+                    <span>{presentation.sourceLabel}</span>
                   </div>
                   <strong>{paper.title}</strong>
-                  <p>{paper.summary}</p>
+                  <p>{paper.summary || 'Summary unavailable in this source.'}</p>
                 </li>
               ))}
             </ol>
           ) : (
             <p className="muted-copy">
-              No representative {isPilotDataset ? 'pilot' : 'demo'} papers are
+              No representative {presentation.recordLabel} papers are
               connected.
             </p>
           )}
@@ -255,7 +260,7 @@ export function ResearcherProfile({
             <div className="entity-section-heading">
               <div>
                 <p className="section-kicker">Historical connections</p>
-                <h3>Related {isPilotDataset ? 'pilot' : 'demo'} events</h3>
+                <h3>Related {presentation.recordLabel} events</h3>
               </div>
             </div>
             <ol className="event-list">
@@ -273,9 +278,9 @@ export function ResearcherProfile({
         )}
 
         <p className="entity-disclaimer">
-          {isPilotDataset
-            ? 'This incomplete pilot profile reflects a bounded metadata sample only. It is not a ranking, recommendation, evaluation, or admission prediction.'
-            : 'This synthetic profile describes ecosystem relationships only. It is not a ranking, recommendation, evaluation, or admission prediction.'}
+          {presentation.isSynthetic
+            ? 'This synthetic profile describes ecosystem relationships only. It is not a ranking, recommendation, evaluation, or admission prediction.'
+            : `${presentation.disclaimer} It is not a recommendation, evaluation, or admission prediction.`}
         </p>
       </div>
     </aside>

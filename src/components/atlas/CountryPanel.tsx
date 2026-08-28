@@ -3,6 +3,10 @@ import type {
   Institution,
   MetricObservation,
 } from '../../domain/models';
+import {
+  getDatasetPresentation,
+  type AtlasDatasetKind,
+} from '../../data/DatasetPresentation';
 
 interface CountryPanelProps {
   country: Country | null;
@@ -12,7 +16,7 @@ interface CountryPanelProps {
   metricLabel: string;
   activeScopeLabel: string;
   selectedYear: number;
-  isPilotDataset: boolean;
+  datasetKind: AtlasDatasetKind;
   onBackToWorld: () => void;
   onInstitutionSelect: (institutionId: string) => void;
 }
@@ -25,10 +29,11 @@ export function CountryPanel({
   metricLabel,
   activeScopeLabel,
   selectedYear,
-  isPilotDataset,
+  datasetKind,
   onBackToWorld,
   onInstitutionSelect,
 }: CountryPanelProps) {
+  const presentation = getDatasetPresentation(datasetKind);
   const valuesByInstitution = new Map(
     institutionObservations.map((observation) => [
       observation.entityId,
@@ -44,7 +49,7 @@ export function CountryPanel({
         <h2>Select a luminous country</h2>
         <p>
           Enter a country to reveal its{' '}
-          {isPilotDataset ? 'pilot' : 'synthetic'} institution landscape for{' '}
+          {presentation.dataLabelLower} institution landscape for{' '}
           {selectedYear}.
         </p>
       </aside>
@@ -57,7 +62,7 @@ export function CountryPanel({
         ← World
       </button>
       <p className="section-kicker">
-        Country view · {isPilotDataset ? 'INSPIRE-HEP pilot' : 'demo'}
+        Country view · {presentation.dataLabel}
       </p>
       <div className="country-heading">
         <span>{country.isoAlpha3}</span>
@@ -103,9 +108,7 @@ export function CountryPanel({
       </div>
 
       <p className="panel-disclaimer">
-        {isPilotDataset
-          ? 'Bounded, selection-biased pilot metadata — not a ranking or complete scientific result.'
-          : 'Synthetic historical interface data — not a ranking or measured result.'}
+        {presentation.disclaimer}
       </p>
     </aside>
   );

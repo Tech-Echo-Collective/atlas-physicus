@@ -8,6 +8,10 @@ import type { AtlasDataset, AtlasRepository } from '../domain/models';
 export async function loadAtlasDataset(
   repository: AtlasRepository,
 ): Promise<AtlasDataset> {
+  if (repository.loadDataset) {
+    return repository.loadDataset();
+  }
+
   const [
     metadata,
     scienceDomains,

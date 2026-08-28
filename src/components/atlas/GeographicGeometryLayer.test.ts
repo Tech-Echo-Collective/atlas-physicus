@@ -3,9 +3,34 @@ import { atlasDatasetSchema } from '../../domain/schemas';
 import {
   buildCountryFeatureCollection,
   buildExplorationCanvasFeatureCollection,
+  geometryUsesUnwrappedWorldCopy,
+  splitGeometryAtAntimeridian,
 } from './GeographicGeometryLayer';
 
 const dataset = atlasDatasetSchema.parse(demoData);
+
+function polygonRings(
+  geometry: ReturnType<typeof buildCountryFeatureCollection>['features'][number]['geometry'],
+) {
+  if (geometry.type === 'Polygon') {
+    return geometry.coordinates;
+  }
+  if (geometry.type === 'MultiPolygon') {
+    return geometry.coordinates.flat();
+  }
+  return [];
+}
+
+function maximumLongitudeJump(rings: number[][][]): number {
+  return Math.max(
+    0,
+    ...rings.flatMap((ring) =>
+      ring.slice(1).map((position, index) =>
+        Math.abs(position[0] - (ring[index]?.[0] ?? position[0])),
+      ),
+    ),
+  );
+}
 
 describe('geographic geometry layer', () => {
   it('keeps every configured China-view source geometry renderable', () => {
@@ -109,6 +134,130 @@ describe('geographic geometry layer', () => {
           latitude >= 21 &&
           latitude <= 26,
       ),
+    ).toBe(true);
+  });
+
+  it('cuts Russia antimeridian rings without joining disconnected geometry across the map', () => {
+    const russia = {
+      ...dataset.countries[0],
+      id: 'country-rus',
+      isoAlpha3: 'RUS',
+      isoNumeric: '643',
+      name: 'Russian Federation',
+    };
+    const russiaView = {
+      ...dataset.geographicViews[0],
+      id: 'geographic-view-rus',
+      countryId: russia.id,
+      geometryIsoNumerics: ['643'],
+      locationCountryIds: [russia.id],
+    };
+    const collection = buildCountryFeatureCollection(
+      [russia],
+      [russiaView],
+      [],
+    );
+    const feature = collection.features.find(
+      (candidate) => candidate.properties.isoNumeric === '643',
+    );
+
+    expect(feature?.geometry.type).toBe('MultiPolygon');
+    expect(maximumLongitudeJump(polygonRings(feature!.geometry))).toBeLessThanOrEqual(
+      180,
+    );
+
+    const longitudes = polygonRings(feature!.geometry)
+      .flat()
+      .map((position) => position[0]);
+    expect(longitudes.some((longitude) => longitude <= -170)).toBe(true);
+    expect(longitudes.some((longitude) => longitude >= 170)).toBe(true);
+    expect(
+      polygonRings(feature!.geometry).some((ring) =>
+        ring.some(
+          ([longitude, latitude]) =>
+            longitude >= 19 &&
+            longitude <= 23 &&
+            latitude >= 53 &&
+            latitude <= 56,
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it('unwraps an antimeridian country canvas into a compact camera span', () => {
+    const russia = {
+      ...dataset.countries[0],
+      id: 'country-rus',
+      isoAlpha3: 'RUS',
+      isoNumeric: '643',
+      name: 'Russian Federation',
+    };
+    const russiaView = {
+      ...dataset.geographicViews[0],
+      id: 'geographic-view-rus',
+      countryId: russia.id,
+      geometryIsoNumerics: ['643'],
+      locationCountryIds: [russia.id],
+    };
+    const collection = buildCountryFeatureCollection(
+      [russia],
+      [russiaView],
+      [],
+    );
+    const canvas = buildExplorationCanvasFeatureCollection(
+      collection,
+      russia.id,
+    );
+    const longitudes = canvas.features[0].geometry.coordinates
+      .flat(3)
+      .filter((value, index) => index % 2 === 0) as number[];
+    const longitudeSpan = Math.max(...longitudes) - Math.min(...longitudes);
+
+    expect(canvas.features).toHaveLength(1);
+    expect(canvas.features[0].geometry.type).toBe('MultiPolygon');
+    expect(longitudeSpan).toBeLessThan(180);
+    expect(Math.max(...longitudes)).toBeGreaterThan(180);
+    expect(
+      geometryUsesUnwrappedWorldCopy(canvas.features[0].geometry),
+    ).toBe(true);
+  });
+
+  it('aligns antimeridian holes with the matching split shell', () => {
+    const split = splitGeometryAtAntimeridian({
+      type: 'Polygon',
+      coordinates: [
+        [
+          [170, 40],
+          [-170, 40],
+          [-170, 60],
+          [170, 60],
+          [170, 40],
+        ],
+        [
+          [-178, 45],
+          [-175, 45],
+          [-175, 50],
+          [-178, 50],
+          [-178, 45],
+        ],
+      ],
+    });
+
+    expect(split.type).toBe('MultiPolygon');
+    if (split.type !== 'MultiPolygon') {
+      return;
+    }
+    const polygonWithHole = split.coordinates.find(
+      (polygon) => polygon.length === 2,
+    );
+    expect(polygonWithHole).toBeDefined();
+    expect(
+      polygonWithHole?.[1]?.every(([longitude]) => longitude < 0),
+    ).toBe(true);
+    expect(
+      split.coordinates
+        .filter((polygon) => polygon[0]?.some(([longitude]) => longitude > 0))
+        .every((polygon) => polygon.length === 1),
     ).toBe(true);
   });
 });

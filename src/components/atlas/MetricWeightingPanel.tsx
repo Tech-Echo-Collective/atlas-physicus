@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
 import {
+  getDatasetPresentation,
+  type AtlasDatasetKind,
+} from '../../data/DatasetPresentation';
+import {
   compositeMetricId,
   type MetricDefinition,
   type MetricId,
@@ -13,6 +17,7 @@ interface MetricWeightingPanelProps {
   configuration: MetricWeightConfiguration;
   hasConfirmedProfile: boolean;
   compositeAvailable: boolean;
+  datasetKind: AtlasDatasetKind;
   onMetricSelect: (metricId: MetricId) => void;
   onApply: (configuration: MetricWeightConfiguration) => void;
 }
@@ -34,9 +39,11 @@ export function MetricWeightingPanel({
   configuration,
   hasConfirmedProfile,
   compositeAvailable,
+  datasetKind,
   onMetricSelect,
   onApply,
 }: MetricWeightingPanelProps) {
+  const presentation = getDatasetPresentation(datasetKind);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState(configuration.id);
   const [draftWeights, setDraftWeights] = useState(() =>
@@ -234,9 +241,10 @@ export function MetricWeightingPanel({
             </>
           ) : (
             <p className="metric-pilot-limit" role="note">
-              Composite profiles are unavailable for this real-data pilot
-              because Research Diversity does not yet have a pilot calculation.
-              Synthetic values are never substituted into the pilot.
+              Composite profiles are unavailable for this{' '}
+              {presentation.dataLabelLower} because one or more required metric
+              calculations are absent. Values from another dataset are never
+              substituted.
             </p>
           )}
 

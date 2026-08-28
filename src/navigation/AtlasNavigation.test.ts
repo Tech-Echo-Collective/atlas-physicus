@@ -24,6 +24,41 @@ describe('atlas URL navigation', () => {
     );
   });
 
+  it('restores continuous in-range years even without an observation', () => {
+    const state = resolveAtlasLocation(
+      { pathname: '/atlas/physics/hep-th', search: '?year=1975' },
+      dataset,
+    );
+
+    expect(state.selectedYear).toBe(1975);
+  });
+
+  it('preserves an explicit year when a neutral live map has no country observations', () => {
+    const state = resolveAtlasLocation(
+      { pathname: '/atlas/physics', search: '?year=2021' },
+      { ...dataset, metricObservations: [] },
+    );
+
+    expect(state.selectedYear).toBe(2021);
+  });
+
+  it('preserves a live requested year outside the bounded bootstrap period', () => {
+    const state = resolveAtlasLocation(
+      { pathname: '/atlas/physics', search: '?year=2000' },
+      {
+        ...dataset,
+        metadata: { ...dataset.metadata, datasetKind: 'live-api' },
+        metricObservations: dataset.metricObservations.filter(
+          (observation) =>
+            observation.entityType === 'country' &&
+            observation.period === '2026',
+        ),
+      },
+    );
+
+    expect(state.selectedYear).toBe(2000);
+  });
+
   it('restores the complete hierarchy for institution and researcher links', () => {
     const institutionState = resolveAtlasLocation(
       {

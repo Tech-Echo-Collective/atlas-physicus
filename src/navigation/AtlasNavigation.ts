@@ -79,13 +79,18 @@ export function resolveAtlasLocation(
     .filter(Boolean)
     .map((segment) => decodeURIComponent(segment).toLocaleLowerCase());
   const parameters = new URLSearchParams(location.search);
-  const availableYears = new Set(
-    dataset.metricObservations.map((observation) =>
-      Number(observation.period),
-    ),
-  );
+  const availableYears = dataset.metricObservations
+    .filter((observation) => observation.entityType === 'country')
+    .map((observation) => Number(observation.period))
+    .filter(Number.isFinite);
+  const minimumYear = Math.min(...availableYears);
+  const maximumYear = Math.max(...availableYears);
   const requestedYear = Number(parameters.get('year'));
-  const selectedYear = availableYears.has(requestedYear)
+  const selectedYear =
+    Number.isInteger(requestedYear) &&
+    (dataset.metadata.datasetKind === 'live-api' ||
+      availableYears.length === 0 ||
+      (requestedYear >= minimumYear && requestedYear <= maximumYear))
     ? requestedYear
     : defaultState.selectedYear;
   const requestedDomainId = parameters.get('domain');

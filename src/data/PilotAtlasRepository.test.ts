@@ -15,6 +15,7 @@ describe('INSPIRE-HEP pilot frontend integration', () => {
     expect(atlasDataSourceOptions.map((source) => source.id)).toEqual([
       'synthetic-framework',
       'inspire-hep-pilot',
+      'live-api',
     ]);
     const pilotUrl = buildDataSourceAwareAtlasUrl(
       '/atlas/physics/hep-th?year=2026',

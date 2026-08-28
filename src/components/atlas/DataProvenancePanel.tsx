@@ -38,6 +38,24 @@ export function DataProvenancePanel({ metadata }: DataProvenancePanelProps) {
               <dt>Status</dt>
               <dd>{provenance.status}</dd>
             </div>
+            <div>
+              <dt>Generated</dt>
+              <dd>{new Date(metadata.generatedAt).toLocaleString()}</dd>
+            </div>
+            {metadata.latestUpdateAt && (
+              <div>
+                <dt>Last updated</dt>
+                <dd>{new Date(metadata.latestUpdateAt).toLocaleString()}</dd>
+              </div>
+            )}
+            <div>
+              <dt>Update sequence</dt>
+              <dd>{metadata.updateSequence ?? 0}</dd>
+            </div>
+            <div>
+              <dt>Source snapshots</dt>
+              <dd>{metadata.sourceSnapshotIds?.length ?? 0}</dd>
+            </div>
             {provenance.confidence !== undefined && (
               <div>
                 <dt>Confidence</dt>
