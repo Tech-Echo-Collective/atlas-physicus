@@ -10,6 +10,7 @@ This file records the factual operating state of the project. Read it with [dura
 - Source branch: `main` in `Tech-Echo-Collective/Physics-Atlas`.
 - The annotated release tag resolves to commit `09f5d855a3ef28d687f5f888f0227a8f911b69de`.
 - The live-data platform implementation landed in `55c50b3`; `09f5d85` contains the release CI readiness correction.
+- Production-activation hardening and the persistent context foundation landed in follow-up commit `b96aec8`; the release tag was not moved.
 - The active milestone is **v3.0.4 Production Activation**. v3.0.5 has not started.
 
 ## Implemented systems
