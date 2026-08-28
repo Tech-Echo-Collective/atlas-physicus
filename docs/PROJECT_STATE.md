@@ -11,6 +11,8 @@ This file records the factual operating state of the project. Read it with [dura
 - The annotated release tag resolves to commit `09f5d855a3ef28d687f5f888f0227a8f911b69de`.
 - The live-data platform implementation landed in `55c50b3`; `09f5d85` contains the release CI readiness correction.
 - Production-activation hardening and the persistent context foundation landed in follow-up commit `b96aec8`; the release tag was not moved.
+- CI and Railway activation compatibility were corrected in follow-up commit
+  `ca4fe97`; the release tag remains on `09f5d85`.
 - The active milestone is **v3.0.4 Production Activation**. v3.0.5 has not started.
 
 ## Implemented systems
@@ -49,13 +51,32 @@ This file records the factual operating state of the project. Read it with [dura
 - The public source selector still exposes the synthetic framework and historical pilot. Live mode is available to a build only when `VITE_ATLAS_API_URL` is configured.
 - Demo, pilot, and fixture assets remain necessary for offline development, regression testing, and reproducibility.
 
+## Repository and CI health
+
+- `Physics-Atlas` main commit `ca4fe97` passed GitHub Actions
+  [run 33181797118](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33181797118): frontend verification, PostgreSQL-backed backend validation, and the Docker Compose job all succeeded.
+- The preceding main failure was a stale CI assertion that expected scheduled ROR
+  output even when no reviewed ROR IDs were configured. CI now verifies the
+  intentional `hep-th-v1` INSPIRE/arXiv safe default and its scope versions.
+- `Physics-Atlas-Web` main remains at `8ff085e`; GitHub Pages
+  [run 33172110570](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33172110570) succeeded. Its `atlas` submodule intentionally remains pinned to the released `v3.0.4-alpha` commit.
+- Both npm dependency audits reported zero vulnerabilities, and the installed
+  backend environment reported no broken Python requirements. No broad
+  dependency upgrade was justified.
+
 ## Backend deployment state
 
 - No public production backend is currently operating or claimed.
-- No production API URL, hosting target, infrastructure account, managed PostgreSQL instance, or production credential set is present in this repository context.
+- Railway is the selected activation target, but no production API URL, linked
+  Railway project, managed PostgreSQL instance, or production credential set is
+  present in this repository context.
 - `compose.production.yml`, Caddy configuration, a production environment
   template, and an operator runbook now configure PostgreSQL, migrations,
   FastAPI, the bounded worker, and automatic HTTPS for a single authorized host.
+- The API now consumes Railway's standard `DATABASE_URL` and `PORT`, normalizes
+  generic PostgreSQL URLs to the installed psycopg 3 driver, and refuses to
+  start in production fixture mode. The runbook records the required Dockerfile
+  path, API migration/health gate, and separately sequenced worker service.
 - The production definition fixes `hep-th-v1`, disables fixtures, admits only the
   exact GitHub Pages origin, keeps PostgreSQL/FastAPI unpublished, and leaves
   credentials in an ignored operator environment file.
@@ -111,7 +132,8 @@ production update or public dataset.
 
 Activate the existing architecture without redesigning it or starting v3.0.5:
 
-1. select and authorize a concrete production hosting target, database, secrets, HTTPS, and public API hostname;
+1. provision and authorize the Railway project, managed PostgreSQL, API and
+   worker services, secrets, and public API hostname using the reviewed runbook;
 2. deploy the reviewed production stack and exercise PostgreSQL backup/restore,
    database restart, worker restart, and monitoring on that host;
 3. choose only corpus-evidenced ROR targets and operate the bounded incremental
