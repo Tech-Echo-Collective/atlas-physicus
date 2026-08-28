@@ -1,7 +1,9 @@
 from collections.abc import Generator
 from datetime import UTC, datetime
+from unittest.mock import Mock
 
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from physics_atlas_api import models, schemas
@@ -74,6 +76,56 @@ def test_read_api_exposes_repository_contract(seeded_session: Session) -> None:
     assert update_status.json()["metricRecalculationStatus"] == "idle"
     assert invalid_period.status_code == 422
     assert invalid_period.json()["error"]["code"] == "validation_error"
+
+
+def test_health_returns_service_unavailable_with_structured_body() -> None:
+    unavailable_session = Mock(spec=Session)
+    unavailable_session.execute.side_effect = SQLAlchemyError("database offline")
+    application = create_app()
+
+    def session_override() -> Generator[Session]:
+        yield unavailable_session
+
+    application.dependency_overrides[get_session] = session_override
+    with TestClient(application) as client:
+        response = client.get("/api/health")
+
+    assert response.status_code == 503
+    assert response.json()["status"] == "degraded"
+    assert response.json()["database"] == "unavailable"
+    assert response.json()["version"]
+    assert response.json()["timestamp"]
+
+
+def test_update_status_exposes_cursor_scope_version(seeded_session: Session) -> None:
+    seeded_session.add(
+        models.SourceCursor(
+            source="inspire",
+            scope_version="hep-th-v1:inspire:updated-articles-v1",
+            cursor="page-2",
+            checkpoint={"nextUrl": "https://inspirehep.net/api/literature?page=2"},
+            last_attempt_at=datetime(2026, 8, 28, tzinfo=UTC),
+            last_success_at=datetime(2026, 8, 28, tzinfo=UTC),
+            consecutive_failures=0,
+        )
+    )
+    seeded_session.commit()
+    application = create_app()
+
+    def session_override() -> Generator[Session]:
+        yield seeded_session
+
+    application.dependency_overrides[get_session] = session_override
+    with TestClient(application) as client:
+        response = client.get("/api/updates/status")
+
+    assert response.status_code == 200
+    source_status = response.json()["sources"][0]
+    assert source_status["source"] == "inspire"
+    assert source_status["status"] == "healthy"
+    assert source_status["scopeVersion"] == ("hep-th-v1:inspire:updated-articles-v1")
+    assert source_status["cursor"] == "page-2"
+    assert source_status["consecutiveFailures"] == 0
 
 
 def test_api_returns_structured_not_found(seeded_session: Session) -> None:
@@ -194,6 +246,7 @@ def test_metadata_and_evidence_routes_have_validated_response_contracts(
         "sourceType": "synthetic-demo",
         "version": "test-v1",
         "status": "synthetic",
+        "acquisitionScope": "hep-th-v1",
     }
     snapshot = models.SourceSnapshot(
         id="snapshot-typed-contract",
@@ -279,6 +332,9 @@ def test_metadata_and_evidence_routes_have_validated_response_contracts(
     assert dataset.json()["datasetKind"] == "synthetic-demo"
     assert snapshots.status_code == 200
     assert snapshots.json()["items"][0]["id"] == snapshot.id
+    assert snapshots.json()["items"][0]["provenance"]["acquisitionScope"] == (
+        "hep-th-v1"
+    )
     assert updates.status_code == 200
     assert updates.json()["items"][0]["changes"]["failed"] == 0
     assert updates.json()["items"][0]["affectedEntities"] == []

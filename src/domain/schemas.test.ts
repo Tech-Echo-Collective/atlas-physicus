@@ -137,9 +137,11 @@ describe('atlasDatasetSchema', () => {
       status: 'unverified' as const,
       confidence: null,
       retrievedAt: null,
+      acquisitionScope: 'hep-th-v1',
     };
 
     const parsedProvenance = provenanceSchema.parse(provenance);
+    expect(parsedProvenance.acquisitionScope).toBe('hep-th-v1');
     const institution = institutionSchema.parse({
       id: 'institution-sparse',
       name: 'Sparse Institute',

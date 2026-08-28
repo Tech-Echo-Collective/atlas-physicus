@@ -26,8 +26,9 @@ class OrcidConnector(SourceConnector):
         *,
         access_token: str | None = None,
         require_credentials: bool = False,
+        dataset_scope: str = "targeted-known-id-v1",
     ):
-        super().__init__(transport, base_url)
+        super().__init__(transport, base_url, dataset_scope=dataset_scope)
         self.require_credentials = require_credentials
         self.access_token = access_token
         self.headers = {"Accept": "application/json"}

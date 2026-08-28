@@ -15,7 +15,8 @@ def test_initial_migration_upgrades_and_downgrades(tmp_path: Path, monkeypatch) 
     config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
 
     command.upgrade(config, "head")
-    tables = set(inspect(create_engine(database_url)).get_table_names())
+    inspector = inspect(create_engine(database_url))
+    tables = set(inspector.get_table_names())
     assert {
         "institutions",
         "researchers",
@@ -27,6 +28,10 @@ def test_initial_migration_upgrades_and_downgrades(tmp_path: Path, monkeypatch) 
         "update_runs",
         "entity_search_terms",
     }.issubset(tables)
+    cursor_columns = {
+        column["name"] for column in inspector.get_columns("source_cursors")
+    }
+    assert "scope_version" in cursor_columns
 
     command.downgrade(config, "base")
     remaining = set(inspect(create_engine(database_url)).get_table_names())

@@ -14,6 +14,7 @@ from physics_atlas_api.connectors.base import (
     NormalizedRecord,
     SourceConnector,
     SourceRecord,
+    SourceTransport,
 )
 from physics_atlas_api.connectors.factory import build_connectors
 from physics_atlas_api.metrics.recomputation import NoFormulaMetricRecalculator
@@ -183,6 +184,126 @@ class CollidingSlugPaperConnector(VariantIdentifierPaperConnector):
         )
 
 
+class SequencedAuthorityPaperConnector(SourceConnector):
+    provider = "inspire"
+    source_version = "authority-replay-test-v1"
+    min_interval_seconds = 0
+
+    def __init__(
+        self,
+        transport: SourceTransport,
+        base_url: str,
+        records: tuple[dict[str, object], ...],
+    ):
+        super().__init__(transport, base_url)
+        self.records = records
+
+    def fetch_new_records(self, cursor: str | None, limit: int = 100) -> ConnectorBatch:
+        del limit
+        index = int(cursor or 0)
+        raw = self.records[index]
+        source_record_id = str(raw["source_record_id"])
+        return ConnectorBatch(
+            records=(
+                SourceRecord(
+                    provider="inspire",
+                    source_record_id=source_record_id,
+                    raw=raw,
+                ),
+            ),
+            next_cursor=str(index + 1),
+        )
+
+    def fetch_record(self, record_id: str) -> SourceRecord | None:
+        del record_id
+        return None
+
+    def normalize_record(self, record: SourceRecord) -> NormalizedRecord:
+        return NormalizedRecord(
+            provider="inspire",
+            kind="paper",
+            source_record_id=record.source_record_id,
+            canonical_name=str(record.raw["title"]),
+            external_ids=tuple(record.raw["external_ids"]),  # type: ignore[arg-type]
+            attributes={
+                "title": str(record.raw["title"]),
+                "abstract": str(record.raw.get("abstract", "")),
+                "publication_year": int(record.raw["publication_year"]),
+                "authors": [],
+                "atlas_field_candidates": ["hep-th"],
+            },
+            raw=record.raw,
+            provenance=PROVENANCE,
+        )
+
+
+class ReplayCheckpointConnector(SourceConnector):
+    provider = "crossref"
+    source_version = "replay-checkpoint-test-v1"
+    min_interval_seconds = 0
+
+    def __init__(
+        self,
+        transport: SourceTransport,
+        base_url: str,
+        *,
+        fail_normalization: bool,
+    ):
+        super().__init__(
+            transport,
+            base_url,
+            cursor_scope="hep-th-v1:crossref:replay-checkpoint-test-v1",
+            dataset_scope="hep-th-v1",
+        )
+        self.fail_normalization = fail_normalization
+        self.observed_checkpoint: dict[str, object] = {}
+
+    def fetch_new_records(self, cursor: str | None, limit: int = 100) -> ConnectorBatch:
+        del limit
+        self.observed_checkpoint = self.get_checkpoint()
+        replay_checkpoint = {
+            "since": "2026-08-01T00:00:00+00:00",
+            "until": "2026-08-02T00:00:00+00:00",
+            "start": 0,
+        }
+        return self._complete(
+            [
+                SourceRecord(
+                    provider="crossref",
+                    source_record_id="replay-paper",
+                    raw={"title": "Replay checkpoint paper"},
+                )
+            ],
+            "2026-08-02T00:00:00+00:00",
+            {},
+            replay_checkpoint=replay_checkpoint,
+        )
+
+    def fetch_record(self, record_id: str) -> SourceRecord | None:
+        del record_id
+        return None
+
+    def normalize_record(self, record: SourceRecord) -> NormalizedRecord:
+        if self.fail_normalization:
+            raise ValueError("deliberate materialization failure")
+        return NormalizedRecord(
+            provider="crossref",
+            kind="paper",
+            source_record_id=record.source_record_id,
+            canonical_name="Replay checkpoint paper",
+            external_ids=(("doi", "10.1234/replay-checkpoint"),),
+            attributes={
+                "title": "Replay checkpoint paper",
+                "abstract": "A deterministic recovery test.",
+                "publication_year": 2026,
+                "authors": [],
+                "atlas_field_candidates": ["hep-th"],
+            },
+            raw=record.raw,
+            provenance=PROVENANCE,
+        )
+
+
 class RejectUnexpectedResourceRequest:
     def request(
         self, method: str, url: str, *, timeout_seconds: float
@@ -212,7 +333,12 @@ def test_incremental_update_is_idempotent_and_keeps_ambiguity_visible(
 ) -> None:
     add_country(session)
     connector = build_connectors(
-        Settings(database_url="sqlite://", fixture_mode=True), fixture_directory
+        Settings(
+            database_url="sqlite://",
+            fixture_mode=True,
+            ror_record_ids="03yrm5c26",
+        ),
+        fixture_directory,
     )["ror"]
     recalculator = NoFormulaMetricRecalculator()
     engine = IncrementalUpdateEngine(
@@ -233,7 +359,11 @@ def test_incremental_update_is_idempotent_and_keeps_ambiguity_visible(
 
     unresolved = IncrementalUpdateEngine(
         session,
-        UnresolvedResearcherConnector(connector.transport, "https://orcid.test"),
+        UnresolvedResearcherConnector(
+            connector.transport,
+            "https://orcid.test",
+            dataset_scope=connector.dataset_scope,
+        ),
     ).run()
     assert unresolved.status == "succeeded"
     assert unresolved.records_unresolved == 1
@@ -254,7 +384,12 @@ def test_incremental_update_never_mixes_fixture_and_provider_data(
 ) -> None:
     add_country(session)
     fixture_connector = build_connectors(
-        Settings(database_url="sqlite://", fixture_mode=True), fixture_directory
+        Settings(
+            database_url="sqlite://",
+            fixture_mode=True,
+            ror_record_ids="03yrm5c26",
+        ),
+        fixture_directory,
     )["ror"]
     assert (
         IncrementalUpdateEngine(session, fixture_connector).run().status == "succeeded"
@@ -293,6 +428,116 @@ def test_update_engine_canonicalizes_authority_identifiers_before_upsert(
         ("doi", "10.test/variant"),
         ("arxiv", "2608.01234"),
     }
+
+
+def test_identical_payload_in_a_new_scope_has_distinct_snapshot_identity(
+    session: Session,
+    fixture_directory: Path,
+) -> None:
+    fixture_transport = build_connectors(
+        Settings(database_url="sqlite://", fixture_mode=True), fixture_directory
+    )["crossref"].transport
+    first_connector = VariantIdentifierPaperConnector(
+        fixture_transport,
+        "https://crossref.test",
+        cursor_scope="scope-a:crossref:targeted-v1",
+    )
+    first = IncrementalUpdateEngine(session, first_connector).run()
+    assert first.status == "succeeded"
+
+    cursor = session.get(models.SourceCursor, "crossref")
+    assert cursor is not None
+    session.delete(cursor)
+    session.commit()
+
+    second_connector = VariantIdentifierPaperConnector(
+        fixture_transport,
+        "https://crossref.test",
+        cursor_scope="scope-b:crossref:targeted-v1",
+    )
+    second = IncrementalUpdateEngine(session, second_connector).run()
+
+    assert second.status == "succeeded"
+    assert second.idempotent_replay is False
+    assert first.snapshot_id != second.snapshot_id
+    assert session.scalar(select(func.count()).select_from(models.SourceSnapshot)) == 2
+
+
+def test_live_dataset_acquisition_scope_fails_closed_on_missing_or_mismatch(
+    session: Session,
+    fixture_directory: Path,
+) -> None:
+    fixture_transport = build_connectors(
+        Settings(database_url="sqlite://", fixture_mode=True), fixture_directory
+    )["crossref"].transport
+    connector = VariantIdentifierPaperConnector(
+        fixture_transport,
+        "https://crossref.test",
+        dataset_scope="hep-th-v1",
+    )
+    assert IncrementalUpdateEngine(session, connector).run().status == "succeeded"
+
+    dataset_state = session.get(models.DatasetState, "current")
+    assert dataset_state is not None
+    dataset_state.provenance_json = {
+        key: value
+        for key, value in dataset_state.provenance_json.items()
+        if key != "acquisitionScope"
+    }
+    session.commit()
+    with pytest.raises(RuntimeError, match="missing its acquisition-scope marker"):
+        IncrementalUpdateEngine(session, connector).run()
+
+    dataset_state.provenance_json = {
+        **dataset_state.provenance_json,
+        "acquisitionScope": "broader-physics-v0",
+    }
+    session.commit()
+    with pytest.raises(RuntimeError, match="created for a different scope"):
+        IncrementalUpdateEngine(session, connector).run()
+
+
+def test_failed_batch_replays_the_same_closed_window_after_restart(
+    session: Session,
+    fixture_directory: Path,
+) -> None:
+    fixture_transport = build_connectors(
+        Settings(database_url="sqlite://", fixture_mode=True), fixture_directory
+    )["crossref"].transport
+    failing_connector = ReplayCheckpointConnector(
+        fixture_transport,
+        "https://crossref.test",
+        fail_normalization=True,
+    )
+
+    failed = IncrementalUpdateEngine(session, failing_connector).run()
+
+    expected_checkpoint = {
+        "since": "2026-08-01T00:00:00+00:00",
+        "until": "2026-08-02T00:00:00+00:00",
+        "start": 0,
+    }
+    assert failed.status == "failed"
+    cursor = session.get(models.SourceCursor, "crossref")
+    assert cursor is not None
+    assert cursor.cursor is None
+    assert cursor.checkpoint == expected_checkpoint
+    assert session.scalar(select(func.count()).select_from(models.SourceSnapshot)) == 0
+
+    restarted_connector = ReplayCheckpointConnector(
+        fixture_transport,
+        "https://crossref.test",
+        fail_normalization=False,
+    )
+    recovered = IncrementalUpdateEngine(session, restarted_connector).run()
+
+    assert restarted_connector.observed_checkpoint == expected_checkpoint
+    assert recovered.status == "succeeded"
+    assert recovered.records_added == 1
+    cursor = session.get(models.SourceCursor, "crossref")
+    assert cursor is not None
+    assert cursor.cursor == "2026-08-02T00:00:00+00:00"
+    assert cursor.checkpoint == {}
 
 
 def test_new_paper_without_publication_year_is_quarantined_without_inference(
@@ -339,6 +584,144 @@ def test_paper_ids_do_not_collide_when_readable_slugs_match(
     papers = list(session.scalars(select(models.Paper).order_by(models.Paper.doi)))
     assert [paper.doi for paper in papers] == ["10.1234/a-b", "10.1234/a.b"]
     assert len({paper.id for paper in papers}) == 2
+
+
+def test_changed_inspire_paper_replays_by_authority_and_adds_later_identifiers(
+    session: Session,
+    fixture_directory: Path,
+) -> None:
+    ensure_reference_data(session)
+    fixture_transport = build_connectors(
+        Settings(database_url="sqlite://", fixture_mode=True), fixture_directory
+    )["inspire"].transport
+    connector = SequencedAuthorityPaperConnector(
+        fixture_transport,
+        "https://inspire.test",
+        (
+            {
+                "source_record_id": "900001",
+                "title": "Authority replay paper",
+                "abstract": "Initial metadata.",
+                "publication_year": 2025,
+                "external_ids": (("inspire", "900001"),),
+            },
+            {
+                "source_record_id": "900001",
+                "title": "Authority replay paper, revised",
+                "abstract": "Revised metadata.",
+                "publication_year": 2025,
+                "external_ids": (("inspire", "900001"),),
+            },
+            {
+                "source_record_id": "900001",
+                "title": "Authority replay paper, identified",
+                "abstract": "Identifiers supplied later.",
+                "publication_year": 2025,
+                "external_ids": (
+                    ("inspire", "900001"),
+                    ("doi", "10.1234/authority-replay"),
+                    ("arxiv", "2501.00001"),
+                ),
+            },
+        ),
+    )
+    engine = IncrementalUpdateEngine(session, connector)
+
+    results = [engine.run(), engine.run(), engine.run()]
+
+    assert [result.status for result in results] == [
+        "succeeded",
+        "succeeded",
+        "succeeded",
+    ]
+    assert [result.records_added for result in results] == [1, 0, 0]
+    assert [result.records_changed for result in results] == [0, 1, 1]
+    papers = list(session.scalars(select(models.Paper)))
+    assert len(papers) == 1
+    assert papers[0].title == "Authority replay paper, identified"
+    assert papers[0].doi == "10.1234/authority-replay"
+    assert papers[0].arxiv_id == "2501.00001"
+    assert set(
+        session.execute(
+            select(
+                models.AuthorityIdentifier.scheme, models.AuthorityIdentifier.value
+            ).where(models.AuthorityIdentifier.entity_type == "paper")
+        ).all()
+    ) == {
+        ("inspire", "900001"),
+        ("doi", "10.1234/authority-replay"),
+        ("arxiv", "2501.00001"),
+    }
+
+
+def test_conflicting_paper_authorities_are_queued_without_silent_merge(
+    session: Session,
+    fixture_directory: Path,
+) -> None:
+    ensure_reference_data(session)
+    fixture_transport = build_connectors(
+        Settings(database_url="sqlite://", fixture_mode=True), fixture_directory
+    )["inspire"].transport
+    connector = SequencedAuthorityPaperConnector(
+        fixture_transport,
+        "https://inspire.test",
+        (
+            {
+                "source_record_id": "910001",
+                "title": "First authority paper",
+                "publication_year": 2025,
+                "external_ids": (("inspire", "910001"),),
+            },
+            {
+                "source_record_id": "910002",
+                "title": "Second authority paper",
+                "publication_year": 2025,
+                "external_ids": (
+                    ("inspire", "910002"),
+                    ("doi", "10.1234/shared-authority"),
+                ),
+            },
+            {
+                "source_record_id": "910001",
+                "title": "Conflicting authority evidence",
+                "publication_year": 2025,
+                "external_ids": (
+                    ("inspire", "910001"),
+                    ("doi", "10.1234/shared-authority"),
+                ),
+            },
+        ),
+    )
+    engine = IncrementalUpdateEngine(session, connector)
+
+    first = engine.run()
+    second = engine.run()
+    conflicting = engine.run()
+
+    assert first.records_added == second.records_added == 1
+    assert conflicting.status == "succeeded"
+    assert conflicting.records_unresolved == 1
+    papers = list(session.scalars(select(models.Paper).order_by(models.Paper.id)))
+    assert len(papers) == 2
+    assert {paper.title for paper in papers} == {
+        "First authority paper",
+        "Second authority paper",
+    }
+    resolution = session.scalar(
+        select(models.IdentityResolution)
+        .where(models.IdentityResolution.status == "ambiguous")
+        .order_by(models.IdentityResolution.resolved_at.desc())
+    )
+    assert resolution is not None
+    assert resolution.canonical_entity_id is None
+    assert resolution.method == "external-identifier"
+    review = session.scalar(
+        select(models.IdentityReview).where(
+            models.IdentityReview.resolution_id == resolution.id
+        )
+    )
+    assert review is not None
+    assert set(review.candidate_entity_ids) == {paper.id for paper in papers}
 
 
 def test_live_identity_resolution_uses_alias_history_and_ambiguity_gated_fuzzy(

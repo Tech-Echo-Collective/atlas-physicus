@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     fixture_mode: bool = True
     fixture_directory: Path | None = None
     reference_data_path: Path | None = None
+    acquisition_scope: str = "hep-th-v1"
+    ror_record_ids: str = ""
     inspire_base_url: str = "https://inspirehep.net/api"
     arxiv_base_url: str = "https://export.arxiv.org/api/query"
     ror_base_url: str = "https://api.ror.org/v2"
@@ -56,6 +58,16 @@ class Settings(BaseSettings):
             for value in self.resource_check_allowed_hosts.split(",")
             if value.strip()
         }
+
+    @property
+    def configured_ror_record_ids(self) -> tuple[str, ...]:
+        return tuple(
+            dict.fromkeys(
+                value.strip()
+                for value in self.ror_record_ids.split(",")
+                if value.strip()
+            )
+        )
 
 
 @lru_cache

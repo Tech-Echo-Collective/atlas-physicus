@@ -26,8 +26,9 @@ class CrossrefConnector(SourceConnector):
         base_url: str,
         *,
         mailto: str | None = None,
+        dataset_scope: str = "targeted-known-id-v1",
     ):
-        super().__init__(transport, base_url)
+        super().__init__(transport, base_url, dataset_scope=dataset_scope)
         self.mailto = mailto
 
     def _records(self, payload: dict[str, Any]) -> list[SourceRecord]:

@@ -298,7 +298,12 @@ describe('APIRepository', () => {
           sourceSnapshotIds: [],
           updateSequence: 0,
           disclaimer: 'No records ingested.',
-          provenance: { ...provenance, confidence: null, retrievedAt: null },
+          provenance: {
+            ...provenance,
+            confidence: null,
+            retrievedAt: null,
+            acquisitionScope: 'hep-th-v1',
+          },
         });
       }
       return jsonResponse([
@@ -321,7 +326,11 @@ describe('APIRepository', () => {
 
     await expect(repository.getMetadata()).resolves.toMatchObject({
       latestUpdateAt: undefined,
-      provenance: { confidence: undefined, retrievedAt: undefined },
+      provenance: {
+        confidence: undefined,
+        retrievedAt: undefined,
+        acquisitionScope: 'hep-th-v1',
+      },
     });
     await expect(repository.searchEntities('10.1234/test')).resolves.toEqual([
       expect.objectContaining({

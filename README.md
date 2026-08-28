@@ -94,7 +94,7 @@ python -m alembic upgrade head
 
 Provider-backed operation requires explicit configuration and compliance with each provider's terms. No secrets or production credentials are included.
 
-The scheduled worker incrementally polls INSPIRE, arXiv, and ROR. ORCID and Crossref provide deliberately record-scoped lookup connectors for an already-known ORCID iD or DOI; v3.0.4 does not yet invoke those lookups automatically or use them as global people/publication crawls.
+The scheduled worker uses the versioned `hep-th-v1` scope: INSPIRE `subject:Theory-HEP`, arXiv `cat:hep-th`, and direct ROR refreshes only for explicitly configured known IDs. ROR is skipped when no targets are configured. ORCID and Crossref provide deliberately record-scoped lookup connectors for an already-known ORCID iD or DOI; v3.0.4 does not yet invoke those lookups automatically or use them as global people/publication crawls. Persisted provider cursors are scope/version bound, so an older broad cursor fails closed instead of being reused.
 
 ## Structure
 
@@ -108,9 +108,13 @@ docker-compose.yml   Local PostgreSQL/API/worker environment
 
 ## Documentation
 
+- [Current project state](docs/PROJECT_STATE.md)
+- [Durable decisions](docs/DECISIONS.md)
+- [Worklog](docs/WORKLOG.md)
 - [Architecture](docs/architecture.md)
 - [Live-data architecture](docs/live-data-architecture.md)
 - [Backend API](docs/backend.md)
+- [Production deployment runbook](docs/production-deployment.md)
 - [Database](docs/database.md)
 - [Data sources and compliance](docs/data-sources.md)
 - [Update engine](docs/update-engine.md)

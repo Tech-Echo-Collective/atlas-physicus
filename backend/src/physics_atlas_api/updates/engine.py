@@ -6,6 +6,7 @@ import unicodedata
 import uuid
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -144,7 +145,12 @@ class IncrementalUpdateEngine:
         self.session.commit()
         return run
 
-    def _fail_run(self, run_id: str, error: Exception) -> UpdateResult:
+    def _fail_run(
+        self,
+        run_id: str,
+        error: Exception,
+        replay_checkpoint: dict[str, Any] | None = None,
+    ) -> UpdateResult:
         self.session.rollback()
         run = self.session.get(models.UpdateRun, run_id)
         assert run is not None
@@ -155,9 +161,14 @@ class IncrementalUpdateEngine:
         cursor = self.session.get(models.SourceCursor, self.connector.provider)
         if cursor is None:
             cursor = models.SourceCursor(
-                source=self.connector.provider, cursor=run.cursor_before, checkpoint={}
+                source=self.connector.provider,
+                scope_version=self.connector.cursor_scope,
+                cursor=run.cursor_before,
+                checkpoint={},
             )
             self.session.add(cursor)
+        if replay_checkpoint is not None:
+            cursor.checkpoint = dict(replay_checkpoint)
         cursor.last_attempt_at = run.finished_at
         cursor.consecutive_failures = (cursor.consecutive_failures or 0) + 1
         self.session.commit()
@@ -202,12 +213,45 @@ class IncrementalUpdateEngine:
                     "Deterministic fixtures and provider-derived records cannot "
                     "be written into the same live dataset"
                 )
+            stored_dataset_scope = dataset_state.provenance_json.get("acquisitionScope")
+            if not isinstance(stored_dataset_scope, str) or not stored_dataset_scope:
+                raise RuntimeError(
+                    "Live dataset provenance is missing its acquisition-scope marker; "
+                    "migrate or replace the dataset explicitly before ingestion"
+                )
+            if stored_dataset_scope != self.connector.dataset_scope:
+                raise RuntimeError(
+                    "Configured acquisition scope cannot write into a live dataset "
+                    f"created for a different scope: stored={stored_dataset_scope!r}, "
+                    f"configured={self.connector.dataset_scope!r}"
+                )
         cursor_state = self.session.get(models.SourceCursor, self.connector.provider)
         cursor_before = cursor_state.cursor if cursor_state else None
-        self.connector.set_checkpoint(cursor_state.checkpoint if cursor_state else {})
         run = self._new_run(cursor_before)
+        replay_checkpoint: dict[str, Any] | None = None
+        fetch_started = False
         try:
+            if (
+                cursor_state is not None
+                and cursor_state.scope_version != self.connector.cursor_scope
+            ):
+                raise RuntimeError(
+                    "Persisted source cursor scope does not match the configured "
+                    f"acquisition scope for {self.connector.provider}: "
+                    f"stored={cursor_state.scope_version!r}, "
+                    f"configured={self.connector.cursor_scope!r}. "
+                    "Reset or migrate the cursor explicitly before ingestion."
+                )
+            self.connector.set_checkpoint(
+                cursor_state.checkpoint if cursor_state else {}
+            )
+            fetch_started = True
             batch = self.connector.fetch_updated_records(cursor_before, limit)
+            replay_checkpoint = (
+                dict(batch.replay_checkpoint)
+                if batch.replay_checkpoint is not None
+                else dict(cursor_state.checkpoint if cursor_state else {})
+            )
             stored_run = self.session.get(models.UpdateRun, run.id)
             assert stored_run is not None
             run = stored_run
@@ -220,7 +264,10 @@ class IncrementalUpdateEngine:
             )
             batch_checksum = _digest(
                 json.dumps(
-                    snapshot_payload,
+                    {
+                        "acquisitionScope": self.connector.cursor_scope,
+                        "payload": snapshot_payload,
+                    },
                     ensure_ascii=False,
                     separators=(",", ":"),
                     sort_keys=True,
@@ -299,6 +346,7 @@ class IncrementalUpdateEngine:
                         "version": self.connector.source_version,
                         "status": "synthetic" if self.fixture_mode else "unverified",
                         "retrievedAt": batch.fetched_at.isoformat(),
+                        "acquisitionScope": self.connector.cursor_scope,
                     },
                 )
                 self.session.add(snapshot)
@@ -365,6 +413,7 @@ class IncrementalUpdateEngine:
                     "sourceType": "derived",
                     "version": "v3.0.4-alpha",
                     "status": "unverified",
+                    "acquisitionScope": self.connector.dataset_scope,
                 },
             )
             self.session.add(update)
@@ -412,7 +461,13 @@ class IncrementalUpdateEngine:
                 len(partitions),
             )
         except Exception as error:
-            return self._fail_run(run.id, error)
+            if replay_checkpoint is None and fetch_started:
+                replay_checkpoint = self.connector.get_replay_checkpoint()
+                if replay_checkpoint is None:
+                    replay_checkpoint = dict(
+                        cursor_state.checkpoint if cursor_state else {}
+                    )
+            return self._fail_run(run.id, error, replay_checkpoint)
 
     def _current_dataset_version(self) -> str | None:
         state = self.session.get(models.DatasetState, "current")
@@ -431,10 +486,16 @@ class IncrementalUpdateEngine:
         if state is None:
             state = models.SourceCursor(
                 source=self.connector.provider,
+                scope_version=self.connector.cursor_scope,
                 cursor=next_cursor,
                 checkpoint={},
             )
             self.session.add(state)
+        elif state.scope_version != self.connector.cursor_scope:
+            raise RuntimeError(
+                "Refusing to advance a source cursor for a different acquisition scope"
+            )
+        state.scope_version = self.connector.cursor_scope
         state.cursor = next_cursor
         state.checkpoint = checkpoint
         state.last_attempt_at = attempted_at
@@ -475,6 +536,7 @@ class IncrementalUpdateEngine:
                     "version": update.dataset_version,
                     "status": "synthetic" if self.fixture_mode else "unverified",
                     "fixtureMode": self.fixture_mode,
+                    "acquisitionScope": self.connector.dataset_scope,
                 },
             )
             self.session.add(state)
@@ -539,27 +601,43 @@ class IncrementalUpdateEngine:
             self.session.flush()
 
         if normalized.kind == "paper":
-            paper_id, outcome = self._upsert_paper(normalized)
+            paper_id, outcome, conflict_evidence = self._upsert_paper(normalized)
             resolution_id = f"resolution-{raw.id}-{self.resolver_version}"
             if paper_id is None:
+                conflict_candidates = sorted(
+                    {
+                        str(item["candidateEntityId"])
+                        for item in conflict_evidence
+                        if item.get("candidateEntityId")
+                    }
+                )
+                is_conflict = bool(conflict_evidence)
                 if self.session.get(models.IdentityResolution, resolution_id) is None:
                     self.session.add(
                         models.IdentityResolution(
                             id=resolution_id,
                             raw_entity_record_id=raw.id,
                             entity_type="paper",
-                            status="unresolved",
+                            status="ambiguous" if is_conflict else "unresolved",
                             canonical_entity_id=None,
-                            method="insufficient-metadata",
-                            confidence=0.0,
-                            evidence=[
-                                {
-                                    "method": "required-metadata",
-                                    "inputValue": "publication_year",
-                                    "score": 0.0,
-                                    "reason": "missing-or-invalid",
-                                }
-                            ],
+                            method=(
+                                "external-identifier"
+                                if is_conflict
+                                else "insufficient-metadata"
+                            ),
+                            confidence=1.0 if is_conflict else 0.0,
+                            evidence=(
+                                conflict_evidence
+                                if is_conflict
+                                else [
+                                    {
+                                        "method": "required-metadata",
+                                        "inputValue": "publication_year",
+                                        "score": 0.0,
+                                        "reason": "missing-or-invalid",
+                                    }
+                                ]
+                            ),
                             resolver_version=self.resolver_version,
                             resolved_at=datetime.now(UTC),
                             provenance_json={
@@ -578,7 +656,7 @@ class IncrementalUpdateEngine:
                             id=review_id,
                             resolution_id=resolution_id,
                             status="needs_review",
-                            candidate_entity_ids=[],
+                            candidate_entity_ids=conflict_candidates,
                         )
                     )
                 return None, "unresolved"
@@ -1105,17 +1183,117 @@ class IncrementalUpdateEngine:
                     )
                 )
 
-    def _upsert_paper(self, record: NormalizedRecord) -> tuple[str | None, str]:
+    def _paper_candidates(
+        self, record: NormalizedRecord
+    ) -> dict[str, list[dict[str, object]]]:
+        candidates: dict[str, list[dict[str, object]]] = {}
+
+        def add_candidate(
+            entity_id: str,
+            *,
+            method: str,
+            input_value: str,
+            canonical_value: str | None = None,
+        ) -> None:
+            if self.session.get(models.Paper, entity_id) is None:
+                return
+            evidence = {
+                "method": method,
+                "inputValue": input_value,
+                "candidateEntityId": entity_id,
+                "score": 1.0,
+                **(
+                    {"canonicalValue": canonical_value}
+                    if canonical_value is not None
+                    else {}
+                ),
+            }
+            bucket = candidates.setdefault(entity_id, [])
+            if evidence not in bucket:
+                bucket.append(evidence)
+
+        for scheme, value in record.external_ids:
+            if scheme not in _authority_schemes("paper"):
+                continue
+            authority = self.session.scalar(
+                select(models.AuthorityIdentifier).where(
+                    models.AuthorityIdentifier.scheme == scheme,
+                    models.AuthorityIdentifier.value == value,
+                    models.AuthorityIdentifier.entity_type == "paper",
+                )
+            )
+            if authority is not None:
+                add_candidate(
+                    authority.entity_id,
+                    method="external-identifier",
+                    input_value=f"{scheme}:{value}",
+                    canonical_value=f"{scheme}:{value}",
+                )
+
+            direct_paper = None
+            if scheme == "doi":
+                direct_paper = self.session.scalar(
+                    select(models.Paper).where(models.Paper.doi == value)
+                )
+            elif scheme == "arxiv":
+                direct_paper = self.session.scalar(
+                    select(models.Paper).where(models.Paper.arxiv_id == value)
+                )
+            if direct_paper is not None:
+                add_candidate(
+                    direct_paper.id,
+                    method="external-identifier",
+                    input_value=f"{scheme}:{value}",
+                    canonical_value=f"{scheme}:{value}",
+                )
+
+        source_primary = f"{record.provider}-{record.source_record_id}"
+        source_slug = _safe_id(source_primary)[:96] or "record"
+        source_id = f"paper-{source_slug}-{_digest(source_primary)[:16]}"
+        add_candidate(
+            source_id,
+            method="source-record-identifier",
+            input_value=record.source_record_id,
+        )
+        return candidates
+
+    def _upsert_paper(
+        self, record: NormalizedRecord
+    ) -> tuple[str | None, str, list[dict[str, object]]]:
         ids = dict(record.external_ids)
-        paper = None
-        if ids.get("doi"):
-            paper = self.session.scalar(
-                select(models.Paper).where(models.Paper.doi == ids["doi"])
+        candidates = self._paper_candidates(record)
+        if len(candidates) > 1:
+            return (
+                None,
+                "unresolved",
+                [
+                    evidence
+                    for entity_id in sorted(candidates)
+                    for evidence in candidates[entity_id]
+                ],
             )
-        if paper is None and ids.get("arxiv"):
-            paper = self.session.scalar(
-                select(models.Paper).where(models.Paper.arxiv_id == ids["arxiv"])
-            )
+        paper = (
+            self.session.get(models.Paper, next(iter(candidates)))
+            if candidates
+            else None
+        )
+        if paper is not None:
+            identifier_conflicts = [
+                {
+                    "method": "external-identifier",
+                    "inputValue": f"{scheme}:{incoming}",
+                    "candidateEntityId": paper.id,
+                    "canonicalValue": f"{scheme}:{current}",
+                    "score": 0.0,
+                }
+                for scheme, current, incoming in (
+                    ("doi", paper.doi, ids.get("doi")),
+                    ("arxiv", paper.arxiv_id, ids.get("arxiv")),
+                )
+                if current and incoming and current != incoming
+            ]
+            if identifier_conflicts:
+                return None, "unresolved", identifier_conflicts
         if paper is None:
             primary = (
                 ids.get("doi")
@@ -1126,7 +1304,7 @@ class IncrementalUpdateEngine:
             if not isinstance(publication_year, int) or isinstance(
                 publication_year, bool
             ):
-                return None, "unresolved"
+                return None, "unresolved", []
             readable_id = _safe_id(primary)[:96] or "record"
             paper_id = f"paper-{readable_id}-{_digest(primary)[:16]}"
             paper = models.Paper(
@@ -1162,6 +1340,8 @@ class IncrementalUpdateEngine:
                 incoming_title != paper.title
                 or incoming_summary != paper.summary
                 or incoming_year != paper.publication_year
+                or (ids.get("doi") is not None and paper.doi is None)
+                or (ids.get("arxiv") is not None and paper.arxiv_id is None)
                 or incoming_external_ids != paper.external_ids
                 or record.provenance != paper.provenance_json
             )
@@ -1169,6 +1349,10 @@ class IncrementalUpdateEngine:
                 paper.title = incoming_title
                 paper.summary = incoming_summary
                 paper.publication_year = incoming_year
+                if paper.doi is None:
+                    paper.doi = ids.get("doi")
+                if paper.arxiv_id is None:
+                    paper.arxiv_id = ids.get("arxiv")
                 paper.external_ids = incoming_external_ids
                 paper.provenance_json = record.provenance
             outcome = "updated" if changed else "unchanged"
@@ -1205,7 +1389,7 @@ class IncrementalUpdateEngine:
             historical_names=[],
             external_ids=paper.external_ids,
         )
-        return paper.id, outcome
+        return paper.id, outcome, []
 
     def _upsert_resources(self, record: NormalizedRecord, canonical_id: str) -> None:
         resources: list[tuple[str, str, str, dict[str, str] | None]] = []

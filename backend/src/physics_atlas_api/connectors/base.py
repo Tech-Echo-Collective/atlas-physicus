@@ -4,7 +4,8 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Literal, Protocol
+from types import TracebackType
+from typing import Any, Literal, Protocol, Self
 from urllib.parse import unquote, urlparse
 
 ProviderName = Literal["inspire", "arxiv", "ror", "orcid", "crossref"]
@@ -12,6 +13,17 @@ RecordKind = Literal["paper", "institution", "researcher"]
 
 
 class SourceTransport(Protocol):
+    def close(self) -> None: ...
+
+    def __enter__(self) -> Self: ...
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None: ...
+
     def get_json(
         self,
         url: str,
@@ -61,6 +73,7 @@ class ConnectorBatch:
     next_cursor: str | None
     fetched_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     checkpoint: dict[str, Any] = field(default_factory=dict)
+    replay_checkpoint: dict[str, Any] | None = None
     raw_payload: tuple[dict[str, Any], ...] = field(default_factory=tuple)
 
 
@@ -77,11 +90,25 @@ class SourceConnector(ABC):
     source_version: str
     min_interval_seconds: float
 
-    def __init__(self, transport: SourceTransport, base_url: str):
+    def __init__(
+        self,
+        transport: SourceTransport,
+        base_url: str,
+        *,
+        cursor_scope: str | None = None,
+        dataset_scope: str = "targeted-known-id-v1",
+    ):
         self.transport = transport
         self.base_url = base_url.rstrip("/")
+        self.cursor_scope = cursor_scope or f"{self.provider}:targeted-record-v1"
+        self.dataset_scope = dataset_scope
         self._cursor: str | None = None
         self._checkpoint: dict[str, Any] = {}
+        self._replay_checkpoint: dict[str, Any] | None = None
+
+    @property
+    def enabled(self) -> bool:
+        return True
 
     @abstractmethod
     def fetch_new_records(self, cursor: str | None, limit: int = 100) -> ConnectorBatch:
@@ -106,9 +133,20 @@ class SourceConnector(ABC):
 
     def set_checkpoint(self, checkpoint: dict[str, Any] | None) -> None:
         self._checkpoint = dict(checkpoint or {})
+        self._replay_checkpoint = None
 
     def get_checkpoint(self) -> dict[str, Any]:
         return dict(self._checkpoint)
+
+    def set_replay_checkpoint(self, checkpoint: dict[str, Any]) -> None:
+        self._replay_checkpoint = dict(checkpoint)
+
+    def get_replay_checkpoint(self) -> dict[str, Any] | None:
+        return (
+            dict(self._replay_checkpoint)
+            if self._replay_checkpoint is not None
+            else None
+        )
 
     def _complete(
         self,
@@ -116,13 +154,18 @@ class SourceConnector(ABC):
         next_cursor: str | None,
         checkpoint: dict[str, Any] | None = None,
         raw_payload: list[dict[str, Any]] | None = None,
+        replay_checkpoint: dict[str, Any] | None = None,
     ) -> ConnectorBatch:
         self._cursor = next_cursor
         self._checkpoint = dict(checkpoint or {})
+        self._replay_checkpoint = (
+            dict(replay_checkpoint) if replay_checkpoint is not None else None
+        )
         return ConnectorBatch(
             tuple(records),
             next_cursor,
             checkpoint=self.get_checkpoint(),
+            replay_checkpoint=self.get_replay_checkpoint(),
             raw_payload=tuple(raw_payload or ()),
         )
 

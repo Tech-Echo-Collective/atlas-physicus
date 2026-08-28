@@ -73,6 +73,15 @@ def _provenance(value: dict[str, Any] | None) -> dict[str, Any]:
             if source.get("sourceSnapshotId", source.get("source_snapshot_id"))
             else {}
         ),
+        **(
+            {
+                "acquisitionScope": source.get(
+                    "acquisitionScope", source.get("acquisition_scope")
+                )
+            }
+            if source.get("acquisitionScope", source.get("acquisition_scope"))
+            else {}
+        ),
     }
 
 

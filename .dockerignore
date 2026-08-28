@@ -1,6 +1,9 @@
 .git
 .github
 .env
+.env.*
+!.env.example
+!.env.production.example
 .venv
 backend/.venv
 backend/**/__pycache__
@@ -11,5 +14,6 @@ backend/tests
 node_modules
 dist
 coverage
+*.dump
 pipeline
 public

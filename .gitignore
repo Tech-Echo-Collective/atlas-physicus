@@ -4,7 +4,10 @@ coverage/
 .DS_Store
 *.local
 *.log
+*.dump
 .env
+.env.production
+.env.production.local
 .venv/
 __pycache__/
 .pytest_cache/

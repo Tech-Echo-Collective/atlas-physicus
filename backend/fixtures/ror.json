@@ -11,5 +11,6 @@
       "external_ids": [],
       "admin": {"last_modified": {"date": "2026-08-24T00:00:00Z"}}
     }
-  ]
+  ],
+  "meta": {"number_of_results": 1}
 }

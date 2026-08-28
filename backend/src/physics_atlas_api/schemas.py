@@ -43,6 +43,7 @@ class Provenance(ApiModel):
     retrieved_at: datetime | None = None
     source_record_id: str | None = None
     source_snapshot_id: str | None = None
+    acquisition_scope: str | None = None
 
 
 class ExternalIdentifier(ApiModel):
@@ -417,6 +418,7 @@ class HealthOut(ApiModel):
 class SourceUpdateStatus(ApiModel):
     source: str
     status: str
+    scope_version: str
     last_attempt_at: datetime | None = None
     last_success_at: datetime | None = None
     cursor: str | None = None

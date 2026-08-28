@@ -1,73 +1,138 @@
-from datetime import UTC, datetime, timedelta
+import hashlib
+from datetime import UTC, datetime
 from typing import Any
 
+from .acquisition import HEP_TH_V1, AcquisitionScope
 from .base import (
     ConnectorBatch,
+    ConnectorConfigurationError,
+    ConnectorError,
     NormalizedRecord,
     SourceConnector,
     SourceRecord,
+    SourceTransport,
     compact_ids,
     external_id,
     parse_provider_datetime,
-    provider_date,
 )
 
 
 class RorConnector(SourceConnector):
     provider = "ror"
-    source_version = "ROR API v2 / schema 2.1"
+    source_version = "ROR API v2 / schema 2.1 / targeted records"
     min_interval_seconds = 0.2
 
-    def _records(self, payload: dict[str, Any]) -> list[SourceRecord]:
-        records = []
-        for item in payload.get("items", []):
-            identifier_pair = external_id("ror", item.get("id"))
-            if identifier_pair:
-                records.append(
-                    SourceRecord(
-                        provider=self.provider,
-                        source_record_id=identifier_pair[1],
-                        raw=item,
-                        updated_at=parse_provider_datetime(
-                            item.get("admin", {}).get("last_modified", {}).get("date")
-                        ),
-                    )
+    def __init__(
+        self,
+        transport: SourceTransport,
+        base_url: str,
+        *,
+        record_ids: tuple[str, ...] = (),
+        acquisition_scope: AcquisitionScope = HEP_TH_V1,
+    ):
+        canonical_ids: list[str] = []
+        for value in record_ids:
+            identifier = external_id("ror", value)
+            if identifier is None:
+                raise ConnectorConfigurationError(
+                    f"Configured ROR record ID is invalid: {value!r}"
                 )
+            if identifier[1] not in canonical_ids:
+                canonical_ids.append(identifier[1])
+        canonical_ids.sort()
+        target_digest = hashlib.sha256("\n".join(canonical_ids).encode()).hexdigest()[
+            :16
+        ]
+        super().__init__(
+            transport,
+            base_url,
+            cursor_scope=(
+                acquisition_scope.cursor_scope(
+                    self.provider, f"targeted-records-v1-{target_digest}"
+                )
+            ),
+            dataset_scope=acquisition_scope.id,
+        )
+        self.acquisition_scope = acquisition_scope
+        self.record_ids = tuple(canonical_ids)
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.record_ids)
+
+    def _records(self, payload: dict[str, Any]) -> list[SourceRecord]:
+        items = payload.get("items")
+        if not isinstance(items, list):
+            raise ConnectorError("ROR response is missing the items collection")
+        records = []
+        for item in items:
+            if not isinstance(item, dict):
+                raise ConnectorError("ROR response contains a malformed organization")
+            identifier_pair = external_id("ror", item.get("id"))
+            if identifier_pair is None:
+                raise ConnectorError(
+                    "ROR response contains an organization without a valid ID"
+                )
+            records.append(
+                SourceRecord(
+                    provider=self.provider,
+                    source_record_id=identifier_pair[1],
+                    raw=item,
+                    updated_at=parse_provider_datetime(
+                        item.get("admin", {}).get("last_modified", {}).get("date")
+                    ),
+                )
+            )
         return records
 
     def fetch_new_records(self, cursor: str | None, limit: int = 100) -> ConnectorBatch:
-        del limit  # ROR v2 has a fixed, bounded page size.
+        if not self.record_ids:
+            return self._complete([], cursor)
+
         checkpoint = self.get_checkpoint()
-        until = (
-            provider_date(checkpoint.get("until"))
-            or datetime.now(UTC).date().isoformat()
-        )
-        since = (
-            provider_date(checkpoint.get("since") or cursor)
-            or (datetime.now(UTC) - timedelta(days=7)).date().isoformat()
-        )
-        page = int(checkpoint.get("page", 1))
-        payload = self.transport.get_json(
-            f"{self.base_url}/organizations",
-            params={
-                "page": page,
-                "all_status": "true",
-                "query.advanced": (f"admin.last_modified.date:[{since} TO {until}]"),
-            },
-        )
-        records = self._records(payload)
-        total = int(payload.get("meta", {}).get("number_of_results", len(records)))
-        if page * 20 < total:
+        until = str(checkpoint.get("until") or datetime.now(UTC).isoformat())
+        target_index = int(checkpoint.get("targetIndex", 0))
+        if target_index < 0 or target_index > len(self.record_ids):
+            raise ConnectorError("ROR checkpoint contains an invalid target index")
+        page_size = max(1, min(limit, 100))
+        targets = self.record_ids[target_index : target_index + page_size]
+        replay_checkpoint = {"until": until, "targetIndex": target_index}
+        self.set_replay_checkpoint(replay_checkpoint)
+        records: list[SourceRecord] = []
+        payloads: list[dict[str, Any]] = []
+        for record_id in targets:
+            payload = self.transport.get_json(
+                f"{self.base_url}/organizations/{record_id}"
+            )
+            payloads.append(payload)
+            candidates = (
+                self._records(payload)
+                if isinstance(payload.get("items"), list)
+                else self._records({"items": [payload]})
+            )
+            if len(candidates) != 1 or candidates[0].source_record_id != record_id:
+                raise ConnectorError(
+                    f"ROR response did not match targeted record {record_id}"
+                )
+            records.append(candidates[0])
+
+        next_index = target_index + len(targets)
+        raw_payload = [
+            {"contentType": "application/json", "body": payload} for payload in payloads
+        ]
+        if next_index < len(self.record_ids):
             return self._complete(
                 records,
                 cursor,
-                {"since": since, "until": until, "page": page + 1},
-                raw_payload=[{"contentType": "application/json", "body": payload}],
+                {"until": until, "targetIndex": next_index},
+                raw_payload=raw_payload,
+                replay_checkpoint=replay_checkpoint,
             )
         return self._complete(
             records,
             until,
-            raw_payload=[{"contentType": "application/json", "body": payload}],
+            raw_payload=raw_payload,
+            replay_checkpoint=replay_checkpoint,
         )
 
     def fetch_record(self, record_id: str) -> SourceRecord | None:
@@ -77,7 +142,11 @@ class RorConnector(SourceConnector):
         payload = self.transport.get_json(
             f"{self.base_url}/organizations/{identifier[1]}"
         )
-        records = self._records({"items": [payload]})
+        records = (
+            self._records(payload)
+            if isinstance(payload.get("items"), list)
+            else self._records({"items": [payload]})
+        )
         return records[0] if records else None
 
     def normalize_record(self, record: SourceRecord) -> NormalizedRecord:

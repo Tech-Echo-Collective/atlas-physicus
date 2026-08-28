@@ -472,6 +472,9 @@ class IdentityReview(Base, TimestampMixin):
 class SourceCursor(Base):
     __tablename__ = "source_cursors"
     source: Mapped[str] = mapped_column(String(120), primary_key=True)
+    scope_version: Mapped[str] = mapped_column(
+        String(240), default="legacy-unbounded-v1", nullable=False
+    )
     cursor: Mapped[str | None] = mapped_column(Text)
     checkpoint: Mapped[dict[str, Any]] = mapped_column(
         JsonType, default=dict, nullable=False

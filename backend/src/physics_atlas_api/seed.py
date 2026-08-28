@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 
 import pycountry
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import InstrumentedAttribute, Session
 
 from . import models
 from .config import get_settings
@@ -172,9 +173,35 @@ def seed_reference_data(session: Session, payload: dict[str, Any]) -> None:
     session.commit()
 
 
+def _reference_data_is_complete(session: Session, payload: dict[str, Any]) -> bool:
+    """Return whether every required non-observational reference row exists."""
+    country_ids = {
+        f"country-{country.alpha_2.casefold()}"
+        for country in pycountry.countries
+        if getattr(country, "numeric", None) is not None
+    }
+    geographic_view_ids = {
+        f"geographic-view-{country_id.removeprefix('country-')}"
+        for country_id in country_ids
+    } | {item["id"] for item in payload.get("geographicViews", [])}
+    metric_ids = {item["id"] for item in payload.get("metricDefinitions", [])}
+
+    def present(id_column: InstrumentedAttribute[str], expected: set[str]) -> bool:
+        if not expected:
+            return True
+        found = set(session.scalars(select(id_column).where(id_column.in_(expected))))
+        return found == expected
+
+    return (
+        session.get(models.ScienceDomain, "physics") is not None
+        and present(models.ResearchField.id, set(BROAD_PHYSICS_FIELDS))
+        and present(models.Country.id, country_ids)
+        and present(models.GeographicView.id, geographic_view_ids)
+        and present(models.MetricDefinition.id, metric_ids)
+    )
+
+
 def ensure_reference_data(session: Session) -> None:
-    if session.get(models.ScienceDomain, "physics") is not None:
-        return
     reference_path = get_settings().reference_data_path or (
         Path(__file__).resolve().parents[3] / "src" / "data" / "demo" / "atlas.json"
     )
@@ -183,7 +210,10 @@ def ensure_reference_data(session: Session) -> None:
             "Physics Atlas reference data is unavailable. Configure "
             "PHYSICS_ATLAS_REFERENCE_DATA_PATH for an installed deployment."
         )
-    seed_reference_data(session, json.loads(reference_path.read_text(encoding="utf-8")))
+    payload = json.loads(reference_path.read_text(encoding="utf-8"))
+    if _reference_data_is_complete(session, payload):
+        return
+    seed_reference_data(session, payload)
 
 
 def parsed_datetime(value: str | None) -> datetime:

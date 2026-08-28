@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -42,12 +42,13 @@ def page(
 
 
 @router.get("/health", response_model=schemas.HealthOut)
-def health(session: SessionDependency) -> dict[str, Any]:
+def health(response: Response, session: SessionDependency) -> dict[str, Any]:
     database_status = "ok"
     try:
         session.execute(text("SELECT 1"))
     except SQLAlchemyError:
         database_status = "unavailable"
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return {
         "status": "ok" if database_status == "ok" else "degraded",
         "version": __version__,
@@ -441,6 +442,7 @@ def update_status(session: SessionDependency) -> dict[str, Any]:
                 "lastAttemptAt": item.last_attempt_at,
                 "lastSuccessAt": item.last_success_at,
                 "cursor": item.cursor,
+                "scopeVersion": item.scope_version,
                 "consecutiveFailures": item.consecutive_failures,
             }
             for item in source_rows

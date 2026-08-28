@@ -1,6 +1,7 @@
 import argparse
 import logging
 import time
+from contextlib import ExitStack
 from functools import partial
 from pathlib import Path
 
@@ -27,42 +28,61 @@ def execute_once(
     check_resources: bool = False,
 ) -> int:
     settings = get_settings()
-    connectors = build_connectors(settings, fixture_directory)
-    requested = list(SOURCE_CADENCE) if source == "all" else [source]
-    with SessionLocal() as session:
-        ensure_reference_data(session)
-        scheduler = UpdateScheduler(session)
-        if not scheduler.acquire_lock():
-            logger.warning(
-                "worker lock is held",
-                extra={"event": "worker.locked", "source": source},
-            )
-            return 0
-        failures = 0
-        try:
-            for provider in scheduler.due_sources(requested):
-                result = IncrementalUpdateEngine(session, connectors[provider]).run()
-                failures += int(result.status != "succeeded")
-            if check_resources:
-                monitor_result = ResourceMonitor(
-                    session,
-                    HttpResourceTransport(),
-                    timeout_seconds=settings.provider_timeout_seconds,
-                    url_validator=partial(
-                        validate_resource_url,
-                        allowed_hosts=settings.resource_allowed_hosts,
-                    ),
-                ).run(limit=settings.resource_check_max_per_run)
-                logger.info(
-                    "resource monitor completed",
-                    extra={
-                        "event": "resources.completed",
-                        "records": monitor_result.checked,
-                    },
+    with ExitStack() as transport_stack:
+        connectors = build_connectors(settings, fixture_directory)
+        seen_transports: set[int] = set()
+        for connector in connectors.values():
+            transport_id = id(connector.transport)
+            if transport_id in seen_transports:
+                continue
+            seen_transports.add(transport_id)
+            transport_stack.enter_context(connector.transport)
+
+        resource_transport = (
+            transport_stack.enter_context(HttpResourceTransport())
+            if check_resources
+            else None
+        )
+        requested = list(SOURCE_CADENCE) if source == "all" else [source]
+        enabled_sources = [
+            provider for provider in requested if connectors[provider].enabled
+        ]
+        with SessionLocal() as session:
+            ensure_reference_data(session)
+            scheduler = UpdateScheduler(session)
+            if not scheduler.acquire_lock():
+                logger.warning(
+                    "worker lock is held",
+                    extra={"event": "worker.locked", "source": source},
                 )
-        finally:
-            scheduler.release_lock()
-        return failures
+                return 0
+            failures = 0
+            try:
+                for provider in scheduler.due_sources(enabled_sources):
+                    result = IncrementalUpdateEngine(
+                        session, connectors[provider]
+                    ).run()
+                    failures += int(result.status != "succeeded")
+                if resource_transport is not None:
+                    monitor_result = ResourceMonitor(
+                        session,
+                        resource_transport,
+                        timeout_seconds=settings.provider_timeout_seconds,
+                        url_validator=partial(
+                            validate_resource_url,
+                            allowed_hosts=settings.resource_allowed_hosts,
+                        ),
+                    ).run(limit=settings.resource_check_max_per_run)
+                    logger.info(
+                        "resource monitor completed",
+                        extra={
+                            "event": "resources.completed",
+                            "records": monitor_result.checked,
+                        },
+                    )
+            finally:
+                scheduler.release_lock()
+            return failures
 
 
 def run() -> None:

@@ -6,7 +6,8 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Literal, Protocol
+from types import TracebackType
+from typing import Literal, Protocol, Self
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -40,6 +41,21 @@ class HttpResourceTransport:
             follow_redirects=False,
             headers={"User-Agent": "PhysicsAtlasResourceMonitor/3.0.4-alpha"},
         )
+
+    def close(self) -> None:
+        self.client.close()
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        del exc_type, exc_value, traceback
+        self.close()
 
     def request(
         self, method: str, url: str, *, timeout_seconds: float

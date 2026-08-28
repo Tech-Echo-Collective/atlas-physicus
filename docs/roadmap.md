@@ -32,6 +32,43 @@ This release adds:
 
 The release is deployment-ready, not automatically publicly live. The GitHub Pages Atlas retains synthetic and historical pilot fallbacks. Provider-backed mode becomes truly live only when an HTTPS backend, PostgreSQL database, worker, credentials, policy configuration, backups, and monitoring are operated.
 
+## Current milestone — v3.0.4 Production Activation
+
+Status: **in progress**. This is an operational follow-through on v3.0.4-alpha, not v3.0.5 and not a new product-feature phase.
+
+The goal is to operate the existing path with a bounded `hep-th` corpus:
+
+```text
+INSPIRE / arXiv → normalization → entity resolution → PostgreSQL
+    → FastAPI → APIRepository → public Atlas
+```
+
+The production activation is not complete. No hosting target, production credentials, public API URL, managed database, or provider-backed worker is currently recorded. The public GitHub Pages application remains static/pilot.
+
+Scheduled acquisition is now bounded deliberately. The versioned `hep-th-v1`
+policy requests INSPIRE Theory-HEP and arXiv `cat:hep-th`; ROR is target-only
+and disabled without configured known IDs. Cursor, snapshot, and dataset scope
+markers prevent legacy broad state from being reused silently. ORCID and
+Crossref remain known-ID-only enrichers.
+
+An isolated temporary-database smoke run verified real bounded INSPIRE/arXiv
+records, checkpoint continuation in fresh worker processes, targeted Crossref,
+resource monitoring, migrations, FastAPI health/reads, and API restart. This
+does not satisfy the production gate: it used SQLite rather than an operated
+PostgreSQL host, and no public HTTPS API or public `APIRepository` connection
+exists.
+
+Activation also requires enough reviewed canonical affiliation and metric data to support a useful geographic view. Until then, missing live map observations remain neutral rather than becoming zero or an unvalidated score.
+
+Completion gates are:
+
+1. authorized HTTPS hosting, production PostgreSQL, secrets, CORS, backups, rate protection, logs, and operational monitoring;
+2. bounded provider-backed ingestion with explicit provenance and no fixture/synthetic/pilot mixing;
+3. checkpoint, restart, timeout, rate-limit, duplicate, partial-update, and malformed-record recovery tests in the operated environment;
+4. healthy public API and current update status;
+5. verified public frontend use of `APIRepository`, including deep links and map/navigation regressions;
+6. removal of the development dataset selector from the normal public experience only after live stability is demonstrated.
+
 ## Next validation gates
 
 Before broad live ingestion, the project should validate:
@@ -49,4 +86,7 @@ Before broad live ingestion, the project should validate:
 
 The roadmap does not currently commit to a graph database, Kubernetes, authentication, full-text paper archive, recommendation engine, prediction model, automatic researcher ranking, or universal live-data coverage. Those additions require a demonstrated scientific or operational need.
 
-The next minimum action after v3.0.4-alpha is an operated, bounded staging deployment with fixture and limited provider-backed updates, followed by measured resolver and API review. Large backfills should wait for that evidence.
+The next minimum action is to select an authorized hosting target and operate
+the reviewed bounded stack with PostgreSQL, HTTPS, backups, and monitoring.
+Only after hosted API and frontend verification should the Pages build switch
+to `APIRepository`. Large backfills should wait for that operating evidence.

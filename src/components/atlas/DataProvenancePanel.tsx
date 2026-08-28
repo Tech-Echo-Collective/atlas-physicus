@@ -38,6 +38,12 @@ export function DataProvenancePanel({ metadata }: DataProvenancePanelProps) {
               <dt>Status</dt>
               <dd>{provenance.status}</dd>
             </div>
+            {provenance.acquisitionScope && (
+              <div>
+                <dt>Acquisition scope</dt>
+                <dd>{provenance.acquisitionScope}</dd>
+              </div>
+            )}
             <div>
               <dt>Generated</dt>
               <dd>{new Date(metadata.generatedAt).toLocaleString()}</dd>

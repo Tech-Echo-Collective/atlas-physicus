@@ -35,6 +35,8 @@ export interface DataProvenance {
   status: ProvenanceStatus;
   confidence?: number;
   retrievedAt?: string;
+  /** Versioned acquisition boundary for live provider-derived data. */
+  acquisitionScope?: string;
 }
 
 export interface Provenanced {

@@ -37,6 +37,8 @@ All settings use the `PHYSICS_ATLAS_` prefix. Important variables are:
 | `FIXTURE_MODE` | Use deterministic connector fixtures when true |
 | `FIXTURE_DIRECTORY` | Optional installed path containing deterministic connector fixtures |
 | `REFERENCE_DATA_PATH` | Optional installed path to the non-observational Atlas reference JSON |
+| `ACQUISITION_SCOPE` | Versioned scheduled-ingestion policy; currently only `hep-th-v1` is supported |
+| `ROR_RECORD_IDS` | Comma-separated, already-known ROR IDs to enrich; an empty value disables scheduled ROR requests |
 | `WORKER_POLL_SECONDS` | Scheduler wake interval, not provider cadence |
 | `RESOURCE_CHECK_MAX_PER_RUN` | Bound link checks per worker cycle |
 | `RESOURCE_CHECK_ALLOWED_HOSTS` | Operator allowlist for bounded resource-health requests |
@@ -74,10 +76,12 @@ GitHub Pages can continue serving the static/pilot frontend with no backend URL.
 
 ## Operations and validation
 
-The service logs request IDs, request paths/status/duration, update events, sources, run IDs, and record counts as structured records. `/api/health` checks database connectivity; `/api/updates/status` reports freshness, source failures, review backlog, resource failures, and metric-recalculation state.
+The service logs request IDs, request paths/status/duration, update events, sources, run IDs, and record counts as structured records. `/api/health` checks database connectivity and returns HTTP 503 with a structured degraded body when the database is unavailable. `/api/updates/status` reports freshness, each cursor's scope version, source failures, review backlog, resource failures, and metric-recalculation state. Dataset and evidence provenance expose the acquisition scope when one is present.
 
 Repository validation covers Ruff, strict mypy, pytest fixtures, API routes, migrations, connector normalization, update idempotency/failure behavior, and resource checks. Standard tests do not call live providers.
 
-The scheduler operates only INSPIRE, arXiv, and ROR. ORCID and Crossref remain targeted record enrichers and are not exposed as `--source` worker choices. The initial reference bootstrap contains taxonomy/geography/metric definitions but no synthetic scientific entities or observations.
+The scheduler operates INSPIRE and arXiv within the configured acquisition scope. `hep-th-v1` maps to INSPIRE `subject:Theory-HEP` and arXiv `cat:hep-th`. ROR never scans the registry: it refreshes only `ROR_RECORD_IDS`, and is skipped when that list is empty. ORCID and Crossref remain targeted record enrichers and are not exposed as `--source` worker choices. The initial reference bootstrap contains taxonomy/geography/metric definitions but no synthetic scientific entities or observations.
+
+Every provider cursor stores the exact scope and connector-policy version that created it. `DatasetState` separately records the shared corpus scope. A migrated legacy cursor, a live dataset without a scope marker, or a cursor/dataset from a different scope fails closed before provider I/O; an operator must deliberately replace or migrate it after preserving required evidence. Changing only the configuration does not reinterpret an older broad corpus as `hep-th`.
 
 The API is public and read-oriented. It has bounded query parameters, GET/OPTIONS-only CORS, URL validation for the resource monitor, provider timeouts, and no authentication because v3.0.4 does not expose write endpoints. Production deployments still require ordinary network controls, TLS, database isolation, rate protection, backups, and log retention.

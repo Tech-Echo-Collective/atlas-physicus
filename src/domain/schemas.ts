@@ -49,6 +49,7 @@ export const provenanceSchema = z.object({
   status: z.enum(['synthetic', 'unverified', 'verified', 'deprecated']),
   confidence: optionalFromNullable(z.number().min(0).max(1)),
   retrievedAt: optionalFromNullable(z.string().datetime({ offset: true })),
+  acquisitionScope: optionalFromNullable(z.string().trim().min(1)),
 });
 
 export const externalIdentifierSchema = z.object({

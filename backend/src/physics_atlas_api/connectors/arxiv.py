@@ -4,12 +4,14 @@ from xml.etree.ElementTree import Element
 
 from defusedxml import ElementTree as ET
 
+from .acquisition import HEP_TH_V1, AcquisitionScope
 from .base import (
     ConnectorBatch,
     ConnectorError,
     NormalizedRecord,
     SourceConnector,
     SourceRecord,
+    SourceTransport,
     compact_ids,
     external_id,
     parse_provider_datetime,
@@ -25,6 +27,23 @@ class ArxivConnector(SourceConnector):
     source_version = "arXiv Query API Atom 1.0 / submittedDate stream"
     min_interval_seconds = 3.0
 
+    def __init__(
+        self,
+        transport: SourceTransport,
+        base_url: str,
+        *,
+        acquisition_scope: AcquisitionScope = HEP_TH_V1,
+    ):
+        super().__init__(
+            transport,
+            base_url,
+            cursor_scope=acquisition_scope.cursor_scope(
+                self.provider, "submitted-date-v1"
+            ),
+            dataset_scope=acquisition_scope.id,
+        )
+        self.acquisition_scope = acquisition_scope
+
     @staticmethod
     def _text(entry: Element, name: str) -> str:
         element = entry.find(f"{ATOM}{name}")
@@ -32,6 +51,8 @@ class ArxivConnector(SourceConnector):
 
     def _records(self, xml: str) -> list[SourceRecord]:
         root = ET.fromstring(xml)
+        if root.tag != f"{ATOM}feed":
+            raise ConnectorError("arXiv response is not an Atom feed")
         records: list[SourceRecord] = []
         for entry in root.findall(f"{ATOM}entry"):
             identifier_url = self._text(entry, "id")
@@ -76,9 +97,7 @@ class ArxivConnector(SourceConnector):
 
     def fetch_new_records(self, cursor: str | None, limit: int = 100) -> ConnectorBatch:
         # Provider categories are acquisition filters, not the Atlas field taxonomy.
-        query = (
-            "cat:physics.* OR cat:hep-* OR cat:gr-qc OR cat:quant-ph OR cat:cond-mat.*"
-        )
+        query = self.acquisition_scope.arxiv_query
         checkpoint = self.get_checkpoint()
         current_minute = datetime.now(UTC).replace(second=0, microsecond=0)
         until = str(checkpoint.get("until") or current_minute.isoformat())
@@ -100,6 +119,8 @@ class ArxivConnector(SourceConnector):
             f"TO {compact_timestamp(until)}]"
         )
         page_size = min(limit, 100)
+        replay_checkpoint = {"since": since, "until": until, "start": start}
+        self.set_replay_checkpoint(replay_checkpoint)
         xml = self.transport.get_text(
             self.base_url,
             params={
@@ -117,11 +138,13 @@ class ArxivConnector(SourceConnector):
                 cursor,
                 {"since": since, "until": until, "start": start + len(records)},
                 raw_payload=[{"contentType": "application/atom+xml", "body": xml}],
+                replay_checkpoint=replay_checkpoint,
             )
         return self._complete(
             records,
             until,
             raw_payload=[{"contentType": "application/atom+xml", "body": xml}],
+            replay_checkpoint=replay_checkpoint,
         )
 
     def fetch_updated_records(
