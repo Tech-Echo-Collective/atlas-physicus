@@ -32,7 +32,10 @@ export function DataSourceSelector({
       aria-busy={isLoading}
     >
       <p className="section-kicker">Data source</p>
-      <div className="data-source-options">
+      <div
+        className="data-source-options"
+        data-single-source={atlasDataSourceOptions.length === 1}
+      >
         {atlasDataSourceOptions.map((source) => {
           const isUnavailable = Boolean(source.requiresApi && !liveApiAvailable);
           return (
@@ -85,7 +88,7 @@ export function DataSourceSelector({
           </span>
         </p>
       )}
-      {isLive && (
+      {isLive && !isLoading && !error && !notice && (
         <p className="pilot-source-note" role="note">
           <strong>API-backed Atlas metadata</strong>
           <span>

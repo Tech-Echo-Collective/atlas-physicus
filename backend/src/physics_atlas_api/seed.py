@@ -12,6 +12,7 @@ from sqlalchemy.orm import InstrumentedAttribute, Session
 from . import models
 from .config import get_settings
 from .database import SessionLocal
+from .metrics.contracts import get_metric_contract
 from .search_index import refresh_search_terms
 
 ISO_ALPHA3_TO_ALPHA2 = {
@@ -29,7 +30,7 @@ ISO_ALPHA3_TO_ALPHA2 = {
 REFERENCE_PROVENANCE = {
     "source": "Physics Atlas reference taxonomy and ISO 3166",
     "sourceType": "derived",
-    "version": "v3.0.4-alpha",
+    "version": "v3.0.5-alpha",
     "status": "unverified",
 }
 
@@ -89,6 +90,47 @@ REFERENCE_METRIC_TEXT = {
         "No resilience or vulnerability claim is calculated in this release.",
     ),
 }
+
+
+def _reference_metric_values(item: dict[str, Any]) -> dict[str, Any]:
+    contract = get_metric_contract(item["id"])
+    if contract is not None:
+        return {
+            "name": contract.name,
+            "description": (
+                f"Experimental candidate {contract.version}. {contract.formula}"
+            ),
+            "interpretation": contract.interpretation,
+            "unit": "candidate normalized visualization index (0-100), withheld",
+            "version": contract.version,
+            "required_data": contract.required_data_metadata(),
+            "implementation_status": contract.implementation_status,
+            "provenance_json": {
+                "source": contract.provenance.source,
+                "sourceType": "derived",
+                "version": contract.version,
+                "status": "unverified",
+                "acquisitionScope": contract.provenance.source_scope,
+                "algorithmVersion": contract.algorithm_version,
+                "normalizationVersion": contract.normalization_version,
+                "scientificStatus": contract.implementation_status,
+            },
+        }
+
+    name, description, interpretation = REFERENCE_METRIC_TEXT.get(
+        item["id"],
+        (item["name"], item["description"], item["interpretation"]),
+    )
+    return {
+        "name": name,
+        "description": description,
+        "interpretation": interpretation,
+        "unit": "taxonomy definition only",
+        "version": item["version"],
+        "required_data": ["future validated source data and reviewed methodology"],
+        "implementation_status": "taxonomy-only",
+        "provenance_json": REFERENCE_PROVENANCE,
+    }
 
 
 def seed_reference_data(session: Session, payload: dict[str, Any]) -> None:
@@ -152,22 +194,19 @@ def seed_reference_data(session: Session, payload: dict[str, Any]) -> None:
             )
         )
     for item in payload.get("metricDefinitions", []):
-        name, description, interpretation = REFERENCE_METRIC_TEXT.get(
-            item["id"],
-            (item["name"], item["description"], item["interpretation"]),
-        )
+        values = _reference_metric_values(item)
         session.merge(
             models.MetricDefinition(
                 id=item["id"],
-                name=name,
+                name=values["name"],
                 category=item["category"],
-                description=description,
-                interpretation=interpretation,
-                unit="taxonomy definition only",
-                version=item["version"],
-                required_data=["future validated source data and reviewed methodology"],
-                implementation_status="taxonomy-only",
-                provenance_json=REFERENCE_PROVENANCE,
+                description=values["description"],
+                interpretation=values["interpretation"],
+                unit=values["unit"],
+                version=values["version"],
+                required_data=values["required_data"],
+                implementation_status=values["implementation_status"],
+                provenance_json=values["provenance_json"],
             )
         )
     session.commit()
@@ -184,7 +223,11 @@ def _reference_data_is_complete(session: Session, payload: dict[str, Any]) -> bo
         f"geographic-view-{country_id.removeprefix('country-')}"
         for country_id in country_ids
     } | {item["id"] for item in payload.get("geographicViews", [])}
-    metric_ids = {item["id"] for item in payload.get("metricDefinitions", [])}
+    metric_items = {
+        item["id"]: _reference_metric_values(item)
+        for item in payload.get("metricDefinitions", [])
+    }
+    metric_ids = set(metric_items)
 
     def present(id_column: InstrumentedAttribute[str], expected: set[str]) -> bool:
         if not expected:
@@ -192,12 +235,28 @@ def _reference_data_is_complete(session: Session, payload: dict[str, Any]) -> bo
         found = set(session.scalars(select(id_column).where(id_column.in_(expected))))
         return found == expected
 
+    metric_definitions = {
+        item.id: item
+        for item in session.scalars(
+            select(models.MetricDefinition).where(
+                models.MetricDefinition.id.in_(metric_ids)
+            )
+        )
+    }
+    metric_definitions_are_current = set(metric_definitions) == metric_ids and all(
+        definition.version == metric_items[metric_id]["version"]
+        and definition.implementation_status
+        == metric_items[metric_id]["implementation_status"]
+        and definition.required_data == metric_items[metric_id]["required_data"]
+        for metric_id, definition in metric_definitions.items()
+    )
+
     return (
         session.get(models.ScienceDomain, "physics") is not None
         and present(models.ResearchField.id, set(BROAD_PHYSICS_FIELDS))
         and present(models.Country.id, country_ids)
         and present(models.GeographicView.id, geographic_view_ids)
-        and present(models.MetricDefinition.id, metric_ids)
+        and metric_definitions_are_current
     )
 
 
@@ -445,7 +504,10 @@ def seed_dataset(session: Session, payload: dict[str, Any]) -> None:
                 provenance_json=provenance(item, default_provenance),
             )
         )
-    for item in payload.get("metricDefinitions", []):
+    metric_definition_items = {
+        item["id"]: item for item in payload.get("metricDefinitions", [])
+    }
+    for item in metric_definition_items.values():
         session.merge(
             models.MetricDefinition(
                 id=item["id"],
@@ -462,6 +524,9 @@ def seed_dataset(session: Session, payload: dict[str, Any]) -> None:
         )
     session.flush()
     for item in payload.get("metricObservations", []):
+        definition = metric_definition_items[item["metricId"]]
+        definition_version = item.get("metricDefinitionVersion", definition["version"])
+        is_legacy_observation = definition_version == "legacy-v1"
         session.merge(
             models.MetricObservation(
                 id=item["id"],
@@ -473,11 +538,41 @@ def seed_dataset(session: Session, payload: dict[str, Any]) -> None:
                 period=item["period"],
                 value=item["value"],
                 source=item.get("source", "checked-in-dataset"),
+                metric_definition_version=definition_version,
                 algorithm_version=item.get("algorithmVersion", "checked-in"),
                 calculation_version=item.get(
                     "calculationVersion", metadata["schemaVersion"]
                 ),
-                data_source_version=metadata["schemaVersion"],
+                data_source_version=item.get(
+                    "dataSourceVersion", default_provenance["version"]
+                ),
+                acquisition_scope=item.get(
+                    "acquisitionScope",
+                    None
+                    if is_legacy_observation
+                    else f"{metadata['datasetKind']}:checked-in-fixture",
+                ),
+                raw_value=item.get(
+                    "rawValue", None if is_legacy_observation else item["value"]
+                ),
+                raw_unit=item.get(
+                    "rawUnit", None if is_legacy_observation else definition["unit"]
+                ),
+                normalization_method=item.get(
+                    "normalizationMethod",
+                    None if is_legacy_observation else "synthetic-fixture-identity-v1",
+                ),
+                normalization_parameters=item.get(
+                    "normalizationParameters",
+                    {} if is_legacy_observation else {"mode": "identity"},
+                ),
+                input_count=item.get(
+                    "inputCount", None if is_legacy_observation else 1
+                ),
+                quality_flags=item.get(
+                    "qualityFlags",
+                    [] if is_legacy_observation else ["synthetic-demo"],
+                ),
                 calculated_at=parsed_datetime(
                     item.get("calculatedAt") or metadata["generatedAt"]
                 ),

@@ -462,6 +462,15 @@ button {
   padding: 17px;
 }
 
+.provenance-panel {
+  width: 340px;
+  max-height: min(680px, calc(100svh - 100px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(97, 215, 222, 0.28) transparent;
+  scrollbar-width: thin;
+}
+
 .metric-weighting-panel {
   width: 390px;
   max-height: min(760px, calc(100vh - 100px));
@@ -751,9 +760,114 @@ button {
   font-size: 0.62rem;
 }
 
+.live-methodology-status {
+  margin: 15px 0;
+  padding-top: 13px;
+  border-top: 1px solid rgba(151, 190, 203, 0.12);
+}
+
+.live-methodology-status h3,
+.live-methodology-status h4 {
+  margin: 0;
+  color: #d7e7ea;
+  font-size: 0.66rem;
+  font-weight: 650;
+  letter-spacing: 0.035em;
+}
+
+.live-methodology-status h4 {
+  margin-bottom: 7px;
+  color: #8fa8b2;
+  font-size: 0.55rem;
+  text-transform: uppercase;
+}
+
+.live-methodology-status > dl {
+  margin: 10px 0 13px;
+}
+
+.live-methodology-status > dl div {
+  grid-template-columns: 118px 1fr;
+  padding-bottom: 5px;
+}
+
+.live-source-health,
+.candidate-metric-status {
+  margin-top: 12px;
+}
+
+.live-source-health ul,
+.candidate-metric-status ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.live-source-health li,
+.candidate-metric-status li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  padding: 6px 7px;
+  border: 1px solid rgba(151, 190, 203, 0.08);
+  border-radius: 7px;
+  background: rgba(151, 190, 203, 0.025);
+}
+
+.live-source-health li > span,
+.candidate-metric-status li > span {
+  overflow: hidden;
+  color: #b9cbd0;
+  font-size: 0.58rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-source-health li > strong,
+.candidate-metric-status li > strong {
+  color: #72c9bd;
+  font-size: 0.5rem;
+  font-weight: 650;
+}
+
+.live-source-health li > small,
+.candidate-metric-status li > small {
+  overflow-wrap: anywhere;
+  grid-column: 1 / -1;
+  color: #667f89;
+  font-size: 0.48rem;
+}
+
+.candidate-metric-status li > strong {
+  grid-column: 1 / -1;
+  color: #d5a86c;
+}
+
+.live-source-health p,
+.candidate-metric-status p,
+.live-status-message {
+  margin: 7px 0 0;
+  color: #788f99;
+  font-size: 0.54rem;
+  line-height: 1.45;
+}
+
+.live-status-message {
+  padding: 8px;
+  border-left: 2px solid rgba(97, 215, 222, 0.5);
+  background: rgba(97, 215, 222, 0.04);
+}
+
+.live-status-message[data-error="true"] {
+  border-left-color: rgba(239, 74, 44, 0.62);
+  color: #d6a092;
+}
+
 .map-navigation-controls {
-  bottom: 84px;
-  left: 28px;
+  top: 102px;
+  left: 350px;
   z-index: 4;
   display: flex;
   overflow: hidden;
@@ -861,6 +975,10 @@ button {
 }
 
 .field-panel {
+  display: flex;
+  max-height: calc(100svh - 250px);
+  overflow: hidden;
+  flex-direction: column;
   left: 28px;
   padding: 21px;
   transition: opacity 220ms ease, transform 220ms ease;
@@ -899,6 +1017,23 @@ button {
   margin-top: 9px;
 }
 
+.data-source-options[data-single-source="true"] {
+  grid-template-columns: 1fr;
+}
+
+.data-source-options[data-single-source="true"] button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-block: 7px;
+}
+
+.data-source-options[data-single-source="true"] small {
+  margin-top: 0;
+  text-align: right;
+}
+
 .data-source-options button {
   min-width: 0;
   padding: 9px;
@@ -924,6 +1059,22 @@ button {
 .data-source-options strong,
 .data-source-options small {
   display: block;
+}
+
+.data-source-status {
+  margin: 8px 0 0;
+  padding: 8px 9px;
+  border-left: 2px solid rgba(97, 215, 222, 0.58);
+  color: #829aa4;
+  font-size: 0.52rem;
+  line-height: 1.42;
+  background: rgba(97, 215, 222, 0.045);
+}
+
+.data-source-status[data-error="true"] {
+  border-left-color: rgba(239, 74, 44, 0.68);
+  color: #d9a294;
+  background: rgba(239, 74, 44, 0.055);
 }
 
 .data-source-options strong {
@@ -1055,13 +1206,44 @@ button {
 }
 
 .field-selector {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 230px;
+  flex-direction: column;
   margin-top: 20px;
 }
 
 .field-list {
   display: grid;
+  min-height: 0;
+  overflow-y: auto;
   gap: 7px;
   margin-top: 10px;
+  padding-right: 5px;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(97, 215, 222, 0.28) transparent;
+  scrollbar-width: thin;
+}
+
+.field-list::-webkit-scrollbar,
+.institution-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.field-list::-webkit-scrollbar-track,
+.institution-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.field-list::-webkit-scrollbar-thumb,
+.institution-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(97, 215, 222, 0.24);
+}
+
+.field-list::-webkit-scrollbar-thumb:hover,
+.institution-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(97, 215, 222, 0.4);
 }
 
 .field-button {
@@ -1170,6 +1352,10 @@ button {
 }
 
 .country-panel {
+  display: flex;
+  max-height: calc(100svh - 270px);
+  overflow: hidden;
+  flex-direction: column;
   right: 28px;
   padding: 21px;
 }
@@ -1343,9 +1529,15 @@ button {
 }
 
 .institution-list {
+  min-height: 0;
+  overflow-y: auto;
   margin-top: 21px;
   padding-top: 16px;
+  padding-right: 5px;
   border-top: 1px solid var(--panel-border);
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(97, 215, 222, 0.28) transparent;
+  scrollbar-width: thin;
 }
 
 .institution-item {
@@ -2318,6 +2510,10 @@ button {
     left: 18px;
   }
 
+  .map-navigation-controls {
+    left: 310px;
+  }
+
   .country-view-back {
     left: 18px;
   }
@@ -2328,7 +2524,7 @@ button {
 
   .timeline {
     width: calc(100vw - 620px);
-    min-width: 350px;
+    min-width: 0;
   }
 
   .map-legend {
@@ -2407,12 +2603,24 @@ button {
     right: auto;
     left: auto;
     width: calc(100% - 32px);
+    max-height: none;
+    overflow: visible;
     margin-right: 16px;
     margin-left: 16px;
   }
 
   .field-panel {
     margin-top: 118px;
+  }
+
+  .field-selector {
+    min-height: auto;
+    flex: none;
+  }
+
+  .field-list,
+  .institution-list {
+    max-height: clamp(180px, 38svh, 320px);
   }
 
   .country-panel {
@@ -2443,6 +2651,7 @@ button {
 
   .map-navigation-controls {
     position: fixed;
+    top: auto;
     bottom: 226px;
     left: 16px;
   }

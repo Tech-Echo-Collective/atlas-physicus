@@ -9,6 +9,7 @@ import {
   mergeMetricObservationsById,
   neutralLiveMapNotice,
   reconcileNavigationForDataSource,
+  resolveMetricForDataSource,
 } from './AtlasDataSources';
 
 const dataset = atlasDatasetSchema.parse(demoData);
@@ -178,6 +179,35 @@ describe('data-source observation availability', () => {
         'inspire-hep-pilot',
       ).canActivate,
     ).toBe(false);
+  });
+
+  it('withholds candidate observations even when an API row exists', () => {
+    const candidateDataset: AtlasDataset = {
+      ...dataset,
+      metricDefinitions: dataset.metricDefinitions.map((definition) =>
+        definition.id === defaultMetricId
+          ? {
+              ...definition,
+              implementationStatus: 'experimental-candidate' as const,
+            }
+          : definition,
+      ),
+    };
+
+    expect(
+      assessDataSourceObservations(
+        candidateDataset,
+        defaultMetricId,
+        'live-api',
+      ),
+    ).toEqual({
+      canActivate: true,
+      hasRenderableObservations: false,
+      notice: neutralLiveMapNotice,
+    });
+    expect(resolveMetricForDataSource(candidateDataset, defaultMetricId)).not.toBe(
+      defaultMetricId,
+    );
   });
 });
 

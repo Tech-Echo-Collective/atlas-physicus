@@ -2,7 +2,7 @@
 
 ## Design goals
 
-The model supports the alpha interaction while keeping source evidence, canonical identity, temporal relationships, profiles, and metrics separate across validated frontend contracts and the v3.0.4 PostgreSQL/FastAPI implementation.
+The model supports the alpha interaction while keeping source evidence, canonical identity, temporal relationships, profiles, and metrics separate across validated frontend contracts and the v3.0.5 PostgreSQL/FastAPI implementation.
 
 The JSON dataset is normalized: countries do not embed duplicated institution or researcher records. Relationships use stable identifiers.
 
@@ -19,7 +19,7 @@ Groups research fields above the field level without changing their identifiers.
 | `description` | Short exploration description |
 | `fieldIds` | References to fields within the domain |
 
-v3.0.4-alpha contains only `Physics`. The array structure supports future domains, but no non-physics data is included. The live reference bootstrap expands the Physics field vocabulary without adding non-physics observations.
+v3.0.5-alpha contains only `Physics`. The array structure supports future domains, but no non-physics data is included. The live reference bootstrap expands the Physics field vocabulary without adding non-physics observations.
 
 ### ResearchField
 
@@ -219,7 +219,7 @@ Every validated entity, relationship, historical event, paper, and metric observ
 | `confidence` | Optional normalized confidence from 0 to 1 |
 | `retrievedAt` | Optional retrieval timestamp |
 
-v3.0.4-alpha normalizes the static fixture's `synthetic-demo` shorthand into an explicit object and preserves separate external-API or derived provenance on pilot records. Deterministic backend connector fixtures are also explicitly labeled synthetic/demo across snapshots, raw records, canonical entities, and dataset metadata. Pilot provenance includes the INSPIRE snapshot version and retrieval time; identity, affiliation, and search confidence describe different technical decisions and are never scientific-quality scores.
+v3.0.5-alpha normalizes the static fixture's `synthetic-demo` shorthand into an explicit object and preserves separate external-API or derived provenance on pilot records. Deterministic backend connector fixtures are also explicitly labeled synthetic/demo across snapshots, raw records, canonical entities, and dataset metadata. Pilot provenance includes the INSPIRE snapshot version and retrieval time; identity, affiliation, and search confidence describe different technical decisions and are never scientific-quality scores.
 
 ### MetricDefinition
 
@@ -235,7 +235,7 @@ Describes a discoverable metric independently from calculated values.
 | `unit` | Display unit |
 | `version` | Definition version |
 | `requiredData` | Inputs expected by a future calculator |
-| `implementationStatus` | Synthetic demonstration, pilot-calculated, or taxonomy-only status |
+| `implementationStatus` | Synthetic demonstration, pilot-calculated, live-calculated, experimental-candidate, or taxonomy-only status |
 | `provenance` | Structured origin metadata |
 
 ### MetricObservation
@@ -253,14 +253,31 @@ Stores a metric value separately from entity identity and presentation.
 | `period` | Observation year in the alpha |
 | `value` | Provided metric value |
 | `source` | Source label for the calculated value |
+| `metricDefinitionVersion` | Exact scientific definition used for interpretation |
 | `algorithmVersion` | Calculator or methodology version |
 | `calculationVersion` | Particular calculation/release version |
+| `dataSourceVersion`, `acquisitionScope` | Immutable input dataset/update and bounded source scope |
+| `rawValue`, `rawUnit` | Preserved pre-normalization observation |
+| `normalizationMethod`, `normalizationParameters` | Versioned transform and fitted reconstruction record |
+| `inputCount`, `qualityFlags` | Evidence amount and explicit calculation warnings |
 | `calculatedAt` | Optional calculation timestamp for generated observations |
 | `provenance` | Structured source metadata |
 
 Each observation must identify either a science domain or a research field and reference a registered metric definition. Supported entity types now include science domains, research fields, countries, institutions, research groups, and researchers. The fixture currently provides country and institution map observations.
 
 The synthetic source registers five visualization definitions: Research Activity, Research Impact, Collaboration / Connectivity, Research Diversity, and Research Momentum / Sustainability. The INSPIRE-HEP pilot calculates only Research Activity, Research Impact, Collaboration / Connectivity, and Research Momentum / Sustainability; its Diversity, Talent Ecosystem, and Concentration / Vulnerability definitions remain taxonomy-only. Multiple observations may share an entity and scope while carrying different metric IDs and periods. Neither the synthetic transformations nor the bounded pilot values are validated scientific measurements.
+
+The live registry exposes the same five scientific categories as
+`experimental-candidate` definitions. They are reviewable methodology but are
+not visualization-ready and cannot enter live map requests or composites. The
+current production dataset contains no live metric observations.
+
+Public observation reads join every row to the currently published
+`MetricDefinition.version` and the current dataset provenance version. Within
+one exact entity/scope/period partition, a newer calculation is selected only
+when all current rows use one algorithm version; conflicting algorithms fail
+closed. Historical rows remain stored for audit but cannot compete with the
+current map or profile value.
 
 ## Preserved pilot canonical records
 

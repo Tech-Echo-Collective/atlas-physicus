@@ -11,6 +11,8 @@ from pydantic import (
     model_validator,
 )
 
+from .metrics.contracts import get_metric_contract
+
 
 def to_camel(value: str) -> str:
     head, *tail = value.split("_")
@@ -190,11 +192,58 @@ class MetricObservationOut(ApiModel):
     period: str
     value: float
     source: str
+    metric_definition_version: str = Field(default="legacy-v1", min_length=1)
     algorithm_version: str
     calculation_version: str
     data_source_version: str | None = None
+    acquisition_scope: str | None = None
+    raw_value: float | None = None
+    raw_unit: str | None = None
+    normalization_method: str | None = None
+    normalization_parameters: dict[str, JsonValue] = Field(default_factory=dict)
+    input_count: int | None = Field(default=None, ge=0)
+    quality_flags: list[str] = Field(default_factory=list)
     calculated_at: datetime
     provenance: Provenance
+
+    @model_validator(mode="after")
+    def require_current_candidate_reconstruction_metadata(self) -> Self:
+        """Require complete lineage for current candidates, but allow legacy rows."""
+
+        contract = get_metric_contract(self.metric_id)
+        if contract is None or (
+            self.metric_definition_version != contract.version
+            and self.algorithm_version != contract.algorithm_version
+        ):
+            return self
+
+        invalid: list[str] = []
+        if self.metric_definition_version != contract.version:
+            invalid.append("metricDefinitionVersion")
+        if self.algorithm_version != contract.algorithm_version:
+            invalid.append("algorithmVersion")
+        if not self.data_source_version or not self.data_source_version.strip():
+            invalid.append("dataSourceVersion")
+        if self.acquisition_scope != contract.provenance.source_scope:
+            invalid.append("acquisitionScope")
+        if self.raw_value is None:
+            invalid.append("rawValue")
+        if self.raw_unit != contract.raw_unit:
+            invalid.append("rawUnit")
+        if self.normalization_method != contract.normalization_version:
+            invalid.append("normalizationMethod")
+        if not self.normalization_parameters:
+            invalid.append("normalizationParameters")
+        if self.input_count is None:
+            invalid.append("inputCount")
+        if "quality_flags" not in self.model_fields_set:
+            invalid.append("qualityFlags")
+        if invalid:
+            raise ValueError(
+                "Current candidate metric observations require reconstructable "
+                f"metadata: {', '.join(invalid)}"
+            )
+        return self
 
 
 class ExternalResourceOut(ApiModel):
@@ -310,6 +359,8 @@ IdentityResolutionMethod = Literal[
     "insufficient-metadata",
 ]
 
+IdentityEvidenceReason = Literal["missing-or-invalid"]
+
 
 class IdentityEvidenceOut(StrictApiModel):
     method: IdentityResolutionMethod | Literal["required-metadata"]
@@ -317,6 +368,7 @@ class IdentityEvidenceOut(StrictApiModel):
     candidate_entity_id: str | None = None
     canonical_value: str | None = None
     score: float = Field(ge=0, le=1)
+    reason: IdentityEvidenceReason | None = None
 
 
 class IdentityResolutionOut(StrictApiModel):
@@ -341,6 +393,58 @@ class IdentityResolutionOut(StrictApiModel):
         if self.status != "matched" and self.canonical_entity_id is not None:
             raise ValueError("Unresolved identity cannot reference a canonical entity")
         return self
+
+
+IdentityResolutionSummaryMethod = IdentityResolutionMethod | Literal["unmatched"]
+IdentityResolutionSummaryReason = Literal[
+    "missing-or-invalid",
+    "authority-identifier-required",
+    "unclassified",
+]
+
+
+class IdentityResolutionStatusCountsOut(StrictApiModel):
+    matched: int = Field(ge=0)
+    unresolved: int = Field(ge=0)
+    ambiguous: int = Field(ge=0)
+
+
+class IdentityResolutionWorkflowCountsOut(StrictApiModel):
+    needs_review: int = Field(ge=0)
+
+
+class IdentityResolutionMethodCountOut(StrictApiModel):
+    method: IdentityResolutionSummaryMethod
+    count: int = Field(ge=0)
+
+
+class IdentityResolutionEntityTypeCountOut(StrictApiModel):
+    entity_type: Literal["institution", "researcher", "paper"]
+    total: int = Field(ge=0)
+    matched: int = Field(ge=0)
+    unresolved: int = Field(ge=0)
+    ambiguous: int = Field(ge=0)
+    needs_review: int = Field(ge=0)
+
+
+class IdentityResolutionReasonCountOut(StrictApiModel):
+    reason: IdentityResolutionSummaryReason
+    count: int = Field(ge=0)
+
+
+class IdentityResolutionResolverVersionCountOut(StrictApiModel):
+    resolver_version: str = Field(min_length=1)
+    count: int = Field(ge=0)
+
+
+class IdentityResolutionSummaryOut(StrictApiModel):
+    total: int = Field(ge=0)
+    status_counts: IdentityResolutionStatusCountsOut
+    workflow_counts: IdentityResolutionWorkflowCountsOut
+    method_counts: list[IdentityResolutionMethodCountOut]
+    entity_type_counts: list[IdentityResolutionEntityTypeCountOut]
+    reason_counts: list[IdentityResolutionReasonCountOut]
+    resolver_version_counts: list[IdentityResolutionResolverVersionCountOut]
 
 
 class KnowledgeGraphNodeOut(StrictApiModel):

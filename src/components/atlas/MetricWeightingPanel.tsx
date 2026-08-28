@@ -18,8 +18,13 @@ interface MetricWeightingPanelProps {
   hasConfirmedProfile: boolean;
   compositeAvailable: boolean;
   datasetKind: AtlasDatasetKind;
+  defaultOpen?: boolean;
   onMetricSelect: (metricId: MetricId) => void;
   onApply: (configuration: MetricWeightConfiguration) => void;
+}
+
+function getUnavailableMetricLayerMessage(dataLabel: string): string {
+  return `No scientifically validated metric layer is available for this ${dataLabel}. The map remains neutral; missing data is not zero, and values from another dataset are never substituted.`;
 }
 
 function draftFromConfiguration(
@@ -40,11 +45,13 @@ export function MetricWeightingPanel({
   hasConfirmedProfile,
   compositeAvailable,
   datasetKind,
+  defaultOpen = false,
   onMetricSelect,
   onApply,
 }: MetricWeightingPanelProps) {
   const presentation = getDatasetPresentation(datasetKind);
-  const [isOpen, setIsOpen] = useState(false);
+  const hasValidatedMetricLayer = definitions.length > 0;
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const [selectedProfileId, setSelectedProfileId] = useState(configuration.id);
   const [draftWeights, setDraftWeights] = useState(() =>
     draftFromConfiguration(configuration),
@@ -132,9 +139,11 @@ export function MetricWeightingPanel({
             <div>
               <p className="section-kicker">Metric Engine · exploration</p>
               <h2>
-                {compositeAvailable
+                {!hasValidatedMetricLayer
+                  ? 'Metrics withheld'
+                  : compositeAvailable
                   ? 'Define a perspective'
-                  : 'Choose a pilot metric'}
+                  : 'Choose a metric'}
               </h2>
             </div>
             {compositeAvailable && (
@@ -144,27 +153,35 @@ export function MetricWeightingPanel({
             )}
           </header>
 
-          <label className="metric-layer-select">
-            <span>Active metric layer</span>
-            <select
-              value={selectedMetricId}
-              onChange={(event) => onMetricSelect(event.target.value)}
-            >
-              {definitions.map((definition) => (
-                <option key={definition.id} value={definition.id}>
-                  {definition.name}
-                </option>
-              ))}
-              <option
-                value={compositeMetricId}
-                disabled={!hasConfirmedProfile || !compositeAvailable}
+          {hasValidatedMetricLayer && (
+            <label className="metric-layer-select">
+              <span>Active metric layer</span>
+              <select
+                value={selectedMetricId}
+                onChange={(event) => onMetricSelect(event.target.value)}
               >
-                Applied composite · {configuration.name}
-              </option>
-            </select>
-          </label>
+                {definitions.map((definition) => (
+                  <option key={definition.id} value={definition.id}>
+                    {definition.name}
+                  </option>
+                ))}
+                <option
+                  value={compositeMetricId}
+                  disabled={!hasConfirmedProfile || !compositeAvailable}
+                >
+                  Applied composite · {configuration.name}
+                </option>
+              </select>
+            </label>
+          )}
 
-          {compositeAvailable ? (
+          {!hasValidatedMetricLayer ? (
+            <p className="metric-pilot-limit" role="note">
+              {getUnavailableMetricLayerMessage(
+                presentation.dataLabelLower,
+              )}
+            </p>
+          ) : compositeAvailable ? (
             <>
               <label className="metric-layer-select">
                 <span>Predefined perspective</span>

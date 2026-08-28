@@ -1,4 +1,22 @@
-import type { MetricDefinition, MetricId } from '../domain/models';
+import type {
+  MetricDefinition,
+  MetricId,
+  MetricImplementationStatus,
+} from '../domain/models';
+
+const visualizationReadyMetricStatuses: ReadonlySet<MetricImplementationStatus> =
+  new Set(['synthetic-demo', 'pilot-calculated', 'live-calculated']);
+
+/**
+ * Single scientific activation gate for map layers and composites. Candidate
+ * definitions remain reviewable metadata, but cannot become observations merely
+ * because an API happens to return rows for them.
+ */
+export function isVisualizationReadyMetricDefinition(
+  definition: Pick<MetricDefinition, 'implementationStatus'>,
+): boolean {
+  return visualizationReadyMetricStatuses.has(definition.implementationStatus);
+}
 
 export class MetricRegistry {
   private readonly definitions: Map<MetricId, MetricDefinition>;
@@ -18,14 +36,19 @@ export class MetricRegistry {
   }
 
   getVisualizationMetrics(): MetricDefinition[] {
-    return this.getMetrics().filter(
-      (definition) => definition.implementationStatus !== 'taxonomy-only',
-    );
+    return this.getMetrics().filter(isVisualizationReadyMetricDefinition);
   }
 
   getTaxonomyOnlyMetrics(): MetricDefinition[] {
     return this.getMetrics().filter(
       (definition) => definition.implementationStatus === 'taxonomy-only',
+    );
+  }
+
+  getExperimentalCandidateMetrics(): MetricDefinition[] {
+    return this.getMetrics().filter(
+      (definition) =>
+        definition.implementationStatus === 'experimental-candidate',
     );
   }
 

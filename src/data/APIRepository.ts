@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type {
   Affiliation,
+  AtlasUpdateStatus,
   AtlasDataset,
   AtlasSearchResult,
   Authorship,
@@ -12,6 +13,7 @@ import type {
   HistoricalEvent,
   IdentityEntityType,
   IdentityResolution,
+  IdentityResolutionSummary,
   IdentityResolutionStatus,
   Institution,
   MetricDefinition,
@@ -29,6 +31,7 @@ import type {
 import { defaultMetricId } from '../domain/models';
 import {
   affiliationSchema,
+  atlasUpdateStatusSchema,
   authorshipSchema,
   countrySchema,
   datasetUpdateSchema,
@@ -36,6 +39,7 @@ import {
   geographicViewSchema,
   historicalEventSchema,
   identityResolutionSchema,
+  identityResolutionSummarySchema,
   institutionSchema,
   metricDefinitionSchema,
   metricObservationSchema,
@@ -50,6 +54,7 @@ import {
   sourceSnapshotSchema,
 } from '../domain/schemas';
 import { KnowledgeGraphService } from '../knowledge/KnowledgeGraph';
+import { isVisualizationReadyMetricDefinition } from '../metrics/MetricRegistry';
 import type { ScientificKnowledgeGraph } from '../knowledge/KnowledgeGraph';
 import type {
   InstitutionProfileData,
@@ -296,6 +301,21 @@ export class APIRepository
     return items;
   }
 
+  private async visualizationMetricDefinitions(
+    requestedMetricIds: MetricId[],
+  ): Promise<Map<MetricId, MetricDefinition>> {
+    const requestedIds = new Set(requestedMetricIds);
+    return new Map(
+      (await this.getMetricDefinitions())
+        .filter(
+          (definition) =>
+            requestedIds.has(definition.id) &&
+            isVisualizationReadyMetricDefinition(definition),
+        )
+        .map((definition) => [definition.id, definition]),
+    );
+  }
+
   async getDatasetVersion(): Promise<string> {
     const metadata = await this.getMetadata();
     return metadata.provenance.version;
@@ -328,7 +348,7 @@ export class APIRepository
       this.getMetricDefinitions(),
     ]);
     const implementedMetricIds = metricDefinitions
-      .filter((definition) => definition.implementationStatus !== 'taxonomy-only')
+      .filter(isVisualizationReadyMetricDefinition)
       .map((definition) => definition.id);
     const bootstrapMetricId = implementedMetricIds.includes(defaultMetricId)
       ? defaultMetricId
@@ -416,8 +436,16 @@ export class APIRepository
       limit?: number;
     },
   ): Promise<InstitutionMapData> {
+    const [metricDefinitions, metadata] = await Promise.all([
+      this.visualizationMetricDefinitions(query.metricIds),
+      this.getMetadata(),
+    ]);
+    const metricIds = [...metricDefinitions.keys()];
+    if (metricIds.length === 0) {
+      return { institutions: [], observations: [] };
+    }
     const requests = countryIds.flatMap((countryId) =>
-      query.metricIds.map((metricId) =>
+      metricIds.map((metricId) =>
         this.request('/map/institutions', {
           country_id: countryId,
           science_domain_id: query.scienceDomainId,
@@ -434,6 +462,16 @@ export class APIRepository
     const institutions = new Map<string, Institution>();
     const observations = new Map<string, MetricObservation>();
     nodes.forEach((node) => {
+      if (
+        node.observation.metricDefinitionVersion !==
+          metricDefinitions.get(node.observation.metricId)?.version ||
+        node.observation.dataSourceVersion !== metadata.provenance.version ||
+        (metadata.provenance.acquisitionScope !== undefined &&
+          node.observation.acquisitionScope !==
+            metadata.provenance.acquisitionScope)
+      ) {
+        return;
+      }
       institutions.set(node.institution.id, node.institution);
       observations.set(node.observation.id, node.observation);
     });
@@ -444,9 +482,17 @@ export class APIRepository
   }
 
   async getCountryMapData(query: CountryMapQuery): Promise<MetricObservation[]> {
+    const [metricDefinitions, metadata] = await Promise.all([
+      this.visualizationMetricDefinitions(query.metricIds),
+      this.getMetadata(),
+    ]);
+    const metricIds = [...metricDefinitions.keys()];
+    if (metricIds.length === 0) {
+      return [];
+    }
     const observations = (
       await Promise.all(
-        query.metricIds.map((metricId) =>
+        metricIds.map((metricId) =>
           this.collection('/metric-observations', metricObservationSchema, {
             entity_type: 'country',
             science_domain_id: query.fieldId
@@ -463,6 +509,12 @@ export class APIRepository
       (observation) =>
         observation.entityType === 'country' &&
         observation.period === query.period &&
+        observation.metricDefinitionVersion ===
+          metricDefinitions.get(observation.metricId)?.version &&
+        observation.dataSourceVersion === metadata.provenance.version &&
+        (metadata.provenance.acquisitionScope === undefined ||
+          observation.acquisitionScope ===
+            metadata.provenance.acquisitionScope) &&
         (query.fieldId
           ? observation.fieldId === query.fieldId
           : observation.scienceDomainId === query.scienceDomainId &&
@@ -592,6 +644,20 @@ export class APIRepository
 
   async getDatasetUpdates(): Promise<DatasetUpdate[]> {
     return this.collection('/dataset-updates', datasetUpdateSchema);
+  }
+
+  async getUpdateStatus(): Promise<AtlasUpdateStatus> {
+    return atlasUpdateStatusSchema.parse(
+      await this.request('/updates/status', undefined, { cache: false }),
+    );
+  }
+
+  async getIdentityResolutionSummary(): Promise<IdentityResolutionSummary> {
+    return identityResolutionSummarySchema.parse(
+      await this.request('/identity-resolutions/summary', undefined, {
+        cache: false,
+      }),
+    );
   }
 
   async getKnowledgeGraph(): Promise<ScientificKnowledgeGraph> {

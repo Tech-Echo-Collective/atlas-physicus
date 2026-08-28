@@ -39,7 +39,7 @@ class HttpResourceTransport:
     def __init__(self) -> None:
         self.client = httpx.Client(
             follow_redirects=False,
-            headers={"User-Agent": "PhysicsAtlasResourceMonitor/3.0.4-alpha"},
+            headers={"User-Agent": "PhysicsAtlasResourceMonitor/3.0.5-alpha"},
         )
 
     def close(self) -> None:

@@ -1,3 +1,3 @@
-"""Physics Atlas v3.0.4-alpha backend package."""
+"""Physics Atlas v3.0.5-alpha backend package."""
 
-__version__ = "3.0.4-alpha"
+__version__ = "3.0.5-alpha"

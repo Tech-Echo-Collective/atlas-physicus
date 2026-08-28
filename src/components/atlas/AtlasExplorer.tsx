@@ -33,7 +33,9 @@ import {
   buildCompositeMetricObservations,
   defaultMetricWeightConfiguration,
   hasCompositeMetricInputs,
+  prepareMetricObservationBatch,
 } from '../../metrics/CompositeMetric';
+import { isVisualizationReadyMetricDefinition } from '../../metrics/MetricRegistry';
 import { ProfileService } from '../../profiles/ProfileService';
 import {
   buildAtlasUrl,
@@ -441,8 +443,22 @@ export function AtlasExplorer() {
 
   const datasetVersion = dataset?.metadata.provenance.version ?? null;
   const geographicViews = dataset?.geographicViews ?? null;
+  const metricDefinitions = useMemo(
+    () => dataset?.metricDefinitions ?? [],
+    [dataset?.metricDefinitions],
+  );
   const isLiveApiRepository =
     repository instanceof APIRepository && selectedDataSourceId === 'live-api';
+  const loadLiveStatus = useCallback(async () => {
+    if (!(repository instanceof APIRepository)) {
+      throw new Error('Live status is unavailable for a static data source.');
+    }
+    const [updateStatus, identityResolutionSummary] = await Promise.all([
+      repository.getUpdateStatus(),
+      repository.getIdentityResolutionSummary(),
+    ]);
+    return { updateStatus, identityResolutionSummary };
+  }, [repository]);
   const liveMapMetricIds = useMemo<MetricId[]>(
     () =>
       selectedMetricId === compositeMetricId
@@ -451,13 +467,13 @@ export function AtlasExplorer() {
               dataset?.metricDefinitions.some(
                 (definition) =>
                   definition.id === metricId &&
-                  definition.implementationStatus !== 'taxonomy-only',
+                  isVisualizationReadyMetricDefinition(definition),
               ),
           )
         : dataset?.metricDefinitions.some(
               (definition) =>
                 definition.id === selectedMetricId &&
-                definition.implementationStatus !== 'taxonomy-only',
+                isVisualizationReadyMetricDefinition(definition),
             )
           ? [selectedMetricId]
           : [],
@@ -535,27 +551,28 @@ export function AtlasExplorer() {
         })
         .then((mapObservations) => {
           if (!active) return;
-          const observations =
-            selectedMetricId === compositeMetricId
-              ? buildCompositeMetricObservations(
-                  mapObservations,
-                  metricWeightConfiguration,
-                )
-              : mapObservations;
+          const preparedObservations = prepareMetricObservationBatch(
+            mapObservations,
+            selectedMetricId,
+            metricWeightConfiguration,
+            metricDefinitions,
+          );
           setDataset((current) =>
             current?.metadata.datasetKind === 'live-api'
               ? {
                   ...current,
                   metricObservations: mergeMetricObservationsById(
                     current.metricObservations,
-                    observations,
+                    preparedObservations.observationsForState,
                   ),
                 }
               : current,
           );
           setSourceError(null);
           setSourceNotice(
-            observations.length > 0 ? null : neutralLiveMapNotice,
+            preparedObservations.observationsForVisualization.length > 0
+              ? null
+              : neutralLiveMapNotice,
           );
         })
         .catch((error: unknown) => {
@@ -579,6 +596,7 @@ export function AtlasExplorer() {
     liveMapMetricIds,
     liveWorldRequestKey,
     metricWeightConfiguration,
+    metricDefinitions,
     repository,
     selectedDomainId,
     selectedFieldId,
@@ -609,13 +627,12 @@ export function AtlasExplorer() {
       })
       .then((mapData) => {
         if (!active) return;
-        const observations =
-          selectedMetricId === compositeMetricId
-            ? buildCompositeMetricObservations(
-                mapData.observations,
-                metricWeightConfiguration,
-              )
-            : mapData.observations;
+        const preparedObservations = prepareMetricObservationBatch(
+          mapData.observations,
+          selectedMetricId,
+          metricWeightConfiguration,
+          metricDefinitions,
+        );
         setDataset((current) =>
           current?.metadata.datasetKind === 'live-api'
             ? {
@@ -626,14 +643,16 @@ export function AtlasExplorer() {
                 ),
                 metricObservations: mergeMetricObservationsById(
                   current.metricObservations,
-                  observations,
+                  preparedObservations.observationsForState,
                 ),
               }
             : current,
         );
         setSourceError(null);
         setSourceNotice(
-          observations.length > 0 ? null : neutralLiveMapNotice,
+          preparedObservations.observationsForVisualization.length > 0
+            ? null
+            : neutralLiveMapNotice,
         );
       })
       .catch((error: unknown) => {
@@ -657,6 +676,7 @@ export function AtlasExplorer() {
     liveMapMetricIds,
     liveScopeRequestKey,
     metricWeightConfiguration,
+    metricDefinitions,
     repository,
     selectedCountryId,
     selectedDataSourceId,
@@ -824,10 +844,17 @@ export function AtlasExplorer() {
       ? buildCompositeMetricObservations(
           dataset.metricObservations,
           metricWeightConfiguration,
+          dataset.metricDefinitions,
         )
-      : dataset.metricObservations.filter(
-          (observation) => observation.metricId === selectedMetricId,
-        );
+      : dataset.metricDefinitions.some(
+            (definition) =>
+              definition.id === selectedMetricId &&
+              isVisualizationReadyMetricDefinition(definition),
+          )
+        ? dataset.metricObservations.filter(
+            (observation) => observation.metricId === selectedMetricId,
+          )
+        : [];
   }, [dataset, metricWeightConfiguration, selectedMetricId]);
 
   const availableYears = useMemo(() => {
@@ -951,7 +978,7 @@ export function AtlasExplorer() {
     (definition) => definition.id === selectedMetricId,
   );
   const visualizationMetricDefinitions = dataset.metricDefinitions.filter(
-    (definition) => definition.implementationStatus !== 'taxonomy-only',
+    isVisualizationReadyMetricDefinition,
   );
   const compositeAvailable = hasCompositeMetricInputs(
     visualizationMetricDefinitions,
@@ -1750,7 +1777,12 @@ export function AtlasExplorer() {
         {datasetPresentation.isSynthetic && (
           <GuidedExploration onNavigate={runGuidedAction} />
         )}
-        <DataProvenancePanel metadata={dataset.metadata} />
+        <DataProvenancePanel
+          key={`provenance:${dataset.metadata.datasetKind}:${dataset.metadata.provenance.version}`}
+          metadata={dataset.metadata}
+          metricDefinitions={dataset.metricDefinitions}
+          loadLiveStatus={isLiveApiRepository ? loadLiveStatus : undefined}
+        />
       </div>
 
       {selectedCountry && !selectedInstitution && (

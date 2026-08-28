@@ -2,7 +2,7 @@
 
 ## Choice and scope
 
-PostgreSQL is the canonical v3.0.4-alpha store. The present queries are relational, temporal, provenance-heavy, and filter by entity, field, country, institution, year, and source. A graph database would add operational complexity without a demonstrated query need, so graph relationships use constrained tables and joins.
+PostgreSQL is the canonical v3.0.5-alpha store. The present queries are relational, temporal, provenance-heavy, and filter by entity, field, country, institution, year, and source. A graph database would add operational complexity without a demonstrated query need, so graph relationships use constrained tables and joins.
 
 SQLAlchemy models define the application persistence layer; Alembic owns schema evolution. JSON/JSONB retains provider payloads, provenance, identifier lists, and other source-varying metadata, while stable identifiers, important relationships, temporal bounds, and query dimensions remain typed columns and foreign keys.
 

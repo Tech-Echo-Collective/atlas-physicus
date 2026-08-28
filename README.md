@@ -6,9 +6,10 @@ Physics Atlas is not a university or researcher ranking, a recommendation or pre
 
 [Explore the public Physics Atlas](https://tech-echo-collective.github.io/Physics-Atlas-Web/) · [View the source repository](https://github.com/Tech-Echo-Collective/Physics-Atlas)
 
-## v3.0.4-alpha
+## v3.0.5-alpha
 
-This release establishes a continuously updateable data-platform foundation while preserving the static demonstration and bounded INSPIRE pilot:
+This release stabilizes the operated v3.0.4 platform and adds a reviewable
+scientific-validation boundary. It preserves the bounded live architecture:
 
 ```text
 Scientific sources → raw snapshots → normalization → entity resolution
@@ -17,6 +18,20 @@ Scientific sources → raw snapshots → normalization → entity resolution
 ```
 
 Highlights include:
+
+- viewport-bounded map controls with an independently scrollable field list,
+  compact live-data language, and responsive overlap protection;
+- explicit candidate-v1 scientific contracts for Activity, Impact,
+  Connectivity, Diversity, and Momentum, with metric-specific minimums and
+  limitations;
+- reconstructable normalization metadata and strict activation gates that keep
+  every insufficient live metric layer neutral;
+- deterministic identity-review sampling, validation-report contracts, and a
+  compact aggregate identity-quality API;
+- a corrected strict identity-evidence response contract for persisted
+  missing-metadata reasons;
+- a compact public status/methodology surface for live scope, source health,
+  update freshness, identity review, metric versions, and dataset version;
 
 - PostgreSQL canonical storage with Alembic migrations, temporal affiliations, immutable raw snapshots, provenance, identity-review records, update cursors, and resource-check history;
 - a typed, paginated FastAPI read service behind the existing repository boundary;
@@ -43,9 +58,17 @@ Physics → research field → time → world → country → institution
 
 - **Synthetic framework:** checked-in demonstration data for UI and metric-framework testing.
 - **INSPIRE-HEP pilot:** a bounded, reproducible historical export; its calculated signals are incomplete engineering outputs, not validated scientific metrics.
-- **Live API:** a deployment-ready FastAPI/PostgreSQL path. Local development and automated tests use deterministic fixtures by default, and fixture provenance remains explicitly synthetic. No public production backend is claimed by this repository.
+- **Live API:** the normal public data path through the operated Railway
+  FastAPI/PostgreSQL service. Local development and automated tests use
+  deterministic fixtures by default, and fixture provenance remains explicitly
+  synthetic. The current live metric layers are intentionally withheld because
+  their scientific activation gates have not passed.
 
-These modes are separate datasets. Synthetic and provider-derived observations are never silently combined. The GitHub Pages deployment continues to use its pinned static fallback unless `VITE_ATLAS_API_URL` is configured at build time.
+These modes are separate datasets. Synthetic and provider-derived observations
+are never silently combined. The public GitHub Pages build configures
+`VITE_ATLAS_API_URL` and exposes only the integrated live source in the normal
+experience; static modes remain internal reproducibility and explicit fallback
+paths.
 
 ## Technology
 
@@ -94,7 +117,13 @@ python -m alembic upgrade head
 
 Provider-backed operation requires explicit configuration and compliance with each provider's terms. No secrets or production credentials are included.
 
-The scheduled worker uses the versioned `hep-th-v1` scope: INSPIRE `subject:Theory-HEP`, arXiv `cat:hep-th`, and direct ROR refreshes only for explicitly configured known IDs. ROR is skipped when no targets are configured. ORCID and Crossref provide deliberately record-scoped lookup connectors for an already-known ORCID iD or DOI; v3.0.4 does not yet invoke those lookups automatically or use them as global people/publication crawls. Persisted provider cursors are scope/version bound, so an older broad cursor fails closed instead of being reused.
+The scheduled worker uses the versioned `hep-th-v1` scope: INSPIRE
+`subject:Theory-HEP`, arXiv `cat:hep-th`, and direct ROR refreshes only for
+explicitly configured known IDs. ROR is skipped when no targets are configured.
+ORCID and Crossref provide deliberately record-scoped lookup connectors for an
+already-known ORCID iD or DOI; v3.0.5 does not use them as global
+people/publication crawls. Persisted provider cursors are scope/version bound,
+so an older broad cursor fails closed instead of being reused.
 
 ## Structure
 
@@ -122,6 +151,11 @@ docker-compose.yml   Local PostgreSQL/API/worker environment
 - [Entity resolution](docs/entity-resolution.md)
 - [Knowledge graph](docs/knowledge-graph.md)
 - [Metric engine](docs/metric-engine.md)
+- [Candidate scientific metric methodology](docs/metric-methodology-v1.md)
+- [Metric normalization](docs/normalization.md)
+- [Entity-resolution validation](docs/entity-resolution-validation.md)
+- [Data quality and public status](docs/data-quality-status.md)
+- [v3.0.5 live validation snapshot](docs/validation/v3.0.5-hep-th-live.md)
 - [Geographic representation policy](docs/geography-policy.md)
 - [Roadmap](docs/roadmap.md)
 

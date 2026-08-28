@@ -33,8 +33,8 @@ def create_app() -> FastAPI:
         title="Physics Atlas API",
         version=__version__,
         description=(
-            "Read-oriented scientific metadata API. v3.0.4-alpha is deployment-ready "
-            "infrastructure and does not imply a hosted live-data service."
+            "Read-oriented scientific metadata API. v3.0.5-alpha exposes bounded "
+            "live evidence and withholds unvalidated scientific metric layers."
         ),
         lifespan=lifespan,
     )

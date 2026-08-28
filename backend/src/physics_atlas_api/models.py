@@ -298,9 +298,23 @@ class MetricObservation(Base, TimestampMixin, ProvenanceMixin):
     period: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
     value: Mapped[float | None] = mapped_column(Float)
     source: Mapped[str] = mapped_column(String(240), nullable=False)
+    metric_definition_version: Mapped[str] = mapped_column(
+        String(80), default="legacy-v1", nullable=False
+    )
     algorithm_version: Mapped[str] = mapped_column(String(120), nullable=False)
     calculation_version: Mapped[str] = mapped_column(String(120), nullable=False)
     data_source_version: Mapped[str | None] = mapped_column(String(160))
+    acquisition_scope: Mapped[str | None] = mapped_column(String(240), index=True)
+    raw_value: Mapped[float | None] = mapped_column(Float)
+    raw_unit: Mapped[str | None] = mapped_column(String(120))
+    normalization_method: Mapped[str | None] = mapped_column(String(160))
+    normalization_parameters: Mapped[dict[str, Any]] = mapped_column(
+        JsonType, default=dict, nullable=False
+    )
+    input_count: Mapped[int | None] = mapped_column(Integer)
+    quality_flags: Mapped[list[str]] = mapped_column(
+        JsonType, default=list, nullable=False
+    )
     calculated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )
@@ -312,8 +326,20 @@ class MetricObservation(Base, TimestampMixin, ProvenanceMixin):
             "field_id",
             "metric_id",
             "period",
+            "metric_definition_version",
+            "algorithm_version",
+            "data_source_version",
+            "acquisition_scope",
             "calculation_version",
             postgresql_nulls_not_distinct=True,
+        ),
+        CheckConstraint(
+            "metric_definition_version = 'legacy-v1' OR "
+            "(data_source_version IS NOT NULL AND "
+            "acquisition_scope IS NOT NULL AND raw_value IS NOT NULL AND "
+            "raw_unit IS NOT NULL AND normalization_method IS NOT NULL AND "
+            "input_count IS NOT NULL AND input_count >= 0)",
+            name="reconstruction_metadata",
         ),
         Index(
             "ix_metric_observation_partition",

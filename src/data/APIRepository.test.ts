@@ -19,7 +19,9 @@ function jsonResponse(value: unknown, status = 200): Response {
   });
 }
 
-function liveDatasetFetcher() {
+function liveDatasetFetcher(
+  metricDefinitions = demoDataset.metricDefinitions,
+) {
   const urls: URL[] = [];
   const fetcher = vi.fn(async (input: RequestInfo | URL) => {
     const url = new URL(String(input));
@@ -34,7 +36,7 @@ function liveDatasetFetcher() {
       '/api/countries': demoDataset.countries,
       '/api/geographic-views': demoDataset.geographicViews,
       '/api/historical-events': demoDataset.historicalEvents,
-      '/api/metrics': demoDataset.metricDefinitions,
+      '/api/metrics': metricDefinitions,
     };
     if (url.pathname in directResponses) {
       return jsonResponse(directResponses[url.pathname]);
@@ -51,7 +53,13 @@ function liveDatasetFetcher() {
           (url.searchParams.has('field_id')
             ? observation.fieldId === url.searchParams.get('field_id')
             : true),
-      );
+      ).map((observation) => ({
+        ...observation,
+        metricDefinitionVersion: metricDefinitions.find(
+          (definition) => definition.id === observation.metricId,
+        )?.version,
+        dataSourceVersion: demoDataset.metadata.provenance.version,
+      }));
       return jsonResponse({
         items,
         total: items.length,
@@ -114,6 +122,41 @@ describe('APIRepository', () => {
     ).toBe(false);
   });
 
+  it('does not bootstrap candidate or taxonomy-only metric definitions', async () => {
+    const withheldDefinitions = demoDataset.metricDefinitions.map(
+      (definition) => ({
+        ...definition,
+        implementationStatus:
+          definition.id === defaultMetricId
+            ? ('experimental-candidate' as const)
+            : ('taxonomy-only' as const),
+      }),
+    );
+    const { fetcher, urls } = liveDatasetFetcher(withheldDefinitions);
+    const repository = new APIRepository({
+      baseUrl: 'https://atlas.test/api',
+      fetch: fetcher as typeof fetch,
+    });
+
+    const snapshot = await repository.loadDataset();
+
+    expect(snapshot.metricObservations).toEqual([]);
+    expect(
+      urls.some((url) => url.pathname === '/api/metric-observations'),
+    ).toBe(false);
+
+    await expect(
+      repository.getCountryMapData({
+        scienceDomainId: 'physics',
+        metricIds: [defaultMetricId],
+        period: demoDataset.metadata.period,
+      }),
+    ).resolves.toEqual([]);
+    expect(
+      urls.some((url) => url.pathname === '/api/metric-observations'),
+    ).toBe(false);
+  });
+
   it('requests and deterministically filters a selected world scope', async () => {
     const { fetcher, urls } = liveDatasetFetcher();
     const repository = new APIRepository({
@@ -151,6 +194,127 @@ describe('APIRepository', () => {
         .sort((left, right) => left.id.localeCompare(right.id))
         .map((observation) => observation.id),
     );
+  });
+
+  it('keeps only the published metric-definition version in world and institution maps', async () => {
+    const currentDefinition = {
+      ...demoDataset.metricDefinitions[0]!,
+      version: 'published-definition-v2',
+      implementationStatus: 'live-calculated' as const,
+    };
+    const metricObservation = (
+      id: string,
+      entityType: 'country' | 'institution',
+      entityId: string,
+      metricDefinitionVersion: string,
+      value: number,
+    ) => ({
+      id,
+      entityType,
+      entityId,
+      scienceDomainId: 'physics',
+      fieldId: null,
+      metricId: currentDefinition.id,
+      period: '2026',
+      value,
+      source: 'version-selection fixture',
+      metricDefinitionVersion,
+      algorithmVersion: 'validated-algorithm-v1',
+      calculationVersion: 'calculation-v1',
+      dataSourceVersion: provenance.version,
+      provenance,
+    });
+    const staleCountry = metricObservation(
+      'observation-country-stale',
+      'country',
+      'country-us',
+      'published-definition-v1',
+      99,
+    );
+    const currentCountry = metricObservation(
+      'observation-country-current',
+      'country',
+      'country-us',
+      currentDefinition.version,
+      42,
+    );
+    const staleDatasetCountry = {
+      ...currentCountry,
+      id: 'observation-country-stale-dataset',
+      value: 100,
+      dataSourceVersion: 'stale-dataset-v1',
+    };
+    const staleInstitution = metricObservation(
+      'observation-institution-stale',
+      'institution',
+      'institution-mit',
+      'published-definition-v1',
+      98,
+    );
+    const currentInstitution = metricObservation(
+      'observation-institution-current',
+      'institution',
+      'institution-mit',
+      currentDefinition.version,
+      41,
+    );
+    const institution = demoDataset.institutions.find(
+      (item) => item.id === 'institution-mit',
+    )!;
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === '/api/metrics') {
+        return jsonResponse([currentDefinition]);
+      }
+      if (url.pathname === '/api/dataset') {
+        return jsonResponse({
+          ...demoDataset.metadata,
+          datasetKind: 'live-api',
+          provenance,
+        });
+      }
+      if (url.pathname === '/api/metric-observations') {
+        return jsonResponse({
+          items: [staleCountry, staleDatasetCountry, currentCountry],
+          total: 3,
+          limit: 200,
+          offset: 0,
+        });
+      }
+      if (url.pathname === '/api/map/institutions') {
+        return jsonResponse([
+          { institution, observation: staleInstitution },
+          { institution, observation: currentInstitution },
+        ]);
+      }
+      return jsonResponse({ detail: 'not found' }, 404);
+    });
+    const repository = new APIRepository({
+      baseUrl: 'https://atlas.test/api',
+      fetch: fetcher as typeof fetch,
+    });
+
+    await expect(
+      repository.getCountryMapData({
+        scienceDomainId: 'physics',
+        metricIds: [currentDefinition.id],
+        period: '2026',
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({ id: currentCountry.id, value: 42 }),
+    ]);
+    await expect(
+      repository.getInstitutionMapData(['country-us'], {
+        scienceDomainId: 'physics',
+        metricIds: [currentDefinition.id],
+        period: '2026',
+      }),
+    ).resolves.toEqual({
+      institutions: [institution],
+      observations: [
+        expect.objectContaining({ id: currentInstitution.id, value: 41 }),
+      ],
+    });
   });
 
   it('validates, paginates, and caches repository collections', async () => {
@@ -337,6 +501,110 @@ describe('APIRepository', () => {
         entityId: 'paper-one',
         matchedValue: undefined,
         identityConfidence: undefined,
+      }),
+    ]);
+  });
+
+  it('parses live operational summaries and reconstruction metadata', async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === '/api/updates/status') {
+        return jsonResponse({
+          lastSuccessfulUpdate: '2026-08-29T00:00:00Z',
+          lastFailedUpdate: null,
+          unresolvedEntityCount: 4,
+          resourceCheckFailures: 1,
+          metricRecalculationStatus: 'idle',
+          sources: [
+            {
+              source: 'inspire',
+              status: 'healthy',
+              scopeVersion: 'hep-th-v1',
+              lastAttemptAt: '2026-08-29T00:00:00Z',
+              lastSuccessAt: '2026-08-29T00:00:00Z',
+              cursor: null,
+              consecutiveFailures: 0,
+            },
+          ],
+        });
+      }
+      if (url.pathname === '/api/identity-resolutions/summary') {
+        return jsonResponse({
+          total: 20,
+          statusCounts: { matched: 15, unresolved: 3, ambiguous: 2 },
+          workflowCounts: { needsReview: 4 },
+          methodCounts: [{ method: 'external-identifier', count: 15 }],
+          entityTypeCounts: [
+            {
+              entityType: 'researcher',
+              total: 20,
+              matched: 15,
+              unresolved: 3,
+              ambiguous: 2,
+              needsReview: 4,
+            },
+          ],
+          reasonCounts: [{ reason: 'unclassified', count: 5 }],
+          resolverVersionCounts: [
+            { resolverVersion: 'identity-resolver-v1', count: 20 },
+          ],
+        });
+      }
+      if (url.pathname === '/api/metric-observations') {
+        return jsonResponse({
+          items: [
+            {
+              id: 'observation-reconstructable',
+              entityType: 'country',
+              entityId: 'country-us',
+              scienceDomainId: 'physics',
+              fieldId: null,
+              metricId: defaultMetricId,
+              period: '2026',
+              value: 42,
+              source: 'inspire-hep',
+              metricDefinitionVersion: 'activity-output-participation-v1',
+              algorithmVersion: 'candidate-v1',
+              calculationVersion: 'metric-run-v1',
+              dataSourceVersion: 'hep-th-v1',
+              acquisitionScope: 'hep-th-v1',
+              rawValue: 21,
+              rawUnit: 'paper participations',
+              normalizationMethod: 'min-max',
+              normalizationParameters: { minimum: 0, maximum: 50 },
+              inputCount: 21,
+              qualityFlags: ['bounded-pilot-scope'],
+              calculatedAt: '2026-08-29T00:00:00Z',
+              provenance,
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        });
+      }
+      return jsonResponse({ detail: 'not found' }, 404);
+    });
+    const repository = new APIRepository({
+      baseUrl: 'https://atlas.test/api',
+      fetch: fetcher as typeof fetch,
+    });
+
+    await expect(repository.getUpdateStatus()).resolves.toMatchObject({
+      unresolvedEntityCount: 4,
+      lastFailedUpdate: undefined,
+      sources: [{ status: 'healthy', cursor: undefined }],
+    });
+    await expect(repository.getIdentityResolutionSummary()).resolves.toMatchObject({
+      statusCounts: { matched: 15, unresolved: 3, ambiguous: 2 },
+      workflowCounts: { needsReview: 4 },
+    });
+    await expect(repository.getMetricObservations(defaultMetricId)).resolves.toEqual([
+      expect.objectContaining({
+        metricDefinitionVersion: 'activity-output-participation-v1',
+        rawValue: 21,
+        normalizationParameters: { minimum: 0, maximum: 50 },
+        qualityFlags: ['bounded-pilot-scope'],
       }),
     ]);
   });

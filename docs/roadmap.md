@@ -13,6 +13,7 @@ The roadmap records engineering direction, not promised dates. Each milestone mu
 | v3.0.1-alpha | Versioned Metric Engine vocabulary, registry, calculation boundary, and transparent composite weighting |
 | v3.0.2-alpha | Bounded INSPIRE-HEP pilot, reproducible real-metadata snapshot, source separation, and uncertainty reporting |
 | v3.0.3-alpha | Canonical identity, entity-aware search, temporal knowledge graph, profiles, resources, and append-only update lineage |
+| v3.0.4-alpha | Continuously updateable PostgreSQL/FastAPI platform, bounded provider connectors, public API repository, and production activation |
 
 ## v3.0.4-alpha — continuously updateable platform foundation
 
@@ -32,18 +33,24 @@ This release adds:
 
 The release tag remains the architectural baseline. The follow-up Production Activation work now operates its HTTPS Railway API, managed PostgreSQL path, bounded worker, and public GitHub Pages `APIRepository` integration. Synthetic and historical pilot sources remain isolated internal reproducibility and fallback resources.
 
-## Current milestone — v3.0.4 Production Activation
+## Current milestone — v3.0.5-alpha Stabilization & Scientific Validation
 
-Status: **in progress**. This is an operational follow-through on v3.0.4-alpha, not v3.0.5 and not a new product-feature phase.
+Status: **release validation**. This milestone stabilizes the live v3.0.4
+system; it does not expand beyond the bounded Physics scope or redesign the
+production architecture.
 
-The goal is to operate the existing path with a bounded `hep-th` corpus:
+The operated path remains bounded to `hep-th-v1`:
 
 ```text
 INSPIRE / arXiv → normalization → entity resolution → PostgreSQL
     → FastAPI → APIRepository → public Atlas
 ```
 
-The transport and public frontend portions of Production Activation are complete. The Railway API is healthy at <https://physics-atlas-api-production.up.railway.app/api>, the bounded provider update reports healthy INSPIRE/arXiv status, and the GitHub Pages application uses `APIRepository` by default. The normal public selector no longer presents synthetic or pilot datasets.
+The Railway API is healthy at
+<https://physics-atlas-api-production.up.railway.app/api>, bounded INSPIRE/arXiv
+updates are persisted, and the GitHub Pages application uses `APIRepository` by
+default. The normal public selector does not present synthetic or pilot
+datasets.
 
 Scheduled acquisition is now bounded deliberately. The versioned `hep-th-v1`
 policy requests INSPIRE Theory-HEP and arXiv `cat:hep-th`; ROR is target-only
@@ -53,16 +60,20 @@ Crossref remain known-ID-only enrichers.
 
 The earlier isolated smoke evidence is now supplemented by an operated Railway deployment, exact-origin CORS, current update status, successful live API reads, a production Pages build, and root/deep-route fallback verification. Backup/restore, long-running monitoring, rate protection, and alerting still require durable operator evidence.
 
-Activation also requires enough reviewed canonical affiliation and metric data to support a useful geographic view. Until then, missing live map observations remain neutral rather than becoming zero or an unvalidated score.
+v3.0.5 adds candidate scientific contracts, metric-specific normalization,
+reconstructable output metadata, explicit activation gates, identity-validation
+sampling/reporting, aggregate public data status, and viewport stabilization.
+The evidence snapshot fails every live metric gate, so the map remains neutral
+rather than becoming zero or an unvalidated score.
 
-Remaining completion gates are:
+Remaining scientific and operational gates are:
 
 1. durable backup/restore, restart, rate-protection, logging, monitoring, and alerting evidence in the operated environment;
 2. longer observation of bounded provider ingestion and checkpoint recovery under production conditions;
 3. reviewed canonical affiliation coverage sufficient for useful country and institution exploration;
 4. scientifically reviewed formulas, normalization, uncertainty, and versioning before any live metric observations are published.
 
-## Next validation gates
+## Gates before broader Physics coverage or v3.1
 
 Before broad live ingestion, the project should validate:
 
@@ -79,4 +90,7 @@ Before broad live ingestion, the project should validate:
 
 The roadmap does not currently commit to a graph database, Kubernetes, authentication, full-text paper archive, recommendation engine, prediction model, automatic researcher ranking, or universal live-data coverage. Those additions require a demonstrated scientific or operational need.
 
-The next minimum action is to monitor the bounded operated path and record a tested backup/restore and restart procedure. Large backfills, new public metrics, and v3.0.5 work should wait for that operating evidence and scientific review.
+The next minimum action after v3.0.5 is to create and independently label the
+bounded identity-review sample, then materialize reviewed affiliation evidence
+without widening acquisition scope. Large backfills, broader Physics coverage,
+and live metric activation remain gated.

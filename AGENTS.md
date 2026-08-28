@@ -11,7 +11,10 @@ Then read the technical document directly relevant to the task. Do not infer tha
 
 ## Current milestone
 
-The active milestone is **v3.0.4 Production Activation**. Do not begin v3.0.5 or introduce unrelated product features while this milestone is active.
+The active milestone is **v3.0.5-alpha Stabilization & Scientific Validation**.
+Do not begin v3.1, widen the bounded `hep-th-v1` scope, or introduce unrelated
+product features while this milestone is active. Candidate metric definitions
+must remain withheld until their exact live activation gates pass.
 
 ## Context maintenance
 

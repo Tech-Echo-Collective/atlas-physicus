@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select, text
@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from . import __version__, models, schemas
 from .config import Settings, get_settings
 from .database import get_session
+from .identity.validation import build_identity_resolution_summary
 from .repository import AtlasDatabaseRepository
 
 SessionDependency = Annotated[Session, Depends(get_session)]
@@ -368,13 +369,23 @@ def raw_entity_records(
 def identity_resolutions(
     repo: RepositoryDependency,
     settings: SettingsDependency,
-    resolution_status: str | None = Query(default=None),
+    resolution_status: Literal["matched", "unresolved", "ambiguous"] | None = Query(
+        default=None
+    ),
     limit: int | None = Query(default=None, ge=1),
     offset: int = Query(default=0, ge=0),
 ) -> dict[str, Any]:
     bounded_limit = min(limit or settings.default_page_size, settings.max_page_size)
     items, total = repo.identity_resolutions(resolution_status, bounded_limit, offset)
     return page(items, total, bounded_limit, offset)
+
+
+@router.get(
+    "/identity-resolutions/summary",
+    response_model=schemas.IdentityResolutionSummaryOut,
+)
+def identity_resolution_summary(session: SessionDependency) -> dict[str, Any]:
+    return build_identity_resolution_summary(session)
 
 
 @router.get(

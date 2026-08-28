@@ -1,6 +1,6 @@
 # Physics Atlas durable decisions
 
-Last reviewed: 2026-08-28
+Last reviewed: 2026-08-29
 
 These decisions constrain implementation and public communication. Add a dated superseding entry when a durable decision changes; do not silently rewrite project history.
 
@@ -25,6 +25,10 @@ These decisions constrain implementation and public communication. Add a dated s
 | PA-017 | Scientific providers are contacted only by backend connectors. | Browsers receive the integrated Atlas API contract and never hold provider secrets, rate-limit logic, or identity-resolution rules. |
 | PA-018 | Production claims require operating evidence. | Deployment-ready code is not a live service. Verify HTTPS API reachability, CORS, database and worker health, update freshness, provenance, and frontend repository use before calling the Atlas live. |
 | PA-019 | Acquisition scope is a versioned dataset boundary. | Provider filters belong in backend connector policy. Cursors, snapshots, and live-dataset provenance record that scope and fail closed on mismatch; changing configuration must not silently reinterpret or mix an older corpus. |
+| PA-020 | A metric taxonomy entry, candidate method, and visualization-ready metric are distinct states. | Candidate definitions may be public methodology, but only observations that pass the documented input, cohort, sanity, and version gates may enter a live map or composite. |
+| PA-021 | Normalized metric values must be reconstructable from preserved raw evidence and fitted parameters. | Retain the raw value/unit, exact cohort and transform, definition/algorithm/dataset versions, calculation time, scope, partition, input count, and quality flags; a method change emits a new version. |
+| PA-022 | Identity quality is measured against independent review, not the resolver's own decisions. | Keep outcomes separate from review workflow, stratify deterministic samples, withhold precision/recall/calibration without enough labels, and append superseding decisions instead of rewriting history. |
+| PA-023 | Public metric reads are bound to one current definition and immutable dataset lineage. | Exclude stale definition or dataset versions, choose the newest calculation only when the current rows agree on algorithm, and fail the partition closed when algorithms conflict. Apply the same rule to map and profile reads. |
 
 ## Current activation decision
 
@@ -36,3 +40,15 @@ connector, cursor, snapshot, and dataset policy rather than by presentation-laye
 filtering.
 
 Existing default cadence remains INSPIRE daily, arXiv daily, ROR weekly, with the worker checking due work hourly unless measured provider or operational evidence justifies a change.
+
+## v3.0.5 scientific activation decision
+
+The five accepted base metrics now have experimental candidate-v1 contracts,
+but the observed `hep-th-v1` live dataset has no canonical institutions,
+affiliations, citation edges, geographic cohort, or multi-year canonical
+history. All five live layers therefore remain withheld. This is an activation
+result, not a redesign of the composite weighting model; synthetic and pilot
+values remain confined to their isolated modes. A corpus-wide readiness count
+cannot activate a layer: the exact entity type, field/domain, period, dataset
+version, acquisition scope, update sequence, per-entity minimums, cohort, and
+missing-data checks must be independently certified.

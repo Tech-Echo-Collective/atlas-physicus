@@ -2,9 +2,12 @@
 
 ## Status
 
-`backend/` is the v3.0.4-alpha read-oriented data service and update worker. It is designed for PostgreSQL and provides migrations, typed API schemas, provider connectors, deterministic fixtures, structured logging, and health/update status.
+`backend/` is the v3.0.5-alpha read-oriented data service and update worker. It is designed for PostgreSQL and provides migrations, typed API schemas, provider connectors, deterministic fixtures, structured logging, health/update status, scientific activation gates, and aggregate identity-quality status.
 
-The backend is deployment-ready infrastructure. A local fixture deployment is not a public live service, and the repository does not contain production credentials or hosting. `PHYSICS_ATLAS_FIXTURE_MODE=true` is the safe default.
+The backend is operated publicly on Railway, while this repository contains no
+production credentials or project identifiers. A local fixture deployment is
+not the public service. `PHYSICS_ATLAS_FIXTURE_MODE=true` remains the safe local
+default.
 
 ## Local container workflow
 
@@ -66,7 +69,7 @@ The configured prefix is `/api`. FastAPI validates query inputs and returns stru
 | Metrics | `/metrics`, `/metrics/{id}`, `/metric-observations` |
 | Discovery | `/search`, `/knowledge-graph` (bounded diagnostic projection) |
 | Profiles | `/profiles/institutions/{id}`, `/profiles/researchers/{id}`, `/profiles/groups/{id}` |
-| Evidence | `/external-resources`, `/source-snapshots`, `/dataset-updates`, `/raw-entity-records`, `/identity-resolutions`, `/provenance/{type}/{id}` |
+| Evidence | `/external-resources`, `/source-snapshots`, `/dataset-updates`, `/raw-entity-records`, `/identity-resolutions`, `/identity-resolutions/summary`, `/provenance/{type}/{id}` |
 
 The knowledge-graph projection has a hard node bound and is not the normal map payload. Global bootstrap loads map vocabulary and country observations only; `/map/institutions` supplies major nodes for the selected country, and profile routes lazily load one canonical entity plus bounded relationships. The browser does not load every paper or researcher at startup. Canonical search uses the incrementally maintained `EntitySearchTerm` index rather than scanning all entities in application memory. It can return canonical papers from supported titles, DOI, arXiv, or INSPIRE identifiers; paper selection then loads `/papers/{id}` and paper-scoped authorships on demand.
 
@@ -88,4 +91,4 @@ The scheduler operates INSPIRE and arXiv within the configured acquisition scope
 
 Every provider cursor stores the exact scope and connector-policy version that created it. `DatasetState` separately records the shared corpus scope. A migrated legacy cursor, a live dataset without a scope marker, or a cursor/dataset from a different scope fails closed before provider I/O; an operator must deliberately replace or migrate it after preserving required evidence. Changing only the configuration does not reinterpret an older broad corpus as `hep-th`.
 
-The API is public and read-oriented. It has bounded query parameters, GET/OPTIONS-only CORS, URL validation for the resource monitor, provider timeouts, and no authentication because v3.0.4 does not expose write endpoints. Production deployments still require ordinary network controls, TLS, database isolation, rate protection, backups, and log retention.
+The API is public and read-oriented. It has bounded query parameters, GET/OPTIONS-only CORS, URL validation for the resource monitor, provider timeouts, and no authentication because v3.0.5 does not expose write endpoints. Production deployments still require ordinary network controls, TLS, database isolation, rate protection, backups, and log retention.

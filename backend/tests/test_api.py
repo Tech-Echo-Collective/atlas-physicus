@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from unittest.mock import Mock
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -76,6 +77,203 @@ def test_read_api_exposes_repository_contract(seeded_session: Session) -> None:
     assert update_status.json()["metricRecalculationStatus"] == "idle"
     assert invalid_period.status_code == 422
     assert invalid_period.json()["error"]["code"] == "validation_error"
+
+
+def test_map_reads_select_only_the_current_definition_and_one_calculation(
+    seeded_session: Session,
+) -> None:
+    current_definition = seeded_session.get_one(
+        models.MetricDefinition, "research_activity_score"
+    )
+    country_base = seeded_session.get_one(
+        models.MetricObservation, "metric-country-us-physics-2026"
+    )
+    institution_base = seeded_session.get_one(
+        models.MetricObservation, "metric-institution-mit-physics-2026"
+    )
+
+    def copy_observation(
+        source: models.MetricObservation,
+        *,
+        observation_id: str,
+        value: float,
+        definition_version: str,
+        algorithm_version: str | None = None,
+        data_source_version: str | None = None,
+        period: str | None = None,
+        calculated_at: datetime,
+    ) -> models.MetricObservation:
+        return models.MetricObservation(
+            id=observation_id,
+            entity_type=source.entity_type,
+            entity_id=source.entity_id,
+            science_domain_id=source.science_domain_id,
+            field_id=source.field_id,
+            metric_id=source.metric_id,
+            period=period or source.period,
+            value=value,
+            source="version-selection fixture",
+            metric_definition_version=definition_version,
+            algorithm_version=algorithm_version or source.algorithm_version,
+            calculation_version=f"calculation-{observation_id}",
+            data_source_version=data_source_version or source.data_source_version,
+            acquisition_scope=source.acquisition_scope,
+            raw_value=value,
+            raw_unit=source.raw_unit,
+            normalization_method=source.normalization_method,
+            normalization_parameters=source.normalization_parameters,
+            input_count=source.input_count,
+            quality_flags=source.quality_flags,
+            calculated_at=calculated_at,
+            provenance_json=source.provenance_json,
+        )
+
+    stale_time = datetime(2026, 8, 27, tzinfo=UTC)
+    current_time = datetime(2026, 8, 29, tzinfo=UTC)
+    seeded_session.add_all(
+        [
+            copy_observation(
+                country_base,
+                observation_id="metric-country-stale-definition",
+                value=99,
+                definition_version="metric-definition-stale",
+                calculated_at=stale_time,
+            ),
+            copy_observation(
+                country_base,
+                observation_id="metric-country-current-calculation",
+                value=42,
+                definition_version=current_definition.version,
+                calculated_at=current_time,
+            ),
+            copy_observation(
+                country_base,
+                observation_id="metric-country-stale-dataset",
+                value=97,
+                definition_version=current_definition.version,
+                data_source_version="stale-dataset-v1",
+                calculated_at=datetime(2026, 8, 30, tzinfo=UTC),
+            ),
+            copy_observation(
+                institution_base,
+                observation_id="metric-institution-stale-definition",
+                value=98,
+                definition_version="metric-definition-stale",
+                calculated_at=stale_time,
+            ),
+            copy_observation(
+                institution_base,
+                observation_id="metric-institution-current-calculation",
+                value=41,
+                definition_version=current_definition.version,
+                calculated_at=current_time,
+            ),
+            copy_observation(
+                country_base,
+                observation_id="metric-country-ambiguous-algorithm-a",
+                value=40,
+                definition_version=current_definition.version,
+                algorithm_version="algorithm-a",
+                period="1799",
+                calculated_at=current_time,
+            ),
+            copy_observation(
+                country_base,
+                observation_id="metric-country-ambiguous-algorithm-b",
+                value=60,
+                definition_version=current_definition.version,
+                algorithm_version="algorithm-b",
+                period="1799",
+                calculated_at=current_time,
+            ),
+        ]
+    )
+    seeded_session.commit()
+    application = create_app()
+
+    def session_override() -> Generator[Session]:
+        yield seeded_session
+
+    application.dependency_overrides[get_session] = session_override
+    with TestClient(application) as client:
+        country_response = client.get(
+            "/api/metric-observations",
+            params={
+                "entity_type": "country",
+                "entity_id": "country-us",
+                "science_domain_id": "physics",
+                "metric_id": "research_activity_score",
+                "period": "2026",
+                "limit": 20,
+            },
+        )
+        institution_response = client.get(
+            "/api/map/institutions",
+            params={
+                "country_id": "country-us",
+                "science_domain_id": "physics",
+                "metric_id": "research_activity_score",
+                "period": "2026",
+                "limit": 20,
+            },
+        )
+        institution_profile_response = client.get(
+            "/api/profiles/institutions/institution-mit"
+        )
+        ambiguous_response = client.get(
+            "/api/metric-observations",
+            params={
+                "entity_type": "country",
+                "entity_id": "country-us",
+                "science_domain_id": "physics",
+                "metric_id": "research_activity_score",
+                "period": "1799",
+                "limit": 20,
+            },
+        )
+
+    assert country_response.status_code == 200
+    assert [item["id"] for item in country_response.json()["items"]] == [
+        "metric-country-current-calculation"
+    ]
+    assert country_response.json()["items"][0]["metricDefinitionVersion"] == (
+        current_definition.version
+    )
+    assert institution_response.status_code == 200
+    mit_nodes = [
+        node
+        for node in institution_response.json()
+        if node["institution"]["id"] == "institution-mit"
+    ]
+    assert [node["observation"]["id"] for node in mit_nodes] == [
+        "metric-institution-current-calculation"
+    ]
+    assert institution_profile_response.status_code == 200
+    profile_metric_ids = {
+        item["id"] for item in institution_profile_response.json()["metrics"]
+    }
+    assert "metric-institution-current-calculation" in profile_metric_ids
+    assert "metric-institution-stale-definition" not in profile_metric_ids
+    assert ambiguous_response.status_code == 200
+    assert ambiguous_response.json()["items"] == []
+    assert ambiguous_response.json()["total"] == 0
+
+    persisted_versions = set(
+        seeded_session.scalars(
+            select(models.MetricObservation.metric_definition_version).where(
+                models.MetricObservation.id.in_(
+                    [
+                        "metric-country-stale-definition",
+                        "metric-country-current-calculation",
+                    ]
+                )
+            )
+        )
+    )
+    assert persisted_versions == {
+        "metric-definition-stale",
+        current_definition.version,
+    }
 
 
 def test_health_returns_service_unavailable_with_structured_body() -> None:

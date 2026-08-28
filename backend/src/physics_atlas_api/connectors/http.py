@@ -21,7 +21,7 @@ class ProviderHttpTransport:
         self,
         *,
         timeout_seconds: float = 15,
-        user_agent: str = "PhysicsAtlas/3.0.4-alpha (open scientific infrastructure)",
+        user_agent: str = "PhysicsAtlas/3.0.5-alpha (open scientific infrastructure)",
         minimum_intervals: dict[str, float] | None = None,
         allowed_hosts: set[str] | None = None,
         max_attempts: int = 3,

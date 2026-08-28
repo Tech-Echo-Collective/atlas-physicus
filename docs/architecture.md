@@ -11,9 +11,11 @@ Physics domain → research field → year → world → country
 
 It is not a university or researcher ranking system, prediction system, recommendation engine, or replacement for scholarly databases.
 
-## v3.0.4-alpha architecture
+## v3.0.5-alpha architecture
 
-v3.0.4 moves the application from a static/pilot prototype to a continuously updateable platform foundation:
+v3.0.5 preserves the continuously updateable v3.0.4 platform and adds
+scientific-validation and presentation gates without changing the deployed
+topology:
 
 ```text
 Official scientific APIs
@@ -47,7 +49,10 @@ Technology choices:
 - Vitest for frontend/domain tests and pytest with deterministic fixtures for backend/pipeline tests;
 - Docker Compose for PostgreSQL, migration, API, and worker development.
 
-The repository includes deployment-ready live infrastructure, not a claim that a public live backend is hosted. The public GitHub Pages application remains functional with its local synthetic and historical pilot datasets when no API URL is configured.
+The public GitHub Pages application uses the operated Railway API on normal
+routes. The repository retains synthetic and historical pilot datasets only for
+explicit fallback, testing, and reproducibility and contains no production
+credentials.
 
 ## Data modes and isolation
 
@@ -107,7 +112,18 @@ The resource monitor validates public HTTP(S) targets, uses bounded `HEAD`/minim
 
 ### Metric Engine
 
-`MetricRegistry`, calculator contracts, versioned `MetricObservation`, and confirmed composite weighting remain unchanged. Presentation code never invents formulas. Provider updates create affected partition plans across entity, field, country, institution, year, and metric; the v3.0.4 default `NoFormulaMetricRecalculator` intentionally writes no new scientific values until a reviewed calculator is supplied.
+`MetricRegistry`, calculator contracts, versioned `MetricObservation`, and
+confirmed composite weighting remain the product boundary. Presentation code
+never invents formulas. Provider updates create affected partition plans across
+entity, field, country, institution, year, and metric; the default
+`NoFormulaMetricRecalculator` intentionally writes no new scientific values
+until a reviewed calculator is supplied.
+
+v3.0.5 registers five `experimental-candidate` scientific contracts, adds
+metric-specific normalization helpers and reconstructable observation metadata,
+and centralizes a strict visualization-readiness predicate. Experimental and
+taxonomy-only definitions cannot enter API map requests, layers, or composites.
+The current live evidence fails every activation gate, so no layer is enabled.
 
 Existing synthetic calculations and bounded pilot signals remain reproducible and source-separated. Missing observations remain missing, not zero. Every calculated value retains definition, algorithm, dataset, and calculation versions. See the [Metric Engine](metric-engine.md).
 

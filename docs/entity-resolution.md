@@ -93,6 +93,18 @@ The source cursor advances only after the complete batch succeeds. Replaying an 
 
 `/api/identity-resolutions` exposes auditable decisions, and `/api/updates/status` reports the number of open review items. v3.0.4 has a persistent review queue but no reviewer UI, authentication, or automated approval policy.
 
+v3.0.5 adds an aggregate `/api/identity-resolutions/summary` contract and the
+deterministic validation framework documented in
+[entity-resolution validation](entity-resolution-validation.md). Resolution
+outcomes remain separate from `needs_review` workflow state. Precision, recall,
+and confidence calibration are withheld until enough cases have independent
+human labels.
+
+Persisted evidence may include a typed missing/invalid-metadata reason. The API
+preserves that reason rather than dropping it; public summaries expose only
+aggregate counts. Future cross-provider re-resolution must append a versioned
+superseding decision and must not overwrite older evidence.
+
 ## Search integration
 
 Search indexes only canonical entities and supported identifiers/names. Results identify entity type, match method/value, query confidence, and available identity confidence. Aliases, abbreviations, historical names, ROR, ORCID, INSPIRE, DOI, and arXiv identifiers can be matched where present.

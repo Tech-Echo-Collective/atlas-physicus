@@ -406,9 +406,89 @@ export const metricDefinitionSchema = z.object({
     'synthetic-demo',
     'pilot-calculated',
     'live-calculated',
+    'experimental-candidate',
     'taxonomy-only',
   ]),
   provenance: recordProvenanceSchema,
+});
+
+export const sourceUpdateStatusSchema = z.object({
+  source: z.string().trim().min(1),
+  status: z.string().trim().min(1),
+  scopeVersion: z.string().trim().min(1),
+  lastAttemptAt: optionalFromNullable(z.string().datetime({ offset: true })),
+  lastSuccessAt: optionalFromNullable(z.string().datetime({ offset: true })),
+  cursor: optionalFromNullable(z.string().min(1)),
+  consecutiveFailures: z.number().int().nonnegative(),
+});
+
+export const atlasUpdateStatusSchema = z.object({
+  lastSuccessfulUpdate: optionalFromNullable(
+    z.string().datetime({ offset: true }),
+  ),
+  lastFailedUpdate: optionalFromNullable(z.string().datetime({ offset: true })),
+  unresolvedEntityCount: z.number().int().nonnegative(),
+  resourceCheckFailures: z.number().int().nonnegative(),
+  metricRecalculationStatus: z.string().trim().min(1),
+  sources: z.array(sourceUpdateStatusSchema),
+});
+
+const identityResolutionSummaryMethodSchema = z.enum([
+  'external-identifier',
+  'canonical-name',
+  'alias',
+  'historical-name',
+  'fuzzy-name',
+  'source-record-identifier',
+  'manual-review',
+  'insufficient-metadata',
+  'unmatched',
+]);
+
+const identityResolutionReasonSchema = z.enum([
+  'missing-or-invalid',
+  'authority-identifier-required',
+  'unclassified',
+]);
+
+export const identityResolutionSummarySchema = z.object({
+  total: z.number().int().nonnegative(),
+  statusCounts: z.object({
+    matched: z.number().int().nonnegative(),
+    unresolved: z.number().int().nonnegative(),
+    ambiguous: z.number().int().nonnegative(),
+  }),
+  workflowCounts: z.object({
+    needsReview: z.number().int().nonnegative(),
+  }),
+  methodCounts: z.array(
+    z.object({
+      method: identityResolutionSummaryMethodSchema,
+      count: z.number().int().nonnegative(),
+    }),
+  ),
+  entityTypeCounts: z.array(
+    z.object({
+      entityType: z.enum(['institution', 'researcher', 'paper']),
+      total: z.number().int().nonnegative(),
+      matched: z.number().int().nonnegative(),
+      unresolved: z.number().int().nonnegative(),
+      ambiguous: z.number().int().nonnegative(),
+      needsReview: z.number().int().nonnegative(),
+    }),
+  ),
+  reasonCounts: z.array(
+    z.object({
+      reason: identityResolutionReasonSchema,
+      count: z.number().int().nonnegative(),
+    }),
+  ),
+  resolverVersionCounts: z.array(
+    z.object({
+      resolverVersion: z.string().trim().min(1),
+      count: z.number().int().nonnegative(),
+    }),
+  ),
 });
 
 export const metricObservationSchema = z.object({
@@ -428,8 +508,24 @@ export const metricObservationSchema = z.object({
   period: z.string().regex(/^\d{4}$/),
   value: z.number().min(0).max(100),
   source: z.string().min(1).default('synthetic-demo'),
+  metricDefinitionVersion: optionalFromNullable(z.string().trim().min(1)),
   algorithmVersion: z.string().min(1).default('metric-engine-v1'),
   calculationVersion: z.string().min(1).default('v3.0.1-alpha'),
+  dataSourceVersion: optionalFromNullable(z.string().trim().min(1)),
+  acquisitionScope: optionalFromNullable(z.string().trim().min(1)),
+  rawValue: optionalFromNullable(z.number().finite()),
+  rawUnit: optionalFromNullable(z.string().trim().min(1)),
+  normalizationMethod: optionalFromNullable(z.string().trim().min(1)),
+  normalizationParameters: z
+    .preprocess(
+      (value) => value ?? {},
+      z.record(z.string(), rawEntityAttributeSchema),
+    )
+    .default({}),
+  inputCount: optionalFromNullable(z.number().int().nonnegative()),
+  qualityFlags: z
+    .preprocess((value) => value ?? [], z.array(z.string().trim().min(1)))
+    .default([]),
   calculatedAt: optionalFromNullable(z.string().datetime({ offset: true })),
   provenance: recordProvenanceSchema,
 });

@@ -11,7 +11,11 @@ Physics Atlas uses four deliberately distinct data modes:
 | Live API fixture mode | The FastAPI/PostgreSQL path running against deterministic provider fixtures. It exercises ingestion and serving without contacting providers. |
 | Provider-backed live mode | The same backend configured to call official provider APIs and refresh a deployed database on a schedule. It is only truly live when that backend, worker, and database are hosted and operating. |
 
-v3.0.4-alpha implements and validates the provider-backed architecture, but the repository itself does not supply hosting credentials or prove that a public backend is running. The GitHub Pages frontend therefore keeps synthetic and pilot modes as safe fallbacks. No mode silently combines observations from another mode.
+The provider-backed architecture is operated through Railway and the public
+GitHub Pages frontend uses `APIRepository` on normal routes. Synthetic and pilot
+modes remain internal reproducibility and explicit fallback paths. The
+repository contains no hosting credentials, and no mode silently combines
+observations from another mode.
 
 ## Processing path
 
@@ -87,8 +91,8 @@ Institution cores and both decorative pulse rings inherit the active metric colo
 
 ## Deployment boundary
 
-`docker-compose.yml` provides PostgreSQL, migration, FastAPI, and worker services for reproducible local or hosted operation. The public `Physics-Atlas-Web` build can enable live mode with `VITE_ATLAS_API_URL`; when it is unset or unavailable, the static and pilot datasets remain usable.
+`docker-compose.yml` provides PostgreSQL, migration, FastAPI, and worker services for reproducible local or hosted operation. The public `Physics-Atlas-Web` build enables live mode with `VITE_ATLAS_API_URL`; when it is unset or unavailable, explicitly retained static fallback paths remain usable.
 
-Deployment-ready means the code, migrations, container configuration, fixtures, and health/status interfaces are present. Truly live means a separately operated PostgreSQL database, API, and scheduled worker are reachable and current. v3.0.4-alpha must not describe the former as the latter.
+Deployment-ready means the code, migrations, container configuration, fixtures, and health/status interfaces are present. Truly live means the separately operated PostgreSQL database, API, and scheduled worker are reachable and current. Production claims must be reverified for each release.
 
 The worker bootstraps only non-observational reference data when the database is empty: the Physics domain, broader field taxonomy, ISO country records, geographic views, and metric definitions. It does not copy synthetic institutions, people, papers, or metric observations into a live database. Deterministic fixture runs remain visibly synthetic throughout provenance and dataset status.

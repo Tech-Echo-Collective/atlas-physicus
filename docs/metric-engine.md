@@ -2,7 +2,18 @@
 
 ## Status and purpose
 
-Physics Atlas v3.0.4-alpha preserves the versioned Metric Engine and connects incremental provider updates to an affected-partition recalculation boundary. It does not add final scientific formulas. The live backend's default `NoFormulaMetricRecalculator` records the required work and emits no observations, preventing infrastructure completion from being mistaken for methodology completion.
+Physics Atlas v3.0.5-alpha preserves the versioned Metric Engine and the
+affected-partition recalculation boundary established in v3.0.4. The live
+backend's default `NoFormulaMetricRecalculator` records required work and emits
+no observations, preventing infrastructure completion from being mistaken for
+scientific validation.
+
+This release adds reviewable candidate-v1 contracts, metric-specific normalization
+helpers, reconstructable observation metadata, and explicit scientific
+activation gates. These are framework completion, not validated live scores.
+The exact contracts are in
+[candidate scientific metric methodology](metric-methodology-v1.md), with the
+normalization record in [metric normalization](normalization.md).
 
 The synthetic dataset remains demonstration data. The historical INSPIRE pilot uses real metadata but incomplete, selection-biased technical signals. Neither is a country, institution, group, or researcher ranking.
 
@@ -98,11 +109,23 @@ A future scientifically reviewed recalculator must:
 
 - read only the affected canonical data plus required comparison context;
 - append observations with metric-definition, algorithm, calculation, dataset, and source versions;
+- bind public reads to the published definition and current dataset lineage,
+  selecting a latest calculation only when the partition has one unambiguous
+  algorithm version;
 - leave prior results reproducible;
 - preserve missing values and uncertainty;
 - report failures without advancing the source checkpoint as though calculation succeeded.
 
-v3.0.4 deliberately stops at the planning/contract boundary. No provider metadata is converted into a new live score by an undocumented formula.
+v3.0.5 retains the production planning boundary while adding reviewable
+candidate contracts, normalization helpers, and activation gates. No provider
+metadata is converted into a live score by an undocumented or unvalidated
+formula.
+
+The v3.0.5 production evidence snapshot still emits no metric observations.
+Activity, Impact, Connectivity, Diversity, and Momentum are registered as
+experimental candidates and are excluded from visualization and composite
+inputs by a fail-closed readiness predicate. Talent Ecosystem and
+Concentration/Vulnerability remain taxonomy-only.
 
 ## Visualization contract
 

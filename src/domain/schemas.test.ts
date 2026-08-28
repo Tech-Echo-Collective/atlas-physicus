@@ -1,11 +1,14 @@
 import demoData from '../data/demo/atlas.json';
 import {
   affiliationSchema,
+  atlasUpdateStatusSchema,
   atlasDatasetSchema,
   datasetUpdateSchema,
   externalIdentifierSchema,
   identityResolutionSchema,
   institutionSchema,
+  identityResolutionSummarySchema,
+  metricDefinitionSchema,
   metricObservationSchema,
   paperSchema,
   provenanceSchema,
@@ -252,9 +255,131 @@ describe('atlasDatasetSchema', () => {
     expect(paper.doi).toBeUndefined();
     expect(affiliation.researchGroupId).toBeUndefined();
     expect(observation.fieldId).toBeUndefined();
+    expect(observation.metricDefinitionVersion).toBeUndefined();
+    expect(observation.normalizationParameters).toEqual({});
+    expect(observation.qualityFlags).toEqual([]);
     expect(snapshot.previousSnapshotId).toBeUndefined();
     expect(update.previousDatasetVersion).toBeUndefined();
     expect(unresolved.canonicalEntityId).toBeUndefined();
+  });
+
+  it('preserves metric reconstruction metadata while remaining legacy-compatible', () => {
+    const observation = metricObservationSchema.parse({
+      id: 'observation-reconstructable',
+      entityType: 'country',
+      entityId: 'country-us',
+      scienceDomainId: 'physics',
+      fieldId: null,
+      metricId: 'research_activity_score',
+      period: '2026',
+      value: 42,
+      source: 'inspire-hep',
+      metricDefinitionVersion: 'activity-output-participation-v1',
+      algorithmVersion: 'research-activity-candidate-v1',
+      calculationVersion: 'metric-run-2026-08-29',
+      dataSourceVersion: 'hep-th-v1',
+      acquisitionScope: 'hep-th-v1',
+      rawValue: 21,
+      rawUnit: 'paper participations',
+      normalizationMethod: 'min-max',
+      normalizationParameters: { minimum: 0, maximum: 50 },
+      inputCount: 21,
+      qualityFlags: ['bounded-pilot-scope'],
+      calculatedAt: '2026-08-29T00:00:00Z',
+      provenance: {
+        source: 'INSPIRE-HEP bounded pilot',
+        sourceType: 'derived',
+        version: 'metric-run-2026-08-29',
+        status: 'unverified',
+      },
+    });
+
+    expect(observation).toMatchObject({
+      metricDefinitionVersion: 'activity-output-participation-v1',
+      dataSourceVersion: 'hep-th-v1',
+      acquisitionScope: 'hep-th-v1',
+      rawValue: 21,
+      rawUnit: 'paper participations',
+      normalizationMethod: 'min-max',
+      normalizationParameters: { minimum: 0, maximum: 50 },
+      inputCount: 21,
+      qualityFlags: ['bounded-pilot-scope'],
+    });
+  });
+
+  it('accepts candidate metric definitions without treating them as live calculations', () => {
+    const definition = metricDefinitionSchema.parse({
+      id: 'research_activity_score',
+      name: 'Research Activity',
+      category: 'Research Activity',
+      description: 'Candidate definition under scientific review.',
+      interpretation: 'Describes observed research activity.',
+      unit: 'normalized score',
+      version: 'activity-output-participation-v1',
+      requiredData: ['source-scope:hep-th-v1'],
+      implementationStatus: 'experimental-candidate',
+      provenance: {
+        source: 'Physics Atlas metric methodology',
+        sourceType: 'derived',
+        version: 'activity-output-participation-v1',
+        status: 'unverified',
+      },
+    });
+
+    expect(definition.implementationStatus).toBe('experimental-candidate');
+  });
+
+  it('validates compact live update and identity-resolution summaries', () => {
+    const updateStatus = atlasUpdateStatusSchema.parse({
+      lastSuccessfulUpdate: '2026-08-28T15:24:37.791326Z',
+      lastFailedUpdate: null,
+      unresolvedEntityCount: 7,
+      resourceCheckFailures: 0,
+      metricRecalculationStatus: 'idle',
+      sources: [
+        {
+          source: 'inspire',
+          status: 'healthy',
+          scopeVersion: 'hep-th-v1:inspire:updated-articles-v1',
+          lastAttemptAt: '2026-08-28T15:24:37.791326Z',
+          lastSuccessAt: '2026-08-28T15:24:37.791326Z',
+          cursor: null,
+          consecutiveFailures: 0,
+        },
+      ],
+    });
+    const identitySummary = identityResolutionSummarySchema.parse({
+      total: 100,
+      statusCounts: { matched: 78, unresolved: 17, ambiguous: 5 },
+      workflowCounts: { needsReview: 7 },
+      methodCounts: [
+        { method: 'external-identifier', count: 70 },
+        { method: 'unmatched', count: 30 },
+      ],
+      entityTypeCounts: [
+        {
+          entityType: 'researcher',
+          total: 100,
+          matched: 78,
+          unresolved: 17,
+          ambiguous: 5,
+          needsReview: 7,
+        },
+      ],
+      reasonCounts: [{ reason: 'unclassified', count: 22 }],
+      resolverVersionCounts: [
+        { resolverVersion: 'identity-resolver-v1', count: 100 },
+      ],
+    });
+
+    expect(updateStatus.lastFailedUpdate).toBeUndefined();
+    expect(updateStatus.sources[0]?.cursor).toBeUndefined();
+    expect(identitySummary.statusCounts).toEqual({
+      matched: 78,
+      unresolved: 17,
+      ambiguous: 5,
+    });
+    expect(identitySummary.workflowCounts.needsReview).toBe(7);
   });
 
   it('represents collaborative papers through multiple affiliated authors', () => {

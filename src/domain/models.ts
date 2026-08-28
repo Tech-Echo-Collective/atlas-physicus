@@ -256,6 +256,13 @@ export interface HistoricalEvent extends Provenanced {
   relatedInstitutionIds: string[];
 }
 
+export type MetricImplementationStatus =
+  | 'synthetic-demo'
+  | 'pilot-calculated'
+  | 'live-calculated'
+  | 'experimental-candidate'
+  | 'taxonomy-only';
+
 export interface MetricDefinition extends Provenanced {
   id: MetricId;
   name: string;
@@ -265,11 +272,7 @@ export interface MetricDefinition extends Provenanced {
   unit: string;
   version: string;
   requiredData: string[];
-  implementationStatus:
-    | 'synthetic-demo'
-    | 'pilot-calculated'
-    | 'live-calculated'
-    | 'taxonomy-only';
+  implementationStatus: MetricImplementationStatus;
 }
 
 export interface MetricObservation extends Provenanced {
@@ -282,8 +285,18 @@ export interface MetricObservation extends Provenanced {
   period: string;
   value: number;
   source: string;
+  /** Definition used to interpret this observation. Omitted by legacy fixtures. */
+  metricDefinitionVersion?: string;
   algorithmVersion: string;
   calculationVersion: string;
+  dataSourceVersion?: string;
+  acquisitionScope?: string;
+  rawValue?: number;
+  rawUnit?: string;
+  normalizationMethod?: string;
+  normalizationParameters?: Record<string, RawEntityAttribute>;
+  inputCount?: number;
+  qualityFlags?: string[];
   calculatedAt?: string;
 }
 
@@ -302,6 +315,67 @@ export interface DatasetMetadata extends Provenanced {
   sourceSnapshotIds?: string[];
   updateSequence?: number;
   disclaimer: string;
+}
+
+export interface SourceUpdateStatus {
+  source: string;
+  status: string;
+  scopeVersion: string;
+  lastAttemptAt?: string;
+  lastSuccessAt?: string;
+  cursor?: string;
+  consecutiveFailures: number;
+}
+
+export interface AtlasUpdateStatus {
+  lastSuccessfulUpdate?: string;
+  lastFailedUpdate?: string;
+  /** Count of open IdentityReview rows, retained under the API field name. */
+  unresolvedEntityCount: number;
+  resourceCheckFailures: number;
+  metricRecalculationStatus: string;
+  sources: SourceUpdateStatus[];
+}
+
+export type IdentityResolutionSummaryMethod =
+  | IdentityResolutionMethod
+  | 'unmatched';
+
+export type IdentityResolutionReason =
+  | 'missing-or-invalid'
+  | 'authority-identifier-required'
+  | 'unclassified';
+
+export interface IdentityResolutionSummary {
+  total: number;
+  statusCounts: {
+    matched: number;
+    unresolved: number;
+    ambiguous: number;
+  };
+  workflowCounts: {
+    needsReview: number;
+  };
+  methodCounts: Array<{
+    method: IdentityResolutionSummaryMethod;
+    count: number;
+  }>;
+  entityTypeCounts: Array<{
+    entityType: IdentityEntityType;
+    total: number;
+    matched: number;
+    unresolved: number;
+    ambiguous: number;
+    needsReview: number;
+  }>;
+  reasonCounts: Array<{
+    reason: IdentityResolutionReason;
+    count: number;
+  }>;
+  resolverVersionCounts: Array<{
+    resolverVersion: string;
+    count: number;
+  }>;
 }
 
 export type SnapshotUpdateMode = 'full-snapshot' | 'incremental';

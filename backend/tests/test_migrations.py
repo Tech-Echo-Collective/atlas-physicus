@@ -32,6 +32,41 @@ def test_initial_migration_upgrades_and_downgrades(tmp_path: Path, monkeypatch) 
         column["name"] for column in inspector.get_columns("source_cursors")
     }
     assert "scope_version" in cursor_columns
+    metric_columns = {
+        column["name"] for column in inspector.get_columns("metric_observations")
+    }
+    assert {
+        "metric_definition_version",
+        "acquisition_scope",
+        "raw_value",
+        "raw_unit",
+        "normalization_method",
+        "normalization_parameters",
+        "input_count",
+        "quality_flags",
+    }.issubset(metric_columns)
+    metric_unique_constraints = {
+        constraint["name"]: tuple(constraint["column_names"])
+        for constraint in inspector.get_unique_constraints("metric_observations")
+    }
+    assert metric_unique_constraints["uq_metric_observations_entity_type"] == (
+        "entity_type",
+        "entity_id",
+        "science_domain_id",
+        "field_id",
+        "metric_id",
+        "period",
+        "metric_definition_version",
+        "algorithm_version",
+        "data_source_version",
+        "acquisition_scope",
+        "calculation_version",
+    )
+    metric_check_names = {
+        constraint["name"]
+        for constraint in inspector.get_check_constraints("metric_observations")
+    }
+    assert "ck_metric_observations_reconstruction_metadata" in metric_check_names
 
     command.downgrade(config, "base")
     remaining = set(inspect(create_engine(database_url)).get_table_names())

@@ -1,9 +1,11 @@
 import type {
+  AtlasUpdateStatus,
   AtlasRepository,
   DatasetUpdate,
   ExternalResource,
   IdentityEntityType,
   IdentityResolution,
+  IdentityResolutionSummary,
   IdentityResolutionStatus,
   RawEntityRecord,
   SourceSnapshot,
@@ -34,6 +36,9 @@ export interface ScientificAtlasRepository extends AtlasRepository {
   getInstitutionProfile(id: string): Promise<InstitutionProfileData | null>;
   getResearcherProfile(id: string): Promise<ResearcherProfileData | null>;
   getResearchGroupProfile(id: string): Promise<ResearchGroupProfileData | null>;
+  /** Live adapters may expose operational summaries; static sources stay offline. */
+  getUpdateStatus?(): Promise<AtlasUpdateStatus>;
+  getIdentityResolutionSummary?(): Promise<IdentityResolutionSummary>;
 }
 
 /**
@@ -44,6 +49,8 @@ export interface AtlasApiTransport {
   getDatasetVersion(): Promise<string>;
   fetchRepositorySnapshot(): Promise<unknown>;
   searchCanonicalEntities(query: string, limit?: number): Promise<unknown>;
+  getUpdateStatus(): Promise<AtlasUpdateStatus>;
+  getIdentityResolutionSummary(): Promise<IdentityResolutionSummary>;
 }
 
 /**

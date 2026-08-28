@@ -4,8 +4,8 @@ title: "Physics Atlas"
 type: software
 authors:
   - name: "Tech Echo Collective"
-version: "v3.0.4-alpha"
-date-released: 2026-08-28
+version: "v3.0.5-alpha"
+date-released: 2026-08-29
 repository-code: "https://github.com/Tech-Echo-Collective/Physics-Atlas"
 url: "https://tech-echo-collective.github.io/Physics-Atlas-Web/"
 license: Apache-2.0

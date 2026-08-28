@@ -1,0 +1,23 @@
+{
+  "sampleVersion": "identity-validation-challenge-v1",
+  "predictions": [
+    {"case_id": "authority-correct", "status": "matched", "canonical_entity_id": "entity-a", "confidence": 0.99},
+    {"case_id": "alias-correct", "status": "matched", "canonical_entity_id": "entity-b", "confidence": 0.9},
+    {"case_id": "fuzzy-incorrect", "status": "matched", "canonical_entity_id": "entity-x", "confidence": 0.75},
+    {"case_id": "missed-match", "status": "unresolved", "canonical_entity_id": null, "confidence": 0.2},
+    {"case_id": "authority-required", "status": "unresolved", "canonical_entity_id": null, "confidence": 0.1},
+    {"case_id": "ambiguous-correct", "status": "ambiguous", "canonical_entity_id": null, "confidence": 0.45},
+    {"case_id": "metadata-unresolved", "status": "unresolved", "canonical_entity_id": null, "confidence": 0.15},
+    {"case_id": "false-positive", "status": "matched", "canonical_entity_id": "entity-e", "confidence": 0.6}
+  ],
+  "labels": [
+    {"case_id": "authority-correct", "status": "matched", "canonical_entity_id": "entity-a"},
+    {"case_id": "alias-correct", "status": "matched", "canonical_entity_id": "entity-b"},
+    {"case_id": "fuzzy-incorrect", "status": "matched", "canonical_entity_id": "entity-c"},
+    {"case_id": "missed-match", "status": "matched", "canonical_entity_id": "entity-d"},
+    {"case_id": "authority-required", "status": "unresolved", "canonical_entity_id": null},
+    {"case_id": "ambiguous-correct", "status": "ambiguous", "canonical_entity_id": null},
+    {"case_id": "metadata-unresolved", "status": "unresolved", "canonical_entity_id": null},
+    {"case_id": "false-positive", "status": "unresolved", "canonical_entity_id": null}
+  ]
+}

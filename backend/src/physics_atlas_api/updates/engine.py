@@ -113,6 +113,7 @@ def _name_similarity(left: str, right: str) -> float:
 class IncrementalUpdateEngine:
     """Auditable, cursor-based, idempotent updater for changed provider records."""
 
+    # These identify unchanged resolver/planner behavior, not the package release.
     resolver_version = "authority-gated-v3.0.4-alpha"
     calculation_version = "metric-partition-contract-v3.0.4-alpha"
 
@@ -411,7 +412,7 @@ class IncrementalUpdateEngine:
                 provenance_json={
                     "source": "Physics Atlas incremental update engine",
                     "sourceType": "derived",
-                    "version": "v3.0.4-alpha",
+                    "version": "v3.0.5-alpha",
                     "status": "unverified",
                     "acquisitionScope": self.connector.dataset_scope,
                 },
@@ -509,7 +510,7 @@ class IncrementalUpdateEngine:
         if state is None:
             state = models.DatasetState(
                 id="current",
-                schema_version="3.0.4-alpha",
+                schema_version="3.0.5-alpha",
                 dataset_kind="live-api",
                 period=str(datetime.now(UTC).year),
                 generated_at=update.applied_at,

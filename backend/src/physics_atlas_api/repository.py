@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from datetime import date
 from typing import Any
 
-from sqlalchemy import Select, case, func, or_, select
+from sqlalchemy import Select, case, false, func, or_, select
 from sqlalchemy.orm import Session
 
 from . import models
@@ -43,7 +43,7 @@ def _provenance(value: dict[str, Any] | None) -> dict[str, Any]:
     return {
         "source": source.get("source", "Physics Atlas live-data service"),
         "sourceType": source.get("sourceType", source.get("source_type", "derived")),
-        "version": source.get("version", "v3.0.4-alpha"),
+        "version": source.get("version", "v3.0.5-alpha"),
         "status": source.get("status", "unverified"),
         **(
             {"confidence": source["confidence"]}
@@ -91,6 +91,82 @@ def _page[ModelT](
     total = session.scalar(select(func.count()).select_from(statement.subquery())) or 0
     items = session.scalars(statement.limit(limit).offset(offset)).all()
     return items, total
+
+
+def _current_metric_observation_ids(
+    *criteria: Any,
+) -> Select[tuple[str]]:
+    """Select one current, reproducible observation per metric partition.
+
+    A row is current only when its definition version matches the published
+    MetricDefinition. Multiple calculation runs of the same algorithm resolve
+    to the latest calculated timestamp with stable version/id tie-breakers. If
+    current rows disagree on algorithm, no implicit winner exists and the
+    partition fails closed.
+    """
+
+    observation = models.MetricObservation
+    partition = (
+        observation.entity_type,
+        observation.entity_id,
+        observation.science_domain_id,
+        observation.field_id,
+        observation.metric_id,
+        observation.period,
+    )
+    ranked = (
+        select(
+            observation.id.label("observation_id"),
+            func.min(observation.algorithm_version)
+            .over(partition_by=partition)
+            .label("minimum_algorithm"),
+            func.max(observation.algorithm_version)
+            .over(partition_by=partition)
+            .label("maximum_algorithm"),
+            func.row_number()
+            .over(
+                partition_by=partition,
+                order_by=(
+                    observation.calculated_at.desc(),
+                    observation.calculation_version.desc(),
+                    observation.data_source_version.desc(),
+                    observation.id.desc(),
+                ),
+            )
+            .label("calculation_rank"),
+        )
+        .join(
+            models.MetricDefinition,
+            models.MetricDefinition.id == observation.metric_id,
+        )
+        .where(
+            observation.value.is_not(None),
+            observation.metric_definition_version == models.MetricDefinition.version,
+            *criteria,
+        )
+        .subquery("ranked_current_metric_observations")
+    )
+    return select(ranked.c.observation_id).where(
+        ranked.c.minimum_algorithm == ranked.c.maximum_algorithm,
+        ranked.c.calculation_rank == 1,
+    )
+
+
+def _current_dataset_metric_criteria(session: Session) -> tuple[Any, ...]:
+    """Bind public metric reads to the current immutable dataset lineage."""
+    state = session.get(models.DatasetState, "current")
+    provenance = state.provenance_json if state is not None else {}
+    dataset_version = provenance.get("version")
+    if not isinstance(dataset_version, str) or not dataset_version.strip():
+        return (false(),)
+
+    criteria: list[Any] = [
+        models.MetricObservation.data_source_version == dataset_version,
+    ]
+    acquisition_scope = provenance.get("acquisitionScope")
+    if isinstance(acquisition_scope, str) and acquisition_scope.strip():
+        criteria.append(models.MetricObservation.acquisition_scope == acquisition_scope)
+    return tuple(criteria)
 
 
 def domain_out(item: models.ScienceDomain, field_ids: list[str]) -> dict[str, Any]:
@@ -242,9 +318,17 @@ def metric_observation_out(item: models.MetricObservation) -> dict[str, Any]:
         "period": item.period,
         "value": item.value,
         "source": item.source,
+        "metricDefinitionVersion": item.metric_definition_version,
         "algorithmVersion": item.algorithm_version,
         "calculationVersion": item.calculation_version,
         "dataSourceVersion": item.data_source_version,
+        "acquisitionScope": item.acquisition_scope,
+        "rawValue": item.raw_value,
+        "rawUnit": item.raw_unit,
+        "normalizationMethod": item.normalization_method,
+        "normalizationParameters": item.normalization_parameters,
+        "inputCount": item.input_count,
+        "qualityFlags": item.quality_flags,
         "calculatedAt": item.calculated_at,
         "provenance": _provenance(item.provenance_json),
     }
@@ -295,7 +379,7 @@ class AtlasDatabaseRepository:
         state = self.session.get(models.DatasetState, "current")
         if state is None:
             return {
-                "schemaVersion": "3.0.4-alpha",
+                "schemaVersion": "3.0.5-alpha",
                 "datasetKind": "live-api",
                 "period": str(date.today().year),
                 "generatedAt": models.utcnow(),
@@ -380,6 +464,18 @@ class AtlasDatabaseRepository:
         limit: int,
     ) -> list[dict[str, Any]]:
         """Return only the highest-activity nodes needed by one country map."""
+        current_observation_ids = _current_metric_observation_ids(
+            *_current_dataset_metric_criteria(self.session),
+            models.MetricObservation.entity_type == "institution",
+            models.MetricObservation.science_domain_id == science_domain_id,
+            models.MetricObservation.metric_id == metric_id,
+            models.MetricObservation.period == period,
+            (
+                models.MetricObservation.field_id == field_id
+                if field_id is not None
+                else models.MetricObservation.field_id.is_(None)
+            ),
+        )
         statement = (
             select(models.Institution, models.MetricObservation)
             .join(
@@ -390,22 +486,13 @@ class AtlasDatabaseRepository:
                 models.Institution.country_id == country_id,
                 models.Institution.longitude.is_not(None),
                 models.Institution.latitude.is_not(None),
-                models.MetricObservation.entity_type == "institution",
-                models.MetricObservation.science_domain_id == science_domain_id,
-                models.MetricObservation.metric_id == metric_id,
-                models.MetricObservation.period == period,
-                models.MetricObservation.value.is_not(None),
+                models.MetricObservation.id.in_(current_observation_ids),
             )
             .order_by(
                 models.MetricObservation.value.desc(),
                 models.Institution.canonical_name,
             )
             .limit(limit)
-        )
-        statement = statement.where(
-            models.MetricObservation.field_id == field_id
-            if field_id is not None
-            else models.MetricObservation.field_id.is_(None)
         )
         return [
             {
@@ -542,11 +629,7 @@ class AtlasDatabaseRepository:
         limit: int,
         offset: int,
     ) -> tuple[list[dict[str, Any]], int]:
-        statement = (
-            select(models.MetricObservation)
-            .where(models.MetricObservation.value.is_not(None))
-            .order_by(models.MetricObservation.period, models.MetricObservation.id)
-        )
+        criteria: list[Any] = []
         filters = {
             models.MetricObservation.entity_type: entity_type,
             models.MetricObservation.entity_id: entity_id,
@@ -557,7 +640,17 @@ class AtlasDatabaseRepository:
         }
         for column, value in filters.items():
             if value is not None:
-                statement = statement.where(column == value)
+                criteria.append(column == value)
+        criteria.extend(_current_dataset_metric_criteria(self.session))
+        statement = (
+            select(models.MetricObservation)
+            .where(
+                models.MetricObservation.id.in_(
+                    _current_metric_observation_ids(*criteria)
+                )
+            )
+            .order_by(models.MetricObservation.period, models.MetricObservation.id)
+        )
         items, total = _page(self.session, statement, limit, offset)
         return [metric_observation_out(item) for item in items], total
 
@@ -854,13 +947,18 @@ class AtlasDatabaseRepository:
                 .limit(PROFILE_RESOURCE_LIMIT)
             )
         )
+        institution_metric_criteria = (
+            *_current_dataset_metric_criteria(self.session),
+            models.MetricObservation.entity_type == "institution",
+            models.MetricObservation.entity_id == entity_id,
+        )
         metrics = list(
             self.session.scalars(
                 select(models.MetricObservation)
                 .where(
-                    models.MetricObservation.entity_type == "institution",
-                    models.MetricObservation.entity_id == entity_id,
-                    models.MetricObservation.value.is_not(None),
+                    models.MetricObservation.id.in_(
+                        _current_metric_observation_ids(*institution_metric_criteria)
+                    )
                 )
                 .order_by(
                     models.MetricObservation.period.desc(),
@@ -963,13 +1061,18 @@ class AtlasDatabaseRepository:
                 .limit(PROFILE_RESOURCE_LIMIT)
             )
         )
+        researcher_metric_criteria = (
+            *_current_dataset_metric_criteria(self.session),
+            models.MetricObservation.entity_type == "researcher",
+            models.MetricObservation.entity_id == entity_id,
+        )
         metrics = list(
             self.session.scalars(
                 select(models.MetricObservation)
                 .where(
-                    models.MetricObservation.entity_type == "researcher",
-                    models.MetricObservation.entity_id == entity_id,
-                    models.MetricObservation.value.is_not(None),
+                    models.MetricObservation.id.in_(
+                        _current_metric_observation_ids(*researcher_metric_criteria)
+                    )
                 )
                 .order_by(
                     models.MetricObservation.period.desc(),

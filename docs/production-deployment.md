@@ -2,7 +2,15 @@
 
 ## Status and safety boundary
 
-`compose.production.yml` is a provider-neutral, single-host deployment definition for PostgreSQL, the one-shot Alembic migration, FastAPI, the incremental worker, and Caddy automatic HTTPS. It is configuration only: the repository contains no production hostname, credentials, server binding, managed database, or deployed backend.
+The operated production path uses Railway-managed PostgreSQL, a Railway FastAPI
+service, a separately sequenced bounded worker, and the public GitHub Pages
+frontend. The verified API entry point is
+<https://physics-atlas-api-production.up.railway.app/api>. Credentials and
+Railway project identifiers remain outside the repository.
+
+`compose.production.yml` remains the provider-neutral, single-host alternative
+for PostgreSQL, one-shot Alembic migration, FastAPI, incremental worker, and
+Caddy automatic HTTPS. It does not describe the current Railway topology.
 
 The production stack fixes `PHYSICS_ATLAS_ACQUISITION_SCOPE` to `hep-th-v1`, the only scope accepted by the current backend. That policy queries `subject:Theory-HEP` in INSPIRE and `cat:hep-th` in arXiv. ROR uses targeted record retrieval and is disabled when `PHYSICS_ATLAS_ROR_RECORD_IDS` is empty. Populate that list only with ROR IDs already evidenced by the bounded corpus; it must not become a registry-wide import.
 
@@ -72,6 +80,10 @@ The existing scheduler wakes hourly. INSPIRE and arXiv are due daily, ROR weekly
 
 Do not configure the public frontend yet. First verify real source snapshots, provenance, identity-resolution state, update status, restart/checkpoint behavior, and that no live metric scores are written without reviewed formulas.
 
+For an already activated environment, treat this sentence as the gate for any
+new frontend build or release: re-run it before changing the public API pin or
+activating a metric layer.
+
 ## Railway activation profile
 
 Railway uses the same backend image and safety boundary, but replaces the
@@ -128,6 +140,24 @@ VITE_ATLAS_API_URL=https://API_HOSTNAME/api
 This value is a public build-time URL, not a secret. Configure it in the deployment repository workflow/environment; never copy database or provider credentials into `VITE_*` variables. Validate a Pages deep link, browser CORS, loading/error recovery, and an actual API request before making live data the normal public source.
 
 ## Operations
+
+### v3.0.5 scientific/status checks
+
+Before and after deploying v3.0.5, verify:
+
+```bash
+curl --fail --show-error --silent https://physics-atlas-api-production.up.railway.app/api/health
+curl --fail --show-error --silent https://physics-atlas-api-production.up.railway.app/api/dataset
+curl --fail --show-error --silent https://physics-atlas-api-production.up.railway.app/api/updates/status
+curl --fail --show-error --silent https://physics-atlas-api-production.up.railway.app/api/identity-resolutions/summary
+curl --fail --show-error --silent 'https://physics-atlas-api-production.up.railway.app/api/metric-observations?limit=1'
+```
+
+The identity summary must remain aggregate-only. Candidate metric definitions
+may be returned as experimental methodology, but the current bounded production
+dataset must still return zero live metric observations unless a separately
+reviewed activation record proves the exact metric and partition passed. Never
+seed a colorful map during deployment validation.
 
 Inspect service state and structured JSON logs:
 
