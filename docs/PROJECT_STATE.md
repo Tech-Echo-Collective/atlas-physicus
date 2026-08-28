@@ -78,8 +78,8 @@ This file records the factual operating state of the project. Read it with [dura
   check, deterministic fixture ingestion, local API/CORS contract checks, and
   zero npm audit findings. The tag is created only after the GitHub frontend,
   PostgreSQL backend, and container jobs pass on the release commit.
-- `Physics-Atlas` main commit `45da545` passed GitHub Actions
-  [run 33182035844](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33182035844): frontend verification, PostgreSQL-backed backend validation, and the Docker Compose job all succeeded.
+- The v3.0.5 implementation commit `ba44c7e` passed GitHub Actions
+  [run 33191858046](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33191858046): frontend verification, PostgreSQL-backed backend validation and migration drift checks, deterministic ingestion/API checks, and the Docker Compose job all succeeded.
 - The preceding main failure was a stale CI assertion that expected scheduled ROR
   output even when no reviewed ROR IDs were configured. CI now verifies the
   intentional `hep-th-v1` INSPIRE/arXiv safe default and its scope versions.
@@ -95,12 +95,17 @@ This file records the factual operating state of the project. Read it with [dura
 
 ## Backend deployment state
 
-- The production Railway API is operating at <https://physics-atlas-api-production.up.railway.app/api>. Before the v3.0.5 deployment it reported a healthy database and API version `3.0.4-alpha`; the release gate requires the deployed version to advance and remain healthy.
-- The live evidence observed on 2026-08-29 reported `datasetKind: live-api`,
-  acquisition scope `hep-th-v1`, update sequence 3, dataset version
-  `live-20260828T155141Z-004ec04c`, and a last successful update at
-  2026-08-28 15:51:44 UTC. INSPIRE and arXiv reported healthy cursor state and
-  idle metric recalculation.
+- The production Railway API is operating at <https://physics-atlas-api-production.up.railway.app/api> with a healthy database and runtime version `3.0.5-alpha`.
+- The post-deployment live evidence observed on 2026-08-29 reported
+  `datasetKind: live-api`, acquisition scope `hep-th-v1`, update sequence 5,
+  dataset version `live-20260828T165104Z-ab7ed700`, and a last successful
+  update at 2026-08-28 16:51:19 UTC. INSPIRE and arXiv reported healthy cursor
+  state, zero consecutive failures, and idle metric recalculation. The
+  persisted additive dataset schema identifier remains `3.0.4-alpha`; the
+  runtime and newly emitted provenance are v3.0.5.
+- Representative warm API reads returned HTTP 200 in 0.19--0.27 seconds. The
+  bounded responses ranged from 43 bytes for an empty metric page to 10,135
+  bytes for the seven-definition metric registry.
 - CORS admits the exact GitHub Pages origin for GET and preflight requests. The deployed Pages bundle contains the configured HTTPS API endpoint.
 - `compose.production.yml`, Caddy configuration, a production environment
   template, and an operator runbook now configure PostgreSQL, migrations,
@@ -150,13 +155,16 @@ production update or public dataset.
 
 ## Scientific validation result and limitations
 
-- The bounded production snapshot has 44 canonical papers, 82 researchers, and
-  82 authorships, but zero canonical institutions, affiliations, citation
-  edges, or metric observations. Canonical papers cover 2026 only.
-- Identity resolution has 319 outcomes: 126 external-identifier matches, 193
-  unresolved/open-review records, and zero ambiguous outcomes. The 60.50%
-  unresolved rate combines missing-metadata quarantine and authority-absent
-  abstention; it is not a precision/error measurement.
+- The bounded post-deployment production snapshot has 160 canonical papers,
+  407 researchers, and 427 authorships, but zero canonical institutions,
+  affiliations, or metric observations. Of the papers, 132 are from 2026; the
+  remaining 28 are sparsely distributed across 1975 and 2001--2025, which is
+  not complete historical-window coverage.
+- Identity resolution has 816 outcomes: 587 matched, 229 unresolved/open-review
+  records, and zero ambiguous outcomes. Match methods are 585 external
+  identifiers and two canonical names; unresolved methods are 203
+  missing/invalid records and 26 authority-absent abstentions. The 28.06%
+  unresolved rate is a workflow/coverage measure, not precision or error rate.
 - No independently labeled live truth sample exists, so precision, recall, and
   confidence calibration remain withheld. Institution/ROR validation cannot be
   measured against the canonical graph until institution materialization exists.
