@@ -13,6 +13,8 @@ This file records the factual operating state of the project. Read it with [dura
 - Production-activation hardening and the persistent context foundation landed in follow-up commit `b96aec8`; the release tag was not moved.
 - CI and Railway activation compatibility were corrected in follow-up commit
   `ca4fe97`; the release tag remains on `09f5d85`.
+- CI health and Railway readiness were recorded in follow-up commit `45da545`;
+  the release tag remains on `09f5d85`.
 - The active milestone is **v3.0.4 Production Activation**. v3.0.5 has not started.
 
 ## Implemented systems
@@ -47,29 +49,29 @@ This file records the factual operating state of the project. Read it with [dura
 ## Public deployment state
 
 - The public entry point is the separate `Tech-Echo-Collective/Physics-Atlas-Web` GitHub Pages project.
-- The public Pages application remains a static/pilot deployment. It is not currently connected to a verified provider-backed Physics Atlas API.
-- The public source selector still exposes the synthetic framework and historical pilot. Live mode is available to a build only when `VITE_ATLAS_API_URL` is configured.
-- Demo, pilot, and fixture assets remain necessary for offline development, regression testing, and reproducibility.
+- The public Pages application at <https://tech-echo-collective.github.io/Physics-Atlas-Web/> is built with `VITE_ATLAS_API_URL=https://physics-atlas-api-production.up.railway.app/api` and uses `APIRepository` on normal clean routes.
+- The normal public source selector exposes only the live API. Synthetic framework and historical pilot repositories remain available only through explicit internal routes for tests, reproducibility, and first-load failure fallback.
+- Data-source resolution, repository boundaries, dataset-kind validation, and scoped live merges prevent live/static record mixing.
+- The production API currently publishes no reviewed metric observations. The public map therefore remains explicitly neutral and does not display an unvalidated scientific score; missing data is not treated as zero.
 
 ## Repository and CI health
 
-- `Physics-Atlas` main commit `ca4fe97` passed GitHub Actions
-  [run 33181797118](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33181797118): frontend verification, PostgreSQL-backed backend validation, and the Docker Compose job all succeeded.
+- `Physics-Atlas` main commit `45da545` passed GitHub Actions
+  [run 33182035844](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33182035844): frontend verification, PostgreSQL-backed backend validation, and the Docker Compose job all succeeded.
 - The preceding main failure was a stale CI assertion that expected scheduled ROR
   output even when no reviewed ROR IDs were configured. CI now verifies the
   intentional `hep-th-v1` INSPIRE/arXiv safe default and its scope versions.
-- `Physics-Atlas-Web` main remains at `8ff085e`; GitHub Pages
-  [run 33172110570](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33172110570) succeeded. Its `atlas` submodule intentionally remains pinned to the released `v3.0.4-alpha` commit.
+- `Physics-Atlas-Web` main commit `13f1d5b` passed and deployed through GitHub Pages
+  [run 33186585196](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33186585196). Its `atlas` submodule is pinned to validated Physics Atlas main commit `45da545`; the `v3.0.4-alpha` tag was not moved.
 - Both npm dependency audits reported zero vulnerabilities, and the installed
   backend environment reported no broken Python requirements. No broad
   dependency upgrade was justified.
 
 ## Backend deployment state
 
-- No public production backend is currently operating or claimed.
-- Railway is the selected activation target, but no production API URL, linked
-  Railway project, managed PostgreSQL instance, or production credential set is
-  present in this repository context.
+- The production Railway API is operating at <https://physics-atlas-api-production.up.railway.app/api> with a healthy database and API version `3.0.4-alpha`.
+- The live dataset reports `datasetKind: live-api`, acquisition scope `hep-th-v1`, and update sequence 2. Update status reports a successful 2026-08-28 run with healthy INSPIRE and arXiv connectors and idle metric recalculation.
+- CORS admits the exact GitHub Pages origin for GET and preflight requests. The deployed Pages bundle contains the configured HTTPS API endpoint.
 - `compose.production.yml`, Caddy configuration, a production environment
   template, and an operator runbook now configure PostgreSQL, migrations,
   FastAPI, the bounded worker, and automatic HTTPS for a single authorized host.
@@ -80,19 +82,19 @@ This file records the factual operating state of the project. Read it with [dura
 - The production definition fixes `hep-th-v1`, disables fixtures, admits only the
   exact GitHub Pages origin, keeps PostgreSQL/FastAPI unpublished, and leaves
   credentials in an ignored operator environment file.
-- Host provisioning, DNS, real secrets, off-host backups, rate protection,
-  deployment monitoring, alerting, and restore rehearsal remain operator
-  responsibilities.
-- Consequently, there is no factual latest provider-backed update time, production database status, or production worker status to report yet.
+- Railway provisioning, managed PostgreSQL, API, and bounded worker activation are complete. Secret values remain outside the repository.
+- Off-host backup/restore evidence, rate protection, longer-running monitoring,
+  alerting, and operational rehearsal remain operator responsibilities and have
+  not been verified from this repository context.
 
 ## Data-source state
 
-Publicly usable modes remain isolated:
+All retained modes remain isolated:
 
 - **Synthetic framework:** hand-authored UI and architecture test data.
 - **Historical INSPIRE-HEP pilot:** bounded, reproducible provider metadata retained for methodology and regression work.
 - **Live API fixture mode:** deterministic connector fixtures exercising the complete database/API path in development and CI.
-- **Provider-backed live mode:** implemented in code but not yet publicly deployed or activated.
+- **Provider-backed live mode:** deployed through Railway and used by the public Pages application as the normal data path.
 
 The implemented provider-backed path is bounded to the requested activation
 corpus:
@@ -130,17 +132,12 @@ production update or public dataset.
 
 ## Immediate task: v3.0.4 Production Activation
 
-Activate the existing architecture without redesigning it or starting v3.0.5:
+The hosted source → PostgreSQL → FastAPI → `APIRepository` path is now active without redesigning the architecture or starting v3.0.5. Remaining activation work is operational and scientific validation:
 
-1. provision and authorize the Railway project, managed PostgreSQL, API and
-   worker services, secrets, and public API hostname using the reviewed runbook;
-2. deploy the reviewed production stack and exercise PostgreSQL backup/restore,
-   database restart, worker restart, and monitoring on that host;
-3. choose only corpus-evidenced ROR targets and operate the bounded incremental
-   window long enough to assess provider/resolver behavior;
-4. verify the hosted source → resolution → PostgreSQL → FastAPI →
-   `APIRepository` path, browser CORS, deep links, and geographic regressions;
-5. connect `Physics-Atlas-Web` only after the HTTPS API and worker are demonstrably healthy;
-6. retire the public dataset selector from the normal experience only after integrated live mode is stable, while retaining static and pilot repositories for testing and reproducibility.
+1. collect durable backup/restore, restart, monitoring, rate-protection, and alerting evidence for the operated Railway services;
+2. observe bounded `hep-th-v1` updates long enough to assess provider and resolver behavior without broadening scope;
+3. materialize and review sufficient canonical affiliation evidence for meaningful country and institution exploration;
+4. review and version scientific metric methods before publishing any live heat values;
+5. retain explicit static and pilot routes for reproducibility while keeping them outside the normal public selector.
 
-Do not claim completion until the public API is reachable, update status is current, the public frontend is demonstrably using `APIRepository`, data modes remain unmixed, and the geographic view has sufficient canonical affiliation and reviewed metric data to be scientifically meaningful.
+The public transport and frontend activation gates are complete. Do not claim the broader production milestone scientifically complete until the geographic view has sufficient reviewed affiliation and metric data to be meaningful.
