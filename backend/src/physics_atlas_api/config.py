@@ -1,8 +1,8 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,11 +13,24 @@ class Settings(BaseSettings):
         env_file=".env",
         env_prefix="PHYSICS_ATLAS_",
         extra="ignore",
+        populate_by_name=True,
     )
 
     environment: Literal["development", "test", "production"] = "development"
-    database_url: str = (
-        "postgresql+psycopg://physics_atlas:physics_atlas@db:5432/physics_atlas"
+    database_url: str = Field(
+        default=(
+            "postgresql+psycopg://physics_atlas:physics_atlas@db:5432/physics_atlas"
+        ),
+        validation_alias=AliasChoices(
+            "PHYSICS_ATLAS_DATABASE_URL",
+            "DATABASE_URL",
+        ),
+    )
+    port: int = Field(
+        default=8000,
+        ge=1,
+        le=65535,
+        validation_alias=AliasChoices("PHYSICS_ATLAS_PORT", "PORT"),
     )
     cors_origins: str = "http://localhost:5173"
     log_level: str = "INFO"
@@ -44,6 +57,25 @@ class Settings(BaseSettings):
     orcid_client_id: str | None = None
     orcid_client_secret: str | None = None
     orcid_access_token: str | None = None
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_postgresql_driver(cls, value: object) -> object:
+        """Use the installed psycopg 3 driver for platform PostgreSQL URLs."""
+
+        if not isinstance(value, str):
+            return value
+        if value.startswith("postgres://"):
+            return value.replace("postgres://", "postgresql+psycopg://", 1)
+        if value.startswith("postgresql://"):
+            return value.replace("postgresql://", "postgresql+psycopg://", 1)
+        return value
+
+    @model_validator(mode="after")
+    def reject_production_fixture_mode(self) -> Self:
+        if self.environment == "production" and self.fixture_mode:
+            raise ValueError("fixture mode must be disabled in production")
+        return self
 
     @property
     def allowed_origins(self) -> list[str]:

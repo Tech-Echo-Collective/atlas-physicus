@@ -87,9 +87,10 @@ app = create_app()
 
 
 def run() -> None:
+    settings = get_settings()
     uvicorn.run(
         "physics_atlas_api.main:app",
         host="0.0.0.0",  # noqa: S104 - container entrypoint must accept host traffic
-        port=8000,
+        port=settings.port,
         reload=False,
     )

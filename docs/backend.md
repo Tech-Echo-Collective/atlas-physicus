@@ -28,11 +28,15 @@ For a direct Python workflow, use Python 3.12+, install `backend[dev]`, set `PHY
 
 ## Configuration
 
-All settings use the `PHYSICS_ATLAS_` prefix. Important variables are:
+Settings use the `PHYSICS_ATLAS_` prefix. The API also accepts the conventional
+platform aliases `DATABASE_URL` and `PORT`; an explicitly prefixed value takes
+precedence. Plain `postgres://` and `postgresql://` URLs are normalized to the
+installed psycopg 3 SQLAlchemy driver.
 
 | Variable | Purpose |
 | --- | --- |
-| `DATABASE_URL` | SQLAlchemy PostgreSQL connection |
+| `PHYSICS_ATLAS_DATABASE_URL` / `DATABASE_URL` | SQLAlchemy PostgreSQL connection |
+| `PHYSICS_ATLAS_PORT` / `PORT` | API listen port; defaults to 8000 |
 | `CORS_ORIGINS` | Comma-separated allowed frontend origins |
 | `FIXTURE_MODE` | Use deterministic connector fixtures when true |
 | `FIXTURE_DIRECTORY` | Optional installed path containing deterministic connector fixtures |
@@ -46,7 +50,7 @@ All settings use the `PHYSICS_ATLAS_` prefix. Important variables are:
 | `ORCID_ACCESS_TOKEN` | Bearer token used for targeted ORCID record retrieval outside fixture mode |
 | `ORCID_CLIENT_ID` / `ORCID_CLIENT_SECRET` | Optional operator-side credential metadata; the service does not exchange these for a token |
 
-Never commit a populated `.env`, database password, provider token, or private client credential. Production CORS must name the deployed Atlas origin rather than using a wildcard.
+Never commit a populated `.env`, database password, provider token, or private client credential. Production CORS must name the deployed Atlas origin rather than using a wildcard. A production process refuses to start while fixture mode is enabled.
 
 ## API surface
 

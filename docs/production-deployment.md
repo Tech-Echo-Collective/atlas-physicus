@@ -72,6 +72,51 @@ The existing scheduler wakes hourly. INSPIRE and arXiv are due daily, ROR weekly
 
 Do not configure the public frontend yet. First verify real source snapshots, provenance, identity-resolution state, update status, restart/checkpoint behavior, and that no live metric scores are written without reviewed formulas.
 
+## Railway activation profile
+
+Railway uses the same backend image and safety boundary, but replaces the
+single-host PostgreSQL and Caddy services with managed PostgreSQL and Railway's
+TLS edge. Create two services from `Tech-Echo-Collective/Physics-Atlas` on
+`main`: one API and one worker. Keep the source root at the repository root
+because `backend/Dockerfile` copies both backend files and the Atlas reference
+dataset. Set `RAILWAY_DOCKERFILE_PATH=backend/Dockerfile` on both services.
+
+Share these runtime values between the API and worker:
+
+```text
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+PHYSICS_ATLAS_ENVIRONMENT=production
+PHYSICS_ATLAS_FIXTURE_MODE=false
+PHYSICS_ATLAS_ACQUISITION_SCOPE=hep-th-v1
+PHYSICS_ATLAS_REFERENCE_DATA_PATH=/app/reference/atlas.json
+PHYSICS_ATLAS_CORS_ORIGINS=https://tech-echo-collective.github.io
+PHYSICS_ATLAS_ROR_RECORD_IDS=
+```
+
+The standard Railway `DATABASE_URL` and `PORT` variables are accepted directly.
+Do not add Caddy, `PHYSICS_ATLAS_API_DOMAIN`, or ACME variables; Railway owns
+the public domain and certificate. Add the resource-check bounds and optional
+provider metadata from `.env.production.example` to the worker as needed.
+
+For the API service:
+
+- retain the image's default `physics-atlas-api` start command;
+- configure `alembic -c /app/alembic.ini upgrade head` as its pre-deploy command;
+- configure `/api/health` as the deployment healthcheck;
+- generate the public domain only after the migration succeeds.
+
+For the worker service:
+
+- set the start command to `physics-atlas-worker --check-resources`;
+- use one persistent replica, with no public domain or HTTP healthcheck;
+- keep GitHub auto-deploy disabled and start or redeploy it only after the API
+  migration and health gate complete.
+
+The API is the sole migration owner. This avoids concurrent Alembic runs while
+Railway treats the API and worker as independent services. Verify the API first,
+then enable the worker and inspect its initial bounded ingestion before wiring
+the frontend to the public API URL.
+
 ## Activate the GitHub Pages frontend
 
 After the HTTPS API and bounded live dataset are verified, build `Physics-Atlas-Web` with:
