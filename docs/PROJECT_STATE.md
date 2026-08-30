@@ -127,7 +127,7 @@ coercing the missing value to year `0`; a regression test records the case. The
 complete frontend validation rerun then passed. Docker is not available in this
 local environment, so GitHub Actions remains the final PostgreSQL/container
 validation gate. The implementation is recorded in commit `fe752f0`; its
-GitHub Actions validation is pending until the branch is pushed.
+GitHub Actions validation passed in [run 33300307090](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33300307090), including the PostgreSQL and container jobs.
 
 ## Backend deployment state
 
