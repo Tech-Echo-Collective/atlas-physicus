@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import demoData from './demo/atlas.json';
-import { defaultMetricId } from '../domain/models';
+import { defaultMetricId, metricSystemV1Ids } from '../domain/models';
 import { atlasDatasetSchema } from '../domain/schemas';
 import { APIRepository, APIRepositoryError } from './APIRepository';
 
@@ -157,6 +157,37 @@ describe('APIRepository', () => {
     ).toBe(false);
   });
 
+  it('does not request an individually ready metric from a partial five-metric system', async () => {
+    const partialDefinitions = demoDataset.metricDefinitions.map(
+      (definition) => ({
+        ...definition,
+        implementationStatus:
+          definition.id === defaultMetricId
+            ? ('live-calculated' as const)
+            : ('taxonomy-only' as const),
+      }),
+    );
+    const { fetcher, urls } = liveDatasetFetcher(partialDefinitions);
+    const repository = new APIRepository({
+      baseUrl: 'https://atlas.test/api',
+      fetch: fetcher as typeof fetch,
+    });
+
+    await expect(repository.loadDataset()).resolves.toEqual(
+      expect.objectContaining({ metricObservations: [] }),
+    );
+    await expect(
+      repository.getCountryMapData({
+        scienceDomainId: 'physics',
+        metricIds: [defaultMetricId],
+        period: demoDataset.metadata.period,
+      }),
+    ).resolves.toEqual([]);
+    expect(
+      urls.some((url) => url.pathname === '/api/metric-observations'),
+    ).toBe(false);
+  });
+
   it('requests and deterministically filters a selected world scope', async () => {
     const { fetcher, urls } = liveDatasetFetcher();
     const repository = new APIRepository({
@@ -264,7 +295,19 @@ describe('APIRepository', () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input));
       if (url.pathname === '/api/metrics') {
-        return jsonResponse([currentDefinition]);
+        return jsonResponse([
+          currentDefinition,
+          ...demoDataset.metricDefinitions.slice(1).map((definition) =>
+            metricSystemV1Ids.includes(
+              definition.id as (typeof metricSystemV1Ids)[number],
+            )
+              ? {
+                  ...definition,
+                  implementationStatus: 'live-calculated' as const,
+                }
+              : definition,
+          ),
+        ]);
       }
       if (url.pathname === '/api/dataset') {
         return jsonResponse({

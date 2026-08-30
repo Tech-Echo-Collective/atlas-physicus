@@ -6,6 +6,10 @@ from sqlalchemy import Select, case, false, func, or_, select
 from sqlalchemy.orm import Session
 
 from . import models
+from .attribution import FRACTIONAL_ATTRIBUTION_V1
+from .fields import PHYSICS_FIELD_ONTOLOGY_VERSION, PROVIDER_FIELD_MAPPING_VERSION
+from .metrics.contracts import METRIC_CONTRACTS
+from .metrics.thresholds import METRIC_VALIDATION_THRESHOLDS_V1
 from .search_index import normalize_search_term
 
 PROFILE_AFFILIATION_LIMIT = 500
@@ -13,6 +17,14 @@ PROFILE_ENTITY_LIMIT = 500
 PROFILE_METRIC_LIMIT = 500
 PROFILE_PAPER_LIMIT = 200
 PROFILE_RESOURCE_LIMIT = 100
+METRIC_SYSTEM_V1_IDS = frozenset(METRIC_CONTRACTS)
+METRIC_SYSTEM_V1_ALGORITHMS = {
+    metric_id: contract.algorithm_version
+    for metric_id, contract in METRIC_CONTRACTS.items()
+}
+METRIC_SYSTEM_V1_DEFINITIONS = {
+    metric_id: contract.version for metric_id, contract in METRIC_CONTRACTS.items()
+}
 
 
 def _resource_ordering() -> tuple[Any, ...]:
@@ -160,9 +172,48 @@ def _current_dataset_metric_criteria(session: Session) -> tuple[Any, ...]:
     if not isinstance(dataset_version, str) or not dataset_version.strip():
         return (false(),)
 
+    if state is not None and state.dataset_kind == "live-api":
+        release = session.scalar(
+            select(models.MetricSystemRelease)
+            .where(models.MetricSystemRelease.status == "active")
+            .order_by(models.MetricSystemRelease.activated_at.desc())
+            .limit(1)
+        )
+        definition_states = {
+            metric_id: (version, implementation_status)
+            for metric_id, version, implementation_status in session.execute(
+                select(
+                    models.MetricDefinition.id,
+                    models.MetricDefinition.version,
+                    models.MetricDefinition.implementation_status,
+                ).where(models.MetricDefinition.id.in_(METRIC_SYSTEM_V1_IDS))
+            )
+        }
+        definitions_are_complete = definition_states == {
+            metric_id: (version, "live-calculated")
+            for metric_id, version in METRIC_SYSTEM_V1_DEFINITIONS.items()
+        }
+        release_is_complete = (
+            release is not None
+            and set(release.metric_ids) == METRIC_SYSTEM_V1_IDS
+            and release.algorithm_versions == METRIC_SYSTEM_V1_ALGORITHMS
+            and release.attribution_policy_version == FRACTIONAL_ATTRIBUTION_V1.version
+            and release.ontology_version == PHYSICS_FIELD_ONTOLOGY_VERSION
+            and release.mapping_policy_version == PROVIDER_FIELD_MAPPING_VERSION
+            and release.threshold_version == METRIC_VALIDATION_THRESHOLDS_V1.version
+            and release.validation_evidence.get("jointGatePassed") is True
+            and definitions_are_complete
+        )
+        if not release_is_complete:
+            return (false(),)
+
     criteria: list[Any] = [
         models.MetricObservation.data_source_version == dataset_version,
     ]
+    if state is not None and state.dataset_kind == "live-api":
+        criteria.append(
+            models.MetricDefinition.implementation_status == "live-calculated"
+        )
     acquisition_scope = provenance.get("acquisitionScope")
     if isinstance(acquisition_scope, str) and acquisition_scope.strip():
         criteria.append(models.MetricObservation.acquisition_scope == acquisition_scope)
@@ -184,6 +235,12 @@ def field_out(item: models.ResearchField) -> dict[str, Any]:
         "id": item.id,
         "label": item.label,
         "description": item.description,
+        "parentFieldId": item.parent_field_id,
+        "aliases": item.aliases,
+        "ontologyVersion": item.ontology_version,
+        "nodeKind": item.node_kind,
+        "isExplorable": item.is_explorable,
+        "displayOrder": item.display_order,
         "provenance": _provenance(item.provenance_json),
     }
 
@@ -284,6 +341,9 @@ def paper_out(item: models.Paper, field_ids: list[str]) -> dict[str, Any]:
         "title": item.title,
         "summary": item.summary,
         "year": item.publication_year,
+        "publicationDate": item.publication_date,
+        "publicationDatePrecision": item.publication_date_precision,
+        "documentType": item.document_type,
         "fieldIds": field_ids,
         "doi": item.doi,
         "arxivId": item.arxiv_id,
@@ -404,7 +464,9 @@ class AtlasDatabaseRepository:
         domains = self.session.scalars(
             select(models.ScienceDomain).order_by(models.ScienceDomain.id)
         ).all()
-        fields = self.session.scalars(select(models.ResearchField)).all()
+        fields = self.session.scalars(
+            select(models.ResearchField).where(models.ResearchField.is_explorable)
+        ).all()
         ids_by_domain: dict[str, list[str]] = {}
         for field in fields:
             ids_by_domain.setdefault(field.domain_id, []).append(field.id)
@@ -413,7 +475,9 @@ class AtlasDatabaseRepository:
         ]
 
     def fields(self, domain_id: str | None = None) -> list[dict[str, Any]]:
-        statement = select(models.ResearchField).order_by(models.ResearchField.id)
+        statement = select(models.ResearchField).order_by(
+            models.ResearchField.display_order, models.ResearchField.id
+        )
         if domain_id:
             statement = statement.where(models.ResearchField.domain_id == domain_id)
         return [field_out(item) for item in self.session.scalars(statement)]

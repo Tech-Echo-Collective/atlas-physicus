@@ -32,13 +32,20 @@ Similar names alone do not justify a researcher merge. Conflicts and close candi
 
 ## Physics field mapping
 
-Provider categories are retained verbatim and mapped through `connectors/field_mapping.py`. They are acquisition/classification hints, not equivalent to the Atlas taxonomy. Every mapping result records the rule version, candidates, confidence, and an uncertainty note.
+Provider categories are retained verbatim and pass through the versioned
+`provider-field-mapping-v1` catalog before becoming Atlas assignments. They are
+source classification evidence, not equivalent to the
+`physics-field-ontology-v1` vocabulary. Every result retains the raw category,
+provider taxonomy, primary/secondary role, exact rule or explicit unmapped
+status, Atlas targets, equal-share policy version, uncalibrated confidence, and
+uncertainty note.
 
 The foundation supports at least:
 
 - High Energy Theory (`hep-th`);
 - High Energy Phenomenology (`hep-ph`);
 - High Energy Experiment (`hep-ex`);
+- Lattice High Energy Physics (`hep-lat`);
 - General Relativity / Quantum Cosmology (`gr-qc`);
 - Quantum Information (`quant-ph`);
 - Astrophysics (`astro-ph`);
@@ -49,7 +56,14 @@ The foundation supports at least:
 - Biophysics (`biophysics`);
 - Mathematical Physics (`math-ph`).
 
-One provider category can map to multiple Atlas fields, and some categories remain unmapped. For example, a broad Crossref subject or an arXiv cross-list is not evidence of one exclusive field. Mapping uncertainty must survive ingestion rather than being collapsed into a confident label.
+One provider category can map to multiple Atlas fields, and some categories
+remain unmapped. Multiple unique supported Atlas fields receive equal shares
+under `equal-supported-fields-v1` unless a future reviewed policy supplies
+evidence for unequal weights. Primary/secondary status remains provenance and
+does not silently alter the share. For example, a broad Crossref subject or an
+arXiv cross-list is not evidence of one exclusive field. Mapping uncertainty
+must survive ingestion rather than being collapsed into a confident label.
+See [Physics Field Ontology v1](field-ontology.md).
 
 ## Freshness and limitations
 

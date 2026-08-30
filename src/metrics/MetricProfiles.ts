@@ -18,9 +18,9 @@ export const metricProfiles: MetricProfile[] = [
     },
   },
   {
-    id: 'research-excellence',
-    name: 'Research Excellence',
-    purpose: 'Explore research output and influence.',
+    id: 'output-and-influence-lens',
+    name: 'Output & Influence Lens',
+    purpose: 'Explore observed output and field-normalized citation influence.',
     weights: {
       research_activity_score: 20,
       research_impact: 45,
@@ -30,9 +30,9 @@ export const metricProfiles: MetricProfile[] = [
     },
   },
   {
-    id: 'frontier-growth',
-    name: 'Frontier Growth',
-    purpose: 'Explore emerging and developing research ecosystems.',
+    id: 'recent-evolution-lens',
+    name: 'Recent Evolution Lens',
+    purpose: 'Explore backward-looking activity evolution and ecosystem breadth.',
     weights: {
       research_activity_score: 20,
       research_impact: 20,

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from .. import models
 from ..database import Base
 from .contracts import METRIC_CONTRACTS, MetricScientificContract
+from .thresholds import METRIC_VALIDATION_THRESHOLDS_V1
 
 ActivationStatus = Literal["withheld", "eligible-for-reviewed-activation"]
 MetricScopeKind = Literal["research-field", "science-domain"]
@@ -25,11 +26,14 @@ REQUIRED_SANITY_CHECKS: dict[str, tuple[str, ...]] = {
         "sparse-entities-withheld",
     ),
     "research_impact": (
+        "mncs-cohort-reconstruction",
+        "pp-top-decile-tie-policy",
         "citation-age-control",
         "citation-coverage-gate",
         "missing-remains-missing",
     ),
     "collaboration": (
+        "collaboration-proportion-reconstruction",
         "relationship-resolution-gate",
         "consortium-outlier-review",
         "missing-remains-missing",
@@ -40,6 +44,8 @@ REQUIRED_SANITY_CHECKS: dict[str, tuple[str, ...]] = {
         "missing-remains-missing",
     ),
     "momentum": (
+        "field-median-relative-change",
+        "robust-scale-reconstruction",
         "complete-window-gate",
         "small-denominator-gate",
         "missing-remains-missing",
@@ -454,23 +460,38 @@ def _data_gate_reasons(
             "acquisition scope does not match the versioned candidate contract"
         )
 
+    thresholds = METRIC_VALIDATION_THRESHOLDS_V1
     if contract.metric_id == "research_activity_score":
         if not summary.has_complete_window(3):
             reasons.append("three complete source years are not certified")
-        if summary.canonical_paper_count < 3:
-            reasons.append("fewer than three canonical papers are available")
-        if summary.canonical_institution_count < 30:
-            reasons.append("fewer than 30 institution-level cohort entities exist")
+        if (
+            summary.canonical_paper_count
+            < thresholds.activity.minimum_fractional_papers
+        ):
+            reasons.append("fewer than ten paper-equivalents are available")
+        if (
+            summary.canonical_researcher_count
+            < thresholds.activity.minimum_distinct_researchers
+        ):
+            reasons.append("fewer than five identifiable researchers are available")
+        if (
+            summary.canonical_institution_count
+            < thresholds.activity.minimum_normalization_cohort
+        ):
+            reasons.append("the institution normalization cohort is too small")
         if (
             summary.affiliation_count == 0
             or not summary.paper_time_affiliation_attribution_certified
         ):
             reasons.append("reviewed paper-time affiliation attribution is unavailable")
-        if summary.countries_with_institutions < 30:
-            reasons.append("fewer than 30 country-level cohort entities exist")
+        if (
+            summary.countries_with_institutions
+            < thresholds.activity.minimum_normalization_cohort
+        ):
+            reasons.append("the country normalization cohort is too small")
     elif contract.metric_id == "research_impact":
-        if summary.mature_paper_count < 5:
-            reasons.append("fewer than five citation-mature papers are available")
+        if summary.mature_paper_count < thresholds.impact.minimum_eligible_papers:
+            reasons.append("fewer than ten citation-mature papers are available")
         if summary.citation_edge_count == 0:
             reasons.append("canonical non-self citation observations are unavailable")
         if not summary.citation_age_control_certified:
@@ -480,10 +501,13 @@ def _data_gate_reasons(
         if not summary.non_self_citation_rule_certified:
             reasons.append("the non-self citation rule is not certified")
         coverage = summary.citation_observation_coverage
-        if coverage is None or coverage < 0.8:
-            reasons.append("citation-observation coverage is below 80 percent")
-        if summary.minimum_field_age_cohort_size < 50:
-            reasons.append("a field-age cohort contains fewer than 50 papers")
+        if coverage is None or coverage < thresholds.coverage.citation:
+            reasons.append("citation-observation coverage is below 90 percent")
+        if (
+            summary.minimum_field_age_cohort_size
+            < thresholds.impact.minimum_reference_cohort
+        ):
+            reasons.append("a field-age cohort is below the v1 minimum")
         if (
             summary.affiliation_count == 0
             or not summary.paper_time_affiliation_attribution_certified
@@ -493,12 +517,22 @@ def _data_gate_reasons(
         if not summary.has_complete_window(3):
             reasons.append("three complete source years are not certified")
         relationship_coverage = summary.authored_paper_coverage
-        if relationship_coverage is None or relationship_coverage < 0.9:
+        if (
+            relationship_coverage is None
+            or relationship_coverage
+            < thresholds.connectivity.minimum_relationship_coverage
+        ):
             reasons.append("resolved authorship coverage is below 90 percent")
-        if summary.canonical_institution_count < 30:
-            reasons.append("fewer than 30 institution-level cohort entities exist")
-        if summary.countries_with_institutions < 30:
-            reasons.append("fewer than 30 country-level cohort entities exist")
+        if (
+            summary.canonical_paper_count
+            < thresholds.connectivity.minimum_fractional_papers
+        ):
+            reasons.append("fewer than ten paper-equivalents are available")
+        if (
+            summary.canonical_researcher_count
+            < thresholds.connectivity.minimum_identifiable_researchers
+        ):
+            reasons.append("fewer than five identifiable researchers are available")
         if (
             summary.affiliation_count == 0
             or not summary.paper_time_affiliation_attribution_certified
@@ -509,13 +543,16 @@ def _data_gate_reasons(
     elif contract.metric_id == "research_diversity":
         if not summary.has_complete_window(3):
             reasons.append("three complete source years are not certified")
-        if summary.reviewed_classified_paper_count < 10:
-            reasons.append("fewer than ten papers have reviewed classifications")
+        if (
+            summary.reviewed_classified_paper_count
+            < thresholds.diversity.minimum_fractional_papers
+        ):
+            reasons.append("fewer than fifteen papers have reviewed classifications")
         if summary.reviewed_taxonomy_version is None:
             reasons.append("a reviewed taxonomy version is unavailable")
         if summary.canonical_paper_count == 0 or (
             summary.reviewed_classified_paper_count / summary.canonical_paper_count
-            < 0.9
+            < thresholds.coverage.field_attribution
         ):
             reasons.append("reviewed classification coverage is below 90 percent")
         if summary.acquisition_scope == "hep-th-v1":
@@ -530,8 +567,11 @@ def _data_gate_reasons(
     elif contract.metric_id == "momentum":
         if not summary.has_complete_window(6):
             reasons.append("six complete source years are not certified")
-        if summary.canonical_paper_count < 10:
-            reasons.append("fewer than ten papers exist across the two windows")
+        if (
+            summary.canonical_paper_count
+            < 2 * thresholds.momentum.minimum_fractional_papers_per_window
+        ):
+            reasons.append("fewer than ten papers exist in each Momentum window")
         if (
             summary.affiliation_count == 0
             or not summary.paper_time_affiliation_attribution_certified

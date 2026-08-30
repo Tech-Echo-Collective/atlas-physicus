@@ -122,6 +122,37 @@ def robust_log_winsorized_cohort(
     )
 
 
+def robust_mncs_cohort(
+    raw_values: Mapping[str, float],
+    *,
+    minimum_cohort: int = 30,
+    lower_quantile: float = 0.05,
+    upper_quantile: float = 0.95,
+) -> CohortNormalizationResult:
+    """Map nonnegative entity MNCS values to a reproducible display range.
+
+    MNCS is already field/year/document-type normalized at paper level. This
+    second transform is presentation-only and preserves MNCS as the raw value.
+    """
+    result = robust_log_winsorized_cohort(
+        raw_values,
+        minimum_cohort=minimum_cohort,
+        lower_quantile=lower_quantile,
+        upper_quantile=upper_quantile,
+    )
+    return CohortNormalizationResult(
+        eligible=result.eligible,
+        scores=result.scores,
+        method_version="field-year-document-mncs-robust-v1",
+        parameters={
+            **result.parameters,
+            "input_metric": "fractional-mncs",
+            "field_normalization": "same-field-year-document-type-mean",
+        },
+        reason=result.reason,
+    )
+
+
 def log_midrank_percentiles(
     raw_values: Mapping[str, float],
     *,
@@ -266,4 +297,95 @@ def symmetric_window_change(
         score=50.0 * (raw_change + 1.0),
         method_version=method_version,
         parameters={**parameters, "total": total},
+    )
+
+
+def robust_centered_change_cohort(
+    raw_log_changes: Mapping[str, float],
+    *,
+    minimum_cohort: int = 30,
+    z_clip: float = 3.0,
+) -> CohortNormalizationResult:
+    """Normalize Momentum after subtracting the exact field-cohort median.
+
+    A median/MAD scale is used first. IQR supplies a deterministic fallback
+    when the median absolute deviation is zero but the cohort still varies.
+    A fully tied cohort maps to the neutral field-relative value 50.
+    """
+    if minimum_cohort < 2:
+        raise ValueError("minimum_cohort must be at least two")
+    if z_clip <= 0:
+        raise ValueError("z_clip must be positive")
+    values: dict[str, float] = {}
+    for entity_id, raw_value in raw_log_changes.items():
+        value = float(raw_value)
+        if not math.isfinite(value):
+            raise ValueError("momentum inputs must be finite")
+        values[entity_id] = value
+
+    method_version = "field-relative-robust-log-change-v1"
+    base_parameters: dict[str, NormalizationParameter] = {
+        "cohort_size": len(values),
+        "minimum_cohort": minimum_cohort,
+        "center": "median",
+        "primary_scale": "1.4826*median-absolute-deviation",
+        "fallback_scale": "interquartile-range/1.349",
+        "z_clip": z_clip,
+        "output_min": 0.0,
+        "output_midpoint": 50.0,
+        "output_max": 100.0,
+    }
+    if len(values) < minimum_cohort:
+        return CohortNormalizationResult(
+            eligible=False,
+            scores={},
+            method_version=method_version,
+            parameters=base_parameters,
+            reason="insufficient field momentum cohort",
+        )
+
+    ordered = sorted(values.values())
+    median = _linear_quantile(ordered, 0.5)
+    deviations = sorted(abs(value - median) for value in ordered)
+    mad = _linear_quantile(deviations, 0.5)
+    q1 = _linear_quantile(ordered, 0.25)
+    q3 = _linear_quantile(ordered, 0.75)
+    mad_scale = 1.4826 * mad
+    iqr_scale = (q3 - q1) / 1.349
+    scale = mad_scale if mad_scale > 1e-12 else iqr_scale
+    parameters = {
+        **base_parameters,
+        "fitted_median": median,
+        "fitted_mad": mad,
+        "fitted_q1": q1,
+        "fitted_q3": q3,
+        "fitted_scale": scale,
+    }
+
+    if scale <= 1e-12:
+        if math.isclose(ordered[0], ordered[-1], rel_tol=0.0, abs_tol=1e-12):
+            return CohortNormalizationResult(
+                eligible=True,
+                scores={entity_id: 50.0 for entity_id in values},
+                method_version=method_version,
+                parameters={**parameters, "all_values_tied": "true"},
+            )
+        return CohortNormalizationResult(
+            eligible=False,
+            scores={},
+            method_version=method_version,
+            parameters=parameters,
+            reason="degenerate robust momentum scale",
+        )
+
+    scores = {
+        entity_id: 50.0
+        + (50.0 / z_clip) * min(z_clip, max(-z_clip, (value - median) / scale))
+        for entity_id, value in values.items()
+    }
+    return CohortNormalizationResult(
+        eligible=True,
+        scores=scores,
+        method_version=method_version,
+        parameters=parameters,
     )

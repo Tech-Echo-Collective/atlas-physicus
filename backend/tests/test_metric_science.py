@@ -78,9 +78,9 @@ def test_all_five_candidate_contracts_are_explicit_and_versioned() -> None:
         assert f"normalization-version:{contract.normalization_version}" in metadata
         assert "source-scope:hep-th-v1" in metadata
 
-    for metric_id in ("research_activity_score", "collaboration"):
-        contract = METRIC_CONTRACTS[metric_id]
-        assert "a cohort percentile" in contract.does_not_mean
+    activity_contract = METRIC_CONTRACTS["research_activity_score"]
+    assert "a cohort percentile" in activity_contract.does_not_mean
+    for contract in METRIC_CONTRACTS.values():
         assert "than most" not in contract.high_score_meaning
         assert "than most" not in contract.low_score_meaning
     assert METRIC_CONTRACTS["momentum"].name == "Research Momentum"
@@ -180,7 +180,7 @@ def test_reference_seed_registers_candidates_without_observations(
     ensure_reference_data(session)
 
     repaired = session.get_one(models.MetricDefinition, "research_activity_score")
-    assert repaired.version == "activity-output-participation-v1"
+    assert repaired.version == METRIC_CONTRACTS["research_activity_score"].version
     assert repaired.implementation_status == "experimental-candidate"
     assert (
         session.scalar(select(func.count()).select_from(models.MetricObservation)) == 0

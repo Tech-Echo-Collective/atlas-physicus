@@ -15,7 +15,11 @@ from .base import (
     parse_provider_datetime,
     provider_date,
 )
-from .field_mapping import map_provider_categories
+from .field_mapping import (
+    INSPIRE_CATEGORY_TAXONOMY,
+    ProviderCategoryEvidence,
+    map_provider_categories,
+)
 
 
 class InspireConnector(SourceConnector):
@@ -221,12 +225,18 @@ class InspireConnector(SourceConnector):
         )
         arxiv = (raw.get("arxiv_eprints") or [{}])[0].get("value")
         doi = (raw.get("dois") or [{}])[0].get("value")
-        categories = [
-            value.get("term")
+        category_evidence = [
+            ProviderCategoryEvidence(
+                category=value["term"],
+                role="unspecified",
+                taxonomy=INSPIRE_CATEGORY_TAXONOMY,
+                source=value.get("source"),
+            )
             for value in raw.get("inspire_categories", [])
-            if value.get("term")
+            if isinstance(value, dict) and value.get("term")
         ]
-        mapping = map_provider_categories("inspire", categories)
+        categories = [item.category for item in category_evidence]
+        mapping = map_provider_categories("inspire", category_evidence)
         return NormalizedRecord(
             provider=self.provider,
             kind="paper",
@@ -241,10 +251,36 @@ class InspireConnector(SourceConnector):
                 "title": title,
                 "abstract": (raw.get("abstracts") or [{}])[0].get("value", ""),
                 "publication_year": raw.get("publication_info", [{}])[0].get("year"),
+                "publication_date": raw.get("earliest_date"),
+                "document_type": (
+                    (raw.get("document_type") or ["article"])[0]
+                    if isinstance(raw.get("document_type"), list)
+                    else raw.get("document_type") or "article"
+                ),
                 "raw_categories": categories,
+                "raw_category_evidence": [
+                    {
+                        "category": item.category,
+                        "role": item.role,
+                        "taxonomy": item.taxonomy,
+                        "source": item.source,
+                    }
+                    for item in category_evidence
+                ],
                 "atlas_field_candidates": list(mapping.atlas_field_ids),
                 "field_mapping_confidence": mapping.confidence,
+                "field_mapping_coverage": mapping.mapping_coverage,
                 "field_mapping_method": mapping.method,
+                "field_ontology_version": mapping.ontology_version,
+                "field_weighting_policy_version": mapping.weighting_policy_version,
+                "atlas_field_assignments": [
+                    {
+                        "field_id": assignment.field_id,
+                        "weight": assignment.weight,
+                    }
+                    for assignment in mapping.assignments
+                ],
+                "field_mapping_provenance": mapping.provenance_payload(),
                 "field_mapping_uncertainty": mapping.uncertainty_note,
                 "authors": raw.get("authors", []),
                 "citation_count": raw.get("citation_count"),

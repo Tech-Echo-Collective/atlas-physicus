@@ -155,8 +155,9 @@ def test_provider_categories_are_mapped_without_becoming_the_taxonomy() -> None:
 
     assert mapping.raw_categories[-1] == "unknown-provider-label"
     assert set(mapping.atlas_field_ids) == {"astro-ph", "gr-qc", "plasma"}
-    assert 0 < mapping.confidence < 1
-    assert "not a definitive scientific taxonomy" in mapping.uncertainty_note
+    assert mapping.confidence is None
+    assert mapping.mapping_coverage == pytest.approx(2 / 3)
+    assert "not the Atlas ontology" in mapping.uncertainty_note
 
 
 def test_arxiv_parser_rejects_unsafe_xml_entities(

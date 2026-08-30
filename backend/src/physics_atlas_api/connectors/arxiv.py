@@ -16,10 +16,15 @@ from .base import (
     external_id,
     parse_provider_datetime,
 )
-from .field_mapping import map_provider_categories
+from .field_mapping import (
+    ARXIV_CATEGORY_TAXONOMY,
+    ProviderCategoryEvidence,
+    map_provider_categories,
+)
 
 ATOM = "{http://www.w3.org/2005/Atom}"
 ARXIV = "{http://arxiv.org/schemas/atom}"
+ARXIV_CATEGORY_SCHEME = "http://arxiv.org/schemas/atom"
 
 
 class ArxivConnector(SourceConnector):
@@ -67,11 +72,65 @@ class ArxivConnector(SourceConnector):
             authors = [
                 self._text(author, "name") for author in entry.findall(f"{ATOM}author")
             ]
+            category_elements = entry.findall(f"{ATOM}category")
             categories = [
                 category.attrib.get("term", "")
-                for category in entry.findall(f"{ATOM}category")
+                for category in category_elements
                 if category.attrib.get("term")
             ]
+            primary_element = entry.find(f"{ARXIV}primary_category")
+            primary_category = (
+                primary_element.attrib.get("term")
+                if primary_element is not None
+                else None
+            )
+            primary_scheme = (
+                primary_element.attrib.get("scheme")
+                if primary_element is not None
+                else None
+            )
+            category_evidence: list[dict[str, str | None]] = []
+            for category in category_elements:
+                term = category.attrib.get("term")
+                if not term:
+                    continue
+                scheme = category.attrib.get("scheme")
+                is_arxiv_taxonomy = scheme in (None, ARXIV_CATEGORY_SCHEME)
+                is_primary = (
+                    primary_category == term
+                    and is_arxiv_taxonomy
+                    and primary_scheme in (None, scheme, ARXIV_CATEGORY_SCHEME)
+                )
+                role = (
+                    "primary"
+                    if is_primary
+                    else "secondary"
+                    if primary_category is not None and is_arxiv_taxonomy
+                    else "unspecified"
+                )
+                category_evidence.append(
+                    {
+                        "category": term,
+                        "role": role,
+                        "taxonomy": ARXIV_CATEGORY_TAXONOMY
+                        if is_arxiv_taxonomy
+                        else (scheme or "unspecified-category-scheme"),
+                        "scheme": scheme,
+                    }
+                )
+            if primary_category and not any(
+                item["category"] == primary_category and item["role"] == "primary"
+                for item in category_evidence
+            ):
+                category_evidence.insert(
+                    0,
+                    {
+                        "category": primary_category,
+                        "role": "primary",
+                        "taxonomy": ARXIV_CATEGORY_TAXONOMY,
+                        "scheme": primary_scheme,
+                    },
+                )
             doi_element = entry.find(f"{ARXIV}doi")
             raw: dict[str, Any] = {
                 "id": identifier,
@@ -81,6 +140,8 @@ class ArxivConnector(SourceConnector):
                 "updated": self._text(entry, "updated"),
                 "authors": authors,
                 "categories": categories,
+                "primary_category": primary_category,
+                "category_evidence": category_evidence,
                 "doi": doi_element.text.strip()
                 if doi_element is not None and doi_element.text
                 else None,
@@ -166,7 +227,19 @@ class ArxivConnector(SourceConnector):
 
     def normalize_record(self, record: SourceRecord) -> NormalizedRecord:
         raw = record.raw
-        mapping = map_provider_categories("arxiv", raw.get("categories", []))
+        category_evidence = [
+            ProviderCategoryEvidence(
+                category=item["category"],
+                role=item.get("role", "unspecified"),
+                taxonomy=item.get("taxonomy"),
+                scheme=item.get("scheme"),
+            )
+            for item in raw.get("category_evidence", [])
+            if item.get("category")
+        ]
+        mapping = map_provider_categories(
+            "arxiv", category_evidence or raw.get("categories", [])
+        )
         return NormalizedRecord(
             provider=self.provider,
             kind="paper",
@@ -182,11 +255,25 @@ class ArxivConnector(SourceConnector):
                 "publication_year": int(raw["published"][:4])
                 if raw.get("published")
                 else None,
+                "publication_date": raw.get("published"),
+                "document_type": "preprint",
                 "authors": raw.get("authors", []),
                 "raw_categories": raw.get("categories", []),
+                "raw_category_evidence": raw.get("category_evidence", []),
                 "atlas_field_candidates": list(mapping.atlas_field_ids),
                 "field_mapping_confidence": mapping.confidence,
+                "field_mapping_coverage": mapping.mapping_coverage,
                 "field_mapping_method": mapping.method,
+                "field_ontology_version": mapping.ontology_version,
+                "field_weighting_policy_version": mapping.weighting_policy_version,
+                "atlas_field_assignments": [
+                    {
+                        "field_id": assignment.field_id,
+                        "weight": assignment.weight,
+                    }
+                    for assignment in mapping.assignments
+                ],
+                "field_mapping_provenance": mapping.provenance_payload(),
                 "field_mapping_uncertainty": mapping.uncertainty_note,
             },
             raw=raw,

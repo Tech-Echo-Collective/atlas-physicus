@@ -3,6 +3,7 @@ import type {
   MetricId,
   MetricImplementationStatus,
 } from '../domain/models';
+import { metricSystemV1Ids } from '../domain/models';
 
 const visualizationReadyMetricStatuses: ReadonlySet<MetricImplementationStatus> =
   new Set(['synthetic-demo', 'pilot-calculated', 'live-calculated']);
@@ -16,6 +17,52 @@ export function isVisualizationReadyMetricDefinition(
   definition: Pick<MetricDefinition, 'implementationStatus'>,
 ): boolean {
   return visualizationReadyMetricStatuses.has(definition.implementationStatus);
+}
+
+/** A public metric layer is all five dimensions or none of them. */
+export function hasCompleteVisualizationMetricSystem(
+  definitions: readonly MetricDefinition[],
+): boolean {
+  const canonicalDefinitions = metricSystemV1Ids.map((metricId) => {
+    const matches = definitions.filter(
+      (definition) => definition.id === metricId,
+    );
+    return matches.length === 1 ? matches[0] : null;
+  });
+  if (
+    canonicalDefinitions.some(
+      (definition) =>
+        definition === null ||
+        !isVisualizationReadyMetricDefinition(definition),
+    )
+  ) {
+    return false;
+  }
+
+  return (
+    new Set(
+      canonicalDefinitions.map(
+        (definition) => definition!.implementationStatus,
+      ),
+    ).size === 1
+  );
+}
+
+/**
+ * Returns the coherent Metric System v1 in its canonical display order.
+ * Candidate, taxonomy-only, extra, or partial definitions never leak into a
+ * public visualization layer.
+ */
+export function getVisualizationReadyMetricDefinitions(
+  definitions: readonly MetricDefinition[],
+): MetricDefinition[] {
+  if (!hasCompleteVisualizationMetricSystem(definitions)) {
+    return [];
+  }
+
+  return metricSystemV1Ids.map(
+    (metricId) => definitions.find((definition) => definition.id === metricId)!,
+  );
 }
 
 export class MetricRegistry {
@@ -36,7 +83,7 @@ export class MetricRegistry {
   }
 
   getVisualizationMetrics(): MetricDefinition[] {
-    return this.getMetrics().filter(isVisualizationReadyMetricDefinition);
+    return getVisualizationReadyMetricDefinitions(this.getMetrics());
   }
 
   getTaxonomyOnlyMetrics(): MetricDefinition[] {

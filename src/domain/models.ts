@@ -1,5 +1,12 @@
 export const defaultMetricId = 'research_activity_score' as const;
 export const compositeMetricId = 'user_defined_composite' as const;
+export const metricSystemV1Ids = [
+  'research_activity_score',
+  'research_impact',
+  'collaboration',
+  'research_diversity',
+  'momentum',
+] as const;
 
 export type MetricId = string;
 export type EntityType =
@@ -133,6 +140,13 @@ export interface ResearchField extends Provenanced {
   id: string;
   label: string;
   description: string;
+  /** Parent membership is structural and does not add another paper weight. */
+  parentFieldId?: string;
+  aliases?: string[];
+  ontologyVersion?: string;
+  nodeKind?: 'domain-root' | 'branch' | 'field';
+  isExplorable?: boolean;
+  displayOrder?: number;
 }
 
 export interface Country extends Provenanced {
@@ -233,6 +247,9 @@ export interface Paper extends Provenanced {
   title: string;
   summary: string;
   year: number;
+  publicationDate?: string;
+  publicationDatePrecision?: 'year' | 'month' | 'day';
+  documentType?: string;
   fieldIds: string[];
   doi?: string;
   arxivId?: string;

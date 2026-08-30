@@ -1,5 +1,5 @@
 import { defaultMetricId, type AtlasDataset, type MetricId } from '../domain/models';
-import { isVisualizationReadyMetricDefinition } from '../metrics/MetricRegistry';
+import { getVisualizationReadyMetricDefinitions } from '../metrics/MetricRegistry';
 import type { AtlasNavigationState } from '../navigation/AtlasNavigation';
 
 export type AtlasDataSourceId =
@@ -80,9 +80,9 @@ export function resolveMetricForDataSource(
   requestedMetricId: MetricId,
 ): MetricId {
   const implementedMetricIds = new Set(
-    dataset.metricDefinitions
-      .filter(isVisualizationReadyMetricDefinition)
-      .map((definition) => definition.id),
+    getVisualizationReadyMetricDefinitions(dataset.metricDefinitions).map(
+      (definition) => definition.id,
+    ),
   );
   if (implementedMetricIds.has(requestedMetricId)) {
     return requestedMetricId;
@@ -97,11 +97,9 @@ export function hasRenderableCountryObservations(
   dataset: AtlasDataset,
   metricId: MetricId,
 ): boolean {
-  const definitionIsReady = dataset.metricDefinitions.some(
-    (definition) =>
-      definition.id === metricId &&
-      isVisualizationReadyMetricDefinition(definition),
-  );
+  const definitionIsReady = getVisualizationReadyMetricDefinitions(
+    dataset.metricDefinitions,
+  ).some((definition) => definition.id === metricId);
   if (!definitionIsReady) {
     return false;
   }

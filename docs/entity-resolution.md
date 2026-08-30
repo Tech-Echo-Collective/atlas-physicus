@@ -78,6 +78,14 @@ Each affiliation carries start/end bounds, source, confidence, and provenance. C
 
 Publication metadata often supports only the statement that an affiliation appeared on a paper at a point in time. Physics Atlas records that dated observation and does not inflate it into continuous employment. Historical profile and paper-attribution queries must evaluate the edge for the relevant period.
 
+Metric attribution uses the separate `PaperAffiliation` materialization, which
+binds every provider author slot to its raw paper-time affiliation assertion,
+optional canonical institution/country, exact fractional share, and source
+snapshot. Authority identifiers and unique reviewed exact names may resolve an
+institution; ambiguous or unsupported strings stay withheld. A homepage or
+current profile update can neither replace nor retroactively reinterpret that
+materialization. See [Scientific Attribution](scientific-attribution.md).
+
 Collaborative papers can appear in every institution profile with a supported author affiliation. This is participation attribution, not contribution share or exclusive country ownership.
 
 ## Incremental pipeline and review

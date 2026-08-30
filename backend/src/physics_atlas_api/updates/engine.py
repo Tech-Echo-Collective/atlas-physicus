@@ -5,13 +5,18 @@ import re
 import unicodedata
 import uuid
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .. import models
+from ..attribution.materialization import (
+    MaterializedAuthorIdentity,
+    materialize_paper_time_affiliations,
+)
 from ..connectors.base import (
     NormalizedRecord,
     SourceConnector,
@@ -62,6 +67,23 @@ def _safe_id(value: str) -> str:
 
 def _digest(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
+
+
+def _publication_date(value: Any) -> tuple[date | None, str | None]:
+    if not isinstance(value, str) or not value.strip():
+        return None, None
+    normalized = value.strip()[:10]
+    try:
+        if re.fullmatch(r"\d{4}", normalized):
+            return date(int(normalized), 1, 1), "year"
+        if re.fullmatch(r"\d{4}-\d{2}", normalized):
+            year, month = (int(item) for item in normalized.split("-"))
+            return date(year, month, 1), "month"
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", normalized):
+            return date.fromisoformat(normalized), "day"
+    except ValueError:
+        return None, None
+    return None, None
 
 
 def _external_id_dicts(record: NormalizedRecord) -> list[dict[str, str]]:
@@ -352,6 +374,9 @@ class IncrementalUpdateEngine:
                 )
                 self.session.add(snapshot)
 
+            dataset_version = (
+                f"live-{batch.fetched_at.strftime('%Y%m%dT%H%M%SZ')}-{snapshot.id[-8:]}"
+            )
             counts = ChangeCounts()
             normalized_with_ids: list[tuple[NormalizedRecord, str | None]] = []
             affected_entities: list[dict[str, str]] = []
@@ -359,7 +384,7 @@ class IncrementalUpdateEngine:
                 try:
                     normalized = self.connector.normalize_record(source_record)
                     canonical_id, outcome = self._apply_record(
-                        source_record, normalized, snapshot.id
+                        source_record, normalized, snapshot.id, dataset_version
                     )
                     setattr(counts, outcome, getattr(counts, outcome) + 1)
                     normalized_with_ids.append((normalized, canonical_id))
@@ -386,9 +411,6 @@ class IncrementalUpdateEngine:
                 )
 
             partitions = self.planner.for_records(normalized_with_ids)
-            dataset_version = (
-                f"live-{batch.fetched_at.strftime('%Y%m%dT%H%M%SZ')}-{snapshot.id[-8:]}"
-            )
             self.recalculator.recalculate(
                 self.session, partitions, dataset_version=dataset_version
             )
@@ -557,6 +579,7 @@ class IncrementalUpdateEngine:
         source_record: SourceRecord,
         normalized: NormalizedRecord,
         snapshot_id: str,
+        dataset_version: str,
     ) -> tuple[str | None, str]:
         canonical_external_ids = compact_ids(
             *(external_id(scheme, value) for scheme, value in normalized.external_ids)
@@ -695,7 +718,9 @@ class IncrementalUpdateEngine:
                         },
                     )
                 )
-            self._upsert_paper_relationships(normalized, paper_id, snapshot_id)
+            self._upsert_paper_relationships(
+                normalized, paper_id, snapshot_id, dataset_version
+            )
             return paper_id, outcome
 
         canonical_id, resolution_status, method, confidence, created, evidence = (
@@ -1093,12 +1118,18 @@ class IncrementalUpdateEngine:
         return changed
 
     def _upsert_paper_relationships(
-        self, record: NormalizedRecord, paper_id: str, snapshot_id: str
+        self,
+        record: NormalizedRecord,
+        paper_id: str,
+        snapshot_id: str,
+        dataset_version: str,
     ) -> None:
-        """Resolve only authority-bearing authors; ambiguous names enter review."""
-        for position, author in enumerate(
-            record.attributes.get("authors", []), start=1
-        ):
+        """Resolve author identity, then preserve every paper-time affiliation slot."""
+        raw_authors = record.attributes.get("authors", [])
+        if not isinstance(raw_authors, list):
+            return
+        author_identities: dict[int, MaterializedAuthorIdentity] = {}
+        for position, author in enumerate(raw_authors, start=1):
             raw_author = author if isinstance(author, dict) else {"name": str(author)}
             name = str(
                 raw_author.get("full_name")
@@ -1145,12 +1176,20 @@ class IncrementalUpdateEngine:
                 updated_at=record.updated_at,
             )
             researcher_id, _ = self._apply_record(
-                source_author, normalized_author, snapshot_id
+                source_author, normalized_author, snapshot_id, dataset_version
             )
             if researcher_id is None:
+                author_identities[position] = MaterializedAuthorIdentity(
+                    author_position=position,
+                    raw_author_name=name,
+                    researcher_id=None,
+                    authorship_id=None,
+                    resolution_status="unresolved",
+                )
                 continue
             authorship_id = f"authorship-{_digest(paper_id + researcher_id)[:24]}"
-            if self.session.get(models.Authorship, authorship_id) is None:
+            authorship = self.session.get(models.Authorship, authorship_id)
+            if authorship is None:
                 self.session.add(
                     models.Authorship(
                         id=authorship_id,
@@ -1160,6 +1199,25 @@ class IncrementalUpdateEngine:
                         provenance_json=record.provenance,
                     )
                 )
+            else:
+                authorship.author_position = position
+                authorship.provenance_json = record.provenance
+            author_identities[position] = MaterializedAuthorIdentity(
+                author_position=position,
+                raw_author_name=name,
+                researcher_id=researcher_id,
+                authorship_id=authorship_id,
+                resolution_status="resolved",
+            )
+        if raw_authors:
+            materialize_paper_time_affiliations(
+                self.session,
+                record=record,
+                paper_id=paper_id,
+                source_snapshot_id=snapshot_id,
+                dataset_version=dataset_version,
+                author_identities=author_identities,
+            )
 
     def _attach_authority_ids(
         self, record: NormalizedRecord, canonical_id: str
@@ -1308,11 +1366,17 @@ class IncrementalUpdateEngine:
                 return None, "unresolved", []
             readable_id = _safe_id(primary)[:96] or "record"
             paper_id = f"paper-{readable_id}-{_digest(primary)[:16]}"
+            publication_date, date_precision = _publication_date(
+                record.attributes.get("publication_date")
+            )
             paper = models.Paper(
                 id=paper_id,
                 title=record.attributes.get("title") or record.canonical_name,
                 summary=record.attributes.get("abstract") or "",
                 publication_year=publication_year,
+                publication_date=publication_date,
+                publication_date_precision=date_precision,
+                document_type=str(record.attributes.get("document_type") or "article"),
                 doi=ids.get("doi"),
                 arxiv_id=ids.get("arxiv"),
                 external_ids=_external_id_dicts(record),
@@ -1331,6 +1395,12 @@ class IncrementalUpdateEngine:
                 and not isinstance(supplied_year, bool)
                 else paper.publication_year
             )
+            incoming_date, incoming_date_precision = _publication_date(
+                record.attributes.get("publication_date")
+            )
+            incoming_document_type = str(
+                record.attributes.get("document_type") or paper.document_type
+            )
             incoming_external_ids = list(
                 {
                     (item["scheme"], item["value"]): item
@@ -1341,6 +1411,15 @@ class IncrementalUpdateEngine:
                 incoming_title != paper.title
                 or incoming_summary != paper.summary
                 or incoming_year != paper.publication_year
+                or (
+                    incoming_date is not None
+                    and incoming_date != paper.publication_date
+                )
+                or (
+                    incoming_date_precision is not None
+                    and incoming_date_precision != paper.publication_date_precision
+                )
+                or incoming_document_type != paper.document_type
                 or (ids.get("doi") is not None and paper.doi is None)
                 or (ids.get("arxiv") is not None and paper.arxiv_id is None)
                 or incoming_external_ids != paper.external_ids
@@ -1350,6 +1429,10 @@ class IncrementalUpdateEngine:
                 paper.title = incoming_title
                 paper.summary = incoming_summary
                 paper.publication_year = incoming_year
+                if incoming_date is not None:
+                    paper.publication_date = incoming_date
+                    paper.publication_date_precision = incoming_date_precision
+                paper.document_type = incoming_document_type
                 if paper.doi is None:
                     paper.doi = ids.get("doi")
                 if paper.arxiv_id is None:
@@ -1357,28 +1440,126 @@ class IncrementalUpdateEngine:
                 paper.external_ids = incoming_external_ids
                 paper.provenance_json = record.provenance
             outcome = "updated" if changed else "unchanged"
+        raw_assignments = record.attributes.get("atlas_field_assignments", [])
+        assignments = (
+            [item for item in raw_assignments if isinstance(item, dict)]
+            if isinstance(raw_assignments, list)
+            else []
+        )
+        if not assignments:
+            assignments = [
+                {"field_id": field_id, "weight": 1.0}
+                for field_id in record.attributes.get("atlas_field_candidates", [])
+                if isinstance(field_id, str)
+            ]
+        assignment_field_ids = {
+            str(item["field_id"])
+            for item in assignments
+            if item.get("field_id") is not None
+        }
         known_fields = set(
             self.session.scalars(
                 select(models.ResearchField.id).where(
-                    models.ResearchField.id.in_(
-                        record.attributes.get("atlas_field_candidates", [])
-                    )
+                    models.ResearchField.id.in_(assignment_field_ids)
                 )
             )
         )
-        for field_id in known_fields:
-            if self.session.get(models.PaperField, (paper.id, field_id)) is None:
+        mapping_provenance = record.attributes.get("field_mapping_provenance", {})
+        if not isinstance(mapping_provenance, dict):
+            mapping_provenance = {}
+        provenance_assignments = mapping_provenance.get("assignments", [])
+        assignment_metadata = (
+            {
+                str(item.get("field_id")): item
+                for item in provenance_assignments
+                if isinstance(item, dict) and item.get("field_id")
+            }
+            if isinstance(provenance_assignments, list)
+            else {}
+        )
+        category_mappings = mapping_provenance.get("category_mappings", [])
+        all_category_mappings = (
+            [item for item in category_mappings if isinstance(item, dict)]
+            if isinstance(category_mappings, list)
+            else []
+        )
+
+        for existing_link in self.session.scalars(
+            select(models.PaperField).where(models.PaperField.paper_id == paper.id)
+        ):
+            link_provenance = existing_link.provenance_json or {}
+            same_source_record = (
+                link_provenance.get("mappingProvider") == record.provider
+                and link_provenance.get(
+                    "mappingSourceRecordId",
+                    link_provenance.get("sourceRecordId"),
+                )
+                == record.source_record_id
+            )
+            if same_source_record and existing_link.field_id not in known_fields:
+                self.session.delete(existing_link)
+
+        for assignment in assignments:
+            field_id = str(assignment.get("field_id", ""))
+            if field_id not in known_fields:
+                continue
+            metadata = assignment_metadata.get(field_id, {})
+            raw_roles = metadata.get("provider_roles", [])
+            roles = (
+                [str(item) for item in raw_roles] if isinstance(raw_roles, list) else []
+            )
+            classification_role = (
+                roles[0]
+                if len(set(roles)) == 1
+                else "mixed"
+                if roles
+                else "unspecified"
+            )
+            weight = Decimal(str(assignment.get("weight", 0)))
+            if weight <= 0 or weight > 1:
+                raise ValueError("field attribution weights must be within (0, 1]")
+            supporting_categories = [
+                item
+                for item in all_category_mappings
+                if field_id in item.get("atlas_field_ids", [])
+            ]
+            link = self.session.get(models.PaperField, (paper.id, field_id))
+            values: dict[str, Any] = {
+                "classification_method": record.attributes.get(
+                    "field_mapping_method", "provider-category-rules-v1"
+                ),
+                "confidence": record.attributes.get("field_mapping_confidence"),
+                "weight": weight,
+                "classification_role": classification_role,
+                "ontology_version": record.attributes.get(
+                    "field_ontology_version", "legacy-flat-physics-fields-v1"
+                ),
+                "mapping_rule_version": record.attributes.get(
+                    "field_mapping_method", "provider-category-rules-v1"
+                ),
+                "weighting_policy_version": record.attributes.get(
+                    "field_weighting_policy_version", "legacy-full-membership-v1"
+                ),
+                "provider_categories": supporting_categories,
+                "uncertainty_note": record.attributes.get("field_mapping_uncertainty"),
+                "provenance_json": {
+                    **record.provenance,
+                    "mappingProvider": record.provider,
+                    "mappingSourceRecordId": record.source_record_id,
+                    "fieldMapping": mapping_provenance,
+                },
+            }
+            if link is None:
                 self.session.add(
                     models.PaperField(
                         paper_id=paper.id,
                         field_id=field_id,
-                        classification_method=record.attributes.get(
-                            "field_mapping_method", "provider-category-rules-v1"
-                        ),
-                        confidence=record.attributes.get("field_mapping_confidence"),
-                        provenance_json=record.provenance,
+                        **values,
                     )
                 )
+            else:
+                for key, value in values.items():
+                    setattr(link, key, value)
         self._attach_authority_ids(record, paper.id)
         self._upsert_resources(record, paper.id)
         refresh_search_terms(

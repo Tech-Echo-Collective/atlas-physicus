@@ -16,7 +16,9 @@ official source record
     → profile/search/map read models
 ```
 
-The repository supplies deployment-ready infrastructure, not a claim that the public GitHub Pages instance is connected to a hosted live graph.
+The public GitHub Pages instance uses the operated Railway API as its normal
+repository. That bounded graph remains incomplete, and deployment does not make
+its scientific relationships or metrics validated.
 
 ## Canonical nodes
 
@@ -43,16 +45,27 @@ Researcher <── Authorship ──> Paper ── PaperField ──> ResearchFi
 
 Institution ── hosts ──> ResearchGroup
 Paper ── Citation ──> Paper
+Paper + author slot ── PaperAffiliation ──> Institution / Country when resolved
 Canonical entity ── has ──> ExternalResource
 ```
 
 Relationships are normalized records rather than embedded copies. This permits multiple/concurrent affiliations, many authors, multiple field classifications, repeated external resources, and versioned observations without duplicating canonical entities.
 
-Affiliation is time-dependent and keeps start/end bounds, source, confidence, and provenance. A researcher does not have one permanent institution field. An unknown date remains unknown. Paper metadata can support an affiliation observed for a publication, but it must not be inflated into an uninterrupted employment interval.
+`Affiliation` is time-dependent profile evidence and keeps start/end bounds,
+source, confidence, and provenance. `PaperAffiliation` is the separate
+publication-time edge: it retains raw affiliation/subunit evidence, source
+snapshot, exact fractional share, resolution state, and canonical target only
+when supported. Neither relationship becomes a permanent researcher property.
 
 Authorship preserves author position; it does not express contribution share, employment, endorsement, or exclusive geographic ownership. Collaborative work can be attributed to every supported participating affiliation.
 
-The live ingestion engine currently materializes papers, paper-field classifications, resources, and authorships only for authors carrying authority evidence such as an ORCID or INSPIRE author ID. Name-only authors become review evidence rather than silent canonical people. INSPIRE affiliation, reference, and citation structures are retained in the exact snapshot and raw-record evidence, but v3.0.4 does not yet promote them to canonical `Affiliation` or `Citation` edges. That promotion needs reviewed institution resolution plus temporal/conflict rules; the alpha does not infer missing edges.
+The ingestion engine materializes all provider author slots for attribution
+conservation while promoting only authority-supported researcher identities.
+It resolves paper-time institutions only through supported authority IDs or a
+unique reviewed exact canonical/alias/historical name. Name-only researchers
+and ambiguous affiliations remain explicit review or withheld evidence.
+Provider citation structures remain raw evidence until their normalization,
+cutoff, maturity, and canonical-paper requirements are satisfied.
 
 ## Geographic separation
 
@@ -95,15 +108,21 @@ Canonical records are not deleted because a provider temporarily omits them. Rep
 
 ## Metric boundary
 
-Metrics are observations about a graph scope, not identity attributes or graph-edge weights. The update engine records affected entity/field/country/institution/year/metric partitions. The default live recalculator intentionally produces no new scientific values until reviewed formulas exist. Missing observations remain missing, and earlier versioned observations remain reproducible.
+Metrics are observations about a graph scope, not identity attributes or
+graph-edge weights. The update engine records affected
+entity/field/country/institution/year/metric partitions. Five v1 algorithms are
+implemented and deterministic, but the default live recalculator intentionally
+produces no values until representative scientific evidence passes one
+exact-five Joint Activation Gate. Missing observations remain missing, and
+earlier versioned observations remain reproducible.
 
 ## Limitations
 
-- The live graph has not been operated or benchmarked on a complete all-physics corpus.
+- The live graph is operated only on a bounded `hep-th-v1` corpus and has not been benchmarked on complete Physics coverage.
 - Provider coverage, affiliations, authority identifiers, citation edges, groups, dates, and coordinates are incomplete.
 - Name-only paper authors remain review evidence until stronger identity support is available.
 - Targeted ORCID/Crossref enrichment is not yet automatically orchestrated for every discovered identifier.
-- No human review UI, merge/split workflow, hosted queue, or public production database is included.
+- No human review UI or operational merge/split adjudication workflow is included; the public production database is operated separately on Railway.
 - The bounded `/api/knowledge-graph` projection is diagnostic and not a general graph-query language.
 - Graph connectivity reflects selected source evidence and can expose source bias; it is not proof of quality, causation, contribution magnitude, or institutional superiority.
 

@@ -205,7 +205,9 @@ describe('data-source observation availability', () => {
       hasRenderableObservations: false,
       notice: neutralLiveMapNotice,
     });
-    expect(resolveMetricForDataSource(candidateDataset, defaultMetricId)).not.toBe(
+    // Selection remains on the neutral default identifier, but no definition
+    // is activated when any canonical dimension fails the joint gate.
+    expect(resolveMetricForDataSource(candidateDataset, defaultMetricId)).toBe(
       defaultMetricId,
     );
   });

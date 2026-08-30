@@ -28,9 +28,13 @@ normalization + field mapping
         ↓
 canonical identity resolution
         ↓
+paper-time fractional attribution
+        ↓
 PostgreSQL knowledge graph
         ↓
 affected metric partitions
+        ↓
+exact-five Joint Activation Gate
         ↓
 FastAPI read service
         ↓
@@ -83,7 +87,13 @@ Large collections are scoped. Global map requests need countries and country obs
 
 PostgreSQL stores canonical entities and typed relationships plus raw evidence, identity decisions, review items, resources, check history, metric observations, and update metadata. Important relationships and query dimensions remain relational; variable provider payloads and structured provenance use JSON/JSONB.
 
-`Affiliation` is a dated relationship between researcher, institution, and optional group. No permanent researcher-to-institution field is introduced. URLs remain `ExternalResource` records. Alembic migrations own schema evolution; application startup does not silently create production tables.
+`Affiliation` is a dated profile relationship between researcher, institution,
+and optional group. `PaperAffiliation` separately stores exact, versioned,
+resolved or withheld publication-time shares, so a current profile cannot
+rewrite historical attribution. No permanent researcher-to-institution field
+is introduced. URLs remain `ExternalResource` records. Alembic migrations own
+schema evolution; application startup does not silently create production
+tables.
 
 ### Connectors and updates
 
@@ -115,15 +125,18 @@ The resource monitor validates public HTTP(S) targets, uses bounded `HEAD`/minim
 `MetricRegistry`, calculator contracts, versioned `MetricObservation`, and
 confirmed composite weighting remain the product boundary. Presentation code
 never invents formulas. Provider updates create affected partition plans across
-entity, field, country, institution, year, and metric; the default
+entity, field, country, institution, year, and metric; the production
 `NoFormulaMetricRecalculator` intentionally writes no new scientific values
-until a reviewed calculator is supplied.
+until the implemented exact-five framework passes scientific review and an
+explicit release manifest authorizes publication.
 
-v3.0.5 registers five `experimental-candidate` scientific contracts, adds
-metric-specific normalization helpers and reconstructable observation metadata,
-and centralizes a strict visualization-readiness predicate. Experimental and
-taxonomy-only definitions cannot enter API map requests, layers, or composites.
-The current live evidence fails every activation gate, so no layer is enabled.
+The post-v3.0.5 foundation implements paper-time fractional Activity,
+MNCS-based Impact, collaboration proportions, Shannon-evenness Diversity, and
+field-relative rolling-window Momentum with metric-specific normalization and
+reconstructable metadata. Experimental and taxonomy-only definitions cannot
+enter live API map requests, layers, or composites. A `MetricSystemRelease`
+must publish all five exact compatible algorithms together. The current live
+evidence fails that gate, so no layer is enabled.
 
 Existing synthetic calculations and bounded pilot signals remain reproducible and source-separated. Missing observations remain missing, not zero. Every calculated value retains definition, algorithm, dataset, and calculation versions. See the [Metric Engine](metric-engine.md).
 
@@ -172,4 +185,11 @@ Provider-backed production requires separately supplied HTTPS hosting, credentia
 
 ## Current limitations
 
-The source connectors and scheduler are not a complete all-physics corpus, the identity confidence model is not calibrated against a representative reviewed truth set, and final live metric formulas are not implemented. No public review UI, hosted queue, database backup service, or production backend is supplied by the repository. Provider-backed freshness and coverage therefore must be reported from actual deployment status, never inferred from the existence of this code.
+The source connectors and scheduler are not a complete all-physics corpus, the
+identity confidence model is not calibrated against a representative reviewed
+truth set, and the implemented v1 formulas have not passed representative
+scientific validation or the Joint Activation Gate. The operated Railway
+backend exists, but the repository does not supply a public adjudication UI or
+automated backup service. Provider freshness, coverage, recovery, and metric
+readiness must therefore be reported from current operating evidence, never
+inferred from the existence of code.

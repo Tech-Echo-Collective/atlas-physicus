@@ -2,7 +2,11 @@
 
 ## Status
 
-The approved Physics Atlas metric families remain the long-term conceptual model. v3.0.2-alpha retains the framework needed to register, calculate, query, combine, and visualize observations and exercises it with a bounded INSPIRE-HEP metadata pilot. Neither its synthetic transformations nor its pilot calculations are scientifically validated.
+The approved Physics Atlas metric families remain the long-term conceptual
+model. The post-v3.0.5 scientific-modeling work implements the exact five
+Metric System v1 algorithms behind a withheld Joint Activation Gate. Synthetic
+transformations and historical pilot signals remain isolated for interface and
+reproducibility tests; neither is scientific validation.
 
 The final heatmap model is:
 
@@ -77,7 +81,12 @@ The user-defined composite profile applies `H = Σ wiMi` without modifying its r
 
 The result is labelled as a user-defined synthetic composite. It is not an official ranking, an objective ordering, or scientific truth.
 
-v3.0.2-alpha provides four named demonstration presets: Balanced, Research Excellence, Frontier Growth, and Global Network. Preset names describe user-selected emphasis only; they do not endorse a methodology or produce authoritative scores. The real-metadata pilot has no Diversity calculation, so the five-metric composite remains unavailable for that source rather than mixing real and synthetic observations.
+The interface provides four named exploration presets: Balanced Scientific
+Ecosystem, Output & Influence Lens, Recent Evolution Lens, and Global Network.
+Preset names describe user-selected emphasis only; they do not endorse a
+methodology or produce authoritative scores. The real-metadata pilot has no
+Diversity calculation, so the five-metric composite remains unavailable for
+that source rather than mixing real and synthetic observations.
 
 ## INSPIRE-HEP pilot layers
 
@@ -94,7 +103,11 @@ Each signal is independently min-max scaled among entities with sampled particip
 
 `MetricDefinition` documents a metric's stable ID, category, description, interpretation, unit, version, required data, implementation status, and provenance. `MetricObservation` separates a calculated value from entity, domain-or-field scope, period, source, algorithm version, calculation version, and provenance. `MetricRegistry`, `MetricCalculator`, and `MetricEngine` keep methodology outside React and MapLibre. `AtlasRepository` separates consumers from the current JSON transport.
 
-A future validated calculator or API-backed repository adapter can replace the current synthetic calculators or static pilot export. The map will continue to render supplied observations without owning the scientific calculation.
+The implemented v1 calculators can replace synthetic or pilot values only
+after the complete system passes reviewed activation and a production
+recalculator is explicitly configured. The map continues to render supplied
+observations without owning the scientific calculation. See the
+[canonical v1 specification](metrics-spec-v1.md).
 
 The UI is responsible for:
 

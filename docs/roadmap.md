@@ -35,9 +35,10 @@ The release tag remains the architectural baseline. The follow-up Production Act
 
 ## Current milestone — v3.0.5-alpha Stabilization & Scientific Validation
 
-Status: **release validation**. This milestone stabilizes the live v3.0.4
-system; it does not expand beyond the bounded Physics scope or redesign the
-production architecture.
+Status: **released baseline with post-release scientific foundation in
+validation**. This milestone stabilizes the live v3.0.4 system; it does not
+expand beyond the bounded Physics scope or redesign the production
+architecture.
 
 The operated path remains bounded to `hep-th-v1`:
 
@@ -66,12 +67,40 @@ sampling/reporting, aggregate public data status, and viewport stabilization.
 The evidence snapshot fails every live metric gate, so the map remains neutral
 rather than becoming zero or an unvalidated score.
 
+### Post-v3.0.5 Metric System v1 foundation
+
+The current source phase completes the deterministic, versioned scientific
+framework without changing the released tag or activating public metrics:
+
+- paper-time affiliation materialization and exact
+  `fractional-attribution-v1`, including explicitly withheld unresolved mass;
+- `physics-field-ontology-v1` and a separate versioned INSPIRE/arXiv mapping
+  layer that preserves raw provider evidence and does not infer unsupported
+  membership;
+- raw calculators and metric-specific normalization for exactly Activity,
+  Impact, Connectivity, Diversity, and Momentum;
+- field-first, field-balanced, coverage-aware Physics aggregation;
+- versioned first-pass evidence thresholds, reconstructable provenance, and an
+  exact-five Joint Activation Gate;
+- exact-five user composite validation and linked reference-ecosystem checks
+  that do not impose a preferred ordering.
+
+This is an implementation milestone, not scientific activation. The live
+Railway/PostgreSQL dataset remains bounded to `hep-th-v1`; a source migration,
+historical materialization, citation reconstruction, wider ingestion, and
+public recalculation are not implied. All five live layers remain jointly
+withheld.
+
 Remaining scientific and operational gates are:
 
 1. durable backup/restore, restart, rate-protection, logging, monitoring, and alerting evidence in the operated environment;
 2. longer observation of bounded provider ingestion and checkpoint recovery under production conditions;
-3. reviewed canonical affiliation coverage sufficient for useful country and institution exploration;
-4. scientifically reviewed formulas, normalization, uncertainty, and versioning before any live metric observations are published.
+3. reviewed canonical paper-time affiliation and institution coverage sufficient for useful country and institution exploration;
+4. representative validation of the implemented formulas, field mapping,
+   normalization, uncertainty, and version lineage before any live metric
+   observations are published;
+5. a single reviewed activation manifest demonstrating that all five metric
+   dimensions pass together.
 
 ## Gates before broader Physics coverage or v3.1
 
@@ -81,7 +110,8 @@ Before broad live ingestion, the project should validate:
 2. representative multi-field sampling and provider-category mapping against expert review;
 3. researcher/institution identity precision, ambiguity thresholds, and a reversible review workflow;
 4. historical affiliation, retraction, tombstone, and source-conflict policies;
-5. scientifically reviewed formulas, normalization, uncertainty, and version migration for any live metrics;
+5. scientific review, robustness, sensitivity, uncertainty, bias, and version-
+   migration evidence for the implemented five-metric system;
 6. scoped API performance on realistic country/profile workloads;
 7. backup/restore, deployment security, rate protection, uptime, and operator runbooks;
 8. accessible public methodology and provenance displays.
@@ -90,7 +120,9 @@ Before broad live ingestion, the project should validate:
 
 The roadmap does not currently commit to a graph database, Kubernetes, authentication, full-text paper archive, recommendation engine, prediction model, automatic researcher ranking, or universal live-data coverage. Those additions require a demonstrated scientific or operational need.
 
-The next minimum action after v3.0.5 is to create and independently label the
-bounded identity-review sample, then materialize reviewed affiliation evidence
-without widening acquisition scope. Large backfills, broader Physics coverage,
-and live metric activation remain gated.
+The next minimum action is to complete full source/CI validation of the Metric
+System v1 foundation, then create and independently label the bounded identity,
+paper-time affiliation, and field-mapping review samples. Only after a
+separately reviewed migration/materialization plan should the production corpus
+be used to gather activation evidence. Large backfills, broader Physics
+coverage, v3.1, and live metric activation remain gated.

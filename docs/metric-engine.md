@@ -8,12 +8,12 @@ backend's default `NoFormulaMetricRecalculator` records required work and emits
 no observations, preventing infrastructure completion from being mistaken for
 scientific validation.
 
-This release adds reviewable candidate-v1 contracts, metric-specific normalization
-helpers, reconstructable observation metadata, and explicit scientific
-activation gates. These are framework completion, not validated live scores.
-The exact contracts are in
-[candidate scientific metric methodology](metric-methodology-v1.md), with the
-normalization record in [metric normalization](normalization.md).
+The post-v3.0.5 scientific-modeling work adds implemented v1 contracts,
+metric-specific calculators and normalization, reconstructable observation
+metadata, and an exact-five Joint Activation Gate. These are framework
+completion, not validated live scores. The canonical algorithms are in the
+[Metric System v1 specification](metrics-spec-v1.md), with the validation and
+publication rules in [Metric System v1 validation](metric-validation.md).
 
 The synthetic dataset remains demonstration data. The historical INSPIRE pilot uses real metadata but incomplete, selection-biased technical signals. Neither is a country, institution, group, or researcher ranking.
 
@@ -34,7 +34,7 @@ MetricRecomputationPlanner
         ↓
 affected entity/field/country/institution/year/metric partitions
         ↓
-validated calculator (future) → new versioned observations
+jointly activated calculator (withheld) → new versioned observations
 ```
 
 React and MapLibre select supplied observations but never derive scientific metrics. Provider connectors normalize metadata but never calculate metrics.
@@ -47,11 +47,11 @@ The complete top-level vocabulary is:
 
 | ID | Category | Interpretation | Alpha status |
 | --- | --- | --- | --- |
-| `research_activity_score` | Research Activity | Intensity and continuity within the selected scope, not research quality | Synthetic visualization; pilot calculated |
-| `research_impact` | Research Impact | How research is received or used, not institutional quality | Synthetic visualization; pilot calculated |
-| `collaboration` | Collaboration / Connectivity | Scientific relationships across researchers and institutions | Synthetic visualization; pilot calculated |
-| `research_diversity` | Research Diversity | Subfield/topic breadth and ecosystem diversity | Synthetic visualization; pilot taxonomy only |
-| `momentum` | Research Momentum / Sustainability | Change over time, not prediction | Synthetic visualization; pilot calculated |
+| `research_activity_score` | Research Activity | Fractionally attributed observed output, not research quality | Implemented v1 framework; live withheld |
+| `research_impact` | Research Impact | Field-, age-, and document-normalized citation attention, not scientific value | Implemented v1 framework; live withheld |
+| `collaboration` | Collaboration / Connectivity | Entity-appropriate collaboration proportions and supported graph evidence | Implemented v1 framework; live withheld |
+| `research_diversity` | Research Diversity | Normalized subfield-distribution evenness, not quality | Implemented v1 framework; live withheld |
+| `momentum` | Research Momentum / Sustainability | Backward-looking field-relative evolution, not prediction | Implemented v1 framework; live withheld |
 | `talent_ecosystem` | Talent Ecosystem | Researcher development, mobility, and early-career activity | Taxonomy only |
 | `concentration_vulnerability` | Concentration / Vulnerability | Institutional/geographic concentration and dependency | Taxonomy only |
 
@@ -82,8 +82,8 @@ where `Mi` is a supplied observation and `wi` is a user-confirmed normalized per
 | Preset | Activity | Impact | Connectivity | Diversity | Momentum |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Balanced Scientific Ecosystem | 25% | 25% | 20% | 15% | 15% |
-| Research Excellence | 20% | 45% | 15% | 10% | 10% |
-| Frontier Growth | 20% | 20% | 20% | 20% | 20% |
+| Output & Influence Lens | 20% | 45% | 15% | 10% | 10% |
+| Recent Evolution Lens | 20% | 20% | 20% | 20% | 20% |
 | Global Network | 15% | 20% | 45% | 10% | 10% |
 
 Composites create derived observations and never modify raw values or graph relationships. The INSPIRE pilot lacks Research Diversity, so its five-category composite remains disabled rather than filling the missing category with synthetic data.
@@ -105,7 +105,7 @@ Each collaborative paper attributes participation to every resolved participatin
 
 `MetricRecomputationPlanner` converts changed normalized records into a unique set of partitions containing entity, field, country, institution, period, and optional metric. The update run stores that set for audit and observability. This prevents the architecture from requiring a whole-Atlas rebuild whenever one paper changes.
 
-A future scientifically reviewed recalculator must:
+A scientifically reviewed production recalculator must:
 
 - read only the affected canonical data plus required comparison context;
 - append observations with metric-definition, algorithm, calculation, dataset, and source versions;
@@ -116,16 +116,15 @@ A future scientifically reviewed recalculator must:
 - preserve missing values and uncertainty;
 - report failures without advancing the source checkpoint as though calculation succeeded.
 
-v3.0.5 retains the production planning boundary while adding reviewable
-candidate contracts, normalization helpers, and activation gates. No provider
-metadata is converted into a live score by an undocumented or unvalidated
-formula.
+The production planning boundary remains intact while the five v1 algorithms
+are implemented behind a withheld publication boundary. No provider metadata
+is converted into a live score by an undocumented or unvalidated formula.
 
 The v3.0.5 production evidence snapshot still emits no metric observations.
-Activity, Impact, Connectivity, Diversity, and Momentum are registered as
-experimental candidates and are excluded from visualization and composite
-inputs by a fail-closed readiness predicate. Talent Ecosystem and
-Concentration/Vulnerability remain taxonomy-only.
+Activity, Impact, Connectivity, Diversity, and Momentum remain excluded from
+live visualization and composite inputs until one active release manifest
+passes the exact-five gate. Talent Ecosystem and Concentration/Vulnerability
+remain taxonomy-only.
 
 ## Visualization contract
 
@@ -135,4 +134,8 @@ Country fill, institution heat surface, institution core, halos, and both pulse 
 
 ## Limitations and methodology gate
 
-Provider-backed ingestion, PostgreSQL storage, and update scheduling do not make the metrics scientifically validated. Representative coverage, data-bias review, identity-error analysis, field-mapping uncertainty, historical affiliation rules, final formulas, normalization, uncertainty propagation, and external scientific review remain required before describing a live metric as authoritative.
+Provider-backed ingestion, PostgreSQL storage, and update scheduling do not make
+the metrics scientifically validated. Representative coverage, data-bias
+review, identity-error analysis, sampled affiliation and field-mapping review,
+normalization robustness, uncertainty communication, and external scientific
+review remain required before the complete system can be activated.

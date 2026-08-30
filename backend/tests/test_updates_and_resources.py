@@ -1,6 +1,8 @@
 import json
 from dataclasses import replace
 from datetime import UTC, datetime
+from decimal import Decimal
+from fractions import Fraction
 from pathlib import Path
 
 import pytest
@@ -17,6 +19,13 @@ from physics_atlas_api.connectors.base import (
     SourceTransport,
 )
 from physics_atlas_api.connectors.factory import build_connectors
+from physics_atlas_api.fields import PHYSICS_FIELD_ONTOLOGY_VERSION
+from physics_atlas_api.fields.mapping import (
+    FIELD_WEIGHTING_POLICY_VERSION,
+    PROVIDER_FIELD_MAPPING_VERSION,
+    ProviderCategoryEvidence,
+    map_provider_categories,
+)
 from physics_atlas_api.metrics.recomputation import NoFormulaMetricRecalculator
 from physics_atlas_api.repository import AtlasDatabaseRepository
 from physics_atlas_api.resources.monitor import (
@@ -219,6 +228,22 @@ class SequencedAuthorityPaperConnector(SourceConnector):
         return None
 
     def normalize_record(self, record: SourceRecord) -> NormalizedRecord:
+        raw_categories = record.raw.get("field_categories", ("Theory-HEP",))
+        categories = (
+            tuple(str(item) for item in raw_categories)
+            if isinstance(raw_categories, (list, tuple))
+            else (str(raw_categories),)
+        )
+        mapping = map_provider_categories(
+            "inspire",
+            tuple(
+                ProviderCategoryEvidence(
+                    category=category,
+                    role="primary" if index == 0 else "secondary",
+                )
+                for index, category in enumerate(categories)
+            ),
+        )
         return NormalizedRecord(
             provider="inspire",
             kind="paper",
@@ -229,11 +254,29 @@ class SequencedAuthorityPaperConnector(SourceConnector):
                 "title": str(record.raw["title"]),
                 "abstract": str(record.raw.get("abstract", "")),
                 "publication_year": int(record.raw["publication_year"]),
-                "authors": [],
-                "atlas_field_candidates": ["hep-th"],
+                "publication_date": record.raw.get("publication_date"),
+                "document_type": str(record.raw.get("document_type", "article")),
+                "authors": record.raw.get("authors", []),
+                "atlas_field_candidates": list(mapping.atlas_field_ids),
+                "field_mapping_confidence": mapping.confidence,
+                "field_mapping_method": mapping.method,
+                "field_ontology_version": mapping.ontology_version,
+                "field_weighting_policy_version": mapping.weighting_policy_version,
+                "atlas_field_assignments": [
+                    {
+                        "field_id": assignment.field_id,
+                        "weight": assignment.weight,
+                    }
+                    for assignment in mapping.assignments
+                ],
+                "field_mapping_provenance": mapping.provenance_payload(),
+                "field_mapping_uncertainty": mapping.uncertainty_note,
             },
             raw=record.raw,
-            provenance=PROVENANCE,
+            provenance={
+                **PROVENANCE,
+                "sourceRecordId": record.source_record_id,
+            },
         )
 
 
@@ -724,6 +767,187 @@ def test_conflicting_paper_authorities_are_queued_without_silent_merge(
     assert set(review.candidate_entity_ids) == {paper.id for paper in papers}
 
 
+def test_update_engine_materializes_versioned_fields_and_paper_time_affiliations(
+    session: Session,
+    fixture_directory: Path,
+) -> None:
+    ensure_reference_data(session)
+    session.add(
+        models.Institution(
+            id="institution-attribution-fixture",
+            canonical_name="Attribution Fixture Institute",
+            aliases=[],
+            historical_names=[],
+            external_ids=[{"scheme": "ror", "value": "03vek6s52"}],
+            identity_confidence=1.0,
+            country_id="country-us",
+            city="Fixture City",
+            longitude=-71.0,
+            latitude=42.0,
+            field_ids=["hep-th", "gr-qc"],
+            provenance_json=PROVENANCE,
+        )
+    )
+    session.add(
+        models.AuthorityIdentifier(
+            id="authority-attribution-fixture-institution",
+            entity_type="institution",
+            entity_id="institution-attribution-fixture",
+            scheme="ror",
+            value="03vek6s52",
+            is_authoritative=True,
+            provenance_json=PROVENANCE,
+        )
+    )
+    session.commit()
+
+    authors = [
+        {
+            "full_name": "Resolved, Alice",
+            "recid": 71001,
+            "affiliations": [
+                {
+                    "value": ("Department of Physics, Attribution Fixture Institute"),
+                    "identifiers": [{"schema": "ROR", "value": "03vek6s52"}],
+                }
+            ],
+        },
+        {
+            "full_name": "Partial, Bob",
+            "recid": 71002,
+            "corresponding": True,
+            "affiliations": [
+                {
+                    "value": "Attribution Fixture Institute",
+                    "identifiers": [{"schema": "ROR", "value": "03vek6s52"}],
+                },
+                {"value": "Unresolved Historical Laboratory"},
+            ],
+        },
+    ]
+    fixture_transport = build_connectors(
+        Settings(database_url="sqlite://", fixture_mode=True), fixture_directory
+    )["inspire"].transport
+    connector = SequencedAuthorityPaperConnector(
+        fixture_transport,
+        "https://inspire.test",
+        (
+            {
+                "source_record_id": "920001",
+                "title": "Scientific materialization fixture",
+                "abstract": "Initial two-field evidence.",
+                "publication_year": 2025,
+                "publication_date": "2025-03-14",
+                "document_type": "article",
+                "external_ids": (("inspire", "920001"),),
+                "field_categories": (
+                    "Theory-HEP",
+                    "Gravitation and Cosmology",
+                ),
+                "authors": authors,
+            },
+            {
+                "source_record_id": "920001",
+                "title": "Scientific materialization fixture, revised",
+                "abstract": "Revised single-field evidence.",
+                "publication_year": 2025,
+                "publication_date": "2025-03-14",
+                "document_type": "article",
+                "external_ids": (("inspire", "920001"),),
+                "field_categories": ("Theory-HEP",),
+                "authors": authors,
+            },
+        ),
+    )
+    engine = IncrementalUpdateEngine(session, connector)
+
+    first = engine.run()
+
+    assert first.status == "succeeded"
+    paper = session.scalar(select(models.Paper))
+    assert paper is not None
+    assert paper.publication_date is not None
+    assert paper.publication_date.isoformat() == "2025-03-14"
+    assert paper.publication_date_precision == "day"
+    assert paper.document_type == "article"
+    initial_field_links = list(
+        session.scalars(select(models.PaperField).order_by(models.PaperField.field_id))
+    )
+    assert [item.field_id for item in initial_field_links] == ["gr-qc", "hep-th"]
+    assert {item.weight for item in initial_field_links} == {Decimal("0.5")}
+    assert {item.ontology_version for item in initial_field_links} == {
+        PHYSICS_FIELD_ONTOLOGY_VERSION
+    }
+    assert {item.mapping_rule_version for item in initial_field_links} == {
+        PROVIDER_FIELD_MAPPING_VERSION
+    }
+    assert {item.weighting_policy_version for item in initial_field_links} == {
+        FIELD_WEIGHTING_POLICY_VERSION
+    }
+    assert {item.classification_role for item in initial_field_links} == {
+        "primary",
+        "secondary",
+    }
+    assert all(item.provider_categories for item in initial_field_links)
+
+    initial_affiliations = list(
+        session.scalars(
+            select(models.PaperAffiliation).where(models.PaperAffiliation.is_current)
+        )
+    )
+    assert len(initial_affiliations) == 3
+    assert sum(
+        (
+            Fraction(
+                item.attribution_weight_numerator,
+                item.attribution_weight_denominator,
+            )
+            for item in initial_affiliations
+        ),
+        start=Fraction(0),
+    ) == Fraction(1)
+    assert sum(
+        item.attribution_weight
+        for item in initial_affiliations
+        if item.affiliation_resolution_status == "resolved"
+    ) == Decimal("0.75")
+    assert [item.affiliation_resolution_status for item in initial_affiliations].count(
+        "unresolved"
+    ) == 1
+    assert any(
+        item.subunit_label == "Department of Physics, Attribution Fixture Institute"
+        for item in initial_affiliations
+    )
+    assert all(
+        evidence["numericWeightApplied"] is False
+        for item in initial_affiliations
+        for evidence in item.contribution_evidence
+    )
+
+    second = engine.run()
+
+    assert second.status == "succeeded"
+    current_field_links = list(session.scalars(select(models.PaperField)))
+    assert len(current_field_links) == 1
+    assert current_field_links[0].field_id == "hep-th"
+    assert current_field_links[0].weight == Decimal("1")
+    all_affiliations = list(session.scalars(select(models.PaperAffiliation)))
+    assert len(all_affiliations) == 6
+    assert sum(item.is_current for item in all_affiliations) == 3
+    first_update = session.get_one(
+        models.DatasetUpdate, f"dataset-update-{first.snapshot_id[-32:]}"
+    )
+    second_update = session.get_one(
+        models.DatasetUpdate, f"dataset-update-{second.snapshot_id[-32:]}"
+    )
+    assert {item.dataset_version for item in all_affiliations if item.is_current} == {
+        second_update.dataset_version
+    }
+    assert {
+        item.dataset_version for item in all_affiliations if not item.is_current
+    } == {first_update.dataset_version}
+
+
 def test_live_identity_resolution_uses_alias_history_and_ambiguity_gated_fuzzy(
     session: Session,
     fixture_directory: Path,
@@ -911,9 +1135,26 @@ def test_paper_ingestion_preserves_raw_identity_and_author_relationships(
     assert result.status == "succeeded"
     paper = session.scalar(select(models.Paper))
     authorship = session.scalar(select(models.Authorship))
+    paper_field = session.scalar(select(models.PaperField))
+    paper_affiliation = session.scalar(select(models.PaperAffiliation))
     assert paper is not None
     assert authorship is not None
+    assert paper_field is not None
+    assert paper_affiliation is not None
     assert authorship.paper_id == paper.id
+    assert paper_field.field_id == "hep-th"
+    assert paper_field.weight == Decimal("1")
+    assert paper_field.ontology_version == PHYSICS_FIELD_ONTOLOGY_VERSION
+    assert paper_field.mapping_rule_version == PROVIDER_FIELD_MAPPING_VERSION
+    assert paper_field.weighting_policy_version == FIELD_WEIGHTING_POLICY_VERSION
+    assert paper_field.provider_categories[0]["category"] == "Theory-HEP"
+    assert paper_affiliation.authorship_id == authorship.id
+    assert paper_affiliation.affiliation_resolution_status == "missing"
+    assert Fraction(
+        paper_affiliation.attribution_weight_numerator,
+        paper_affiliation.attribution_weight_denominator,
+    ) == Fraction(1)
+    assert paper_affiliation.is_current is True
     assert (
         session.scalar(
             select(func.count())

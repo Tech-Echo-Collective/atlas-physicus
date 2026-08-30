@@ -1,0 +1,53 @@
+"""Canonical Physics Atlas field ontology and provider mapping."""
+
+from .mapping import (
+    ARXIV_CATEGORY_TAXONOMY,
+    CROSSREF_SUBJECT_TAXONOMY,
+    FIELD_WEIGHTING_POLICY_VERSION,
+    INSPIRE_CATEGORY_TAXONOMY,
+    PROVIDER_FIELD_MAPPING_RULES_V1,
+    PROVIDER_FIELD_MAPPING_VERSION,
+    AtlasFieldAssignment,
+    CategoryMapping,
+    FieldMappingResult,
+    FieldMappingRule,
+    Provider,
+    ProviderCategoryEvidence,
+    ProviderCategoryRole,
+    map_provider_categories,
+)
+from .ontology import (
+    PHYSICS_DOMAIN_ID,
+    PHYSICS_FIELD_DEFINITIONS_V1,
+    PHYSICS_FIELD_ONTOLOGY_PROVENANCE,
+    PHYSICS_FIELD_ONTOLOGY_V1,
+    PHYSICS_FIELD_ONTOLOGY_VERSION,
+    FieldDefinition,
+    FieldOntologyProvenance,
+    PhysicsFieldOntology,
+)
+
+__all__ = [
+    "ARXIV_CATEGORY_TAXONOMY",
+    "CROSSREF_SUBJECT_TAXONOMY",
+    "FIELD_WEIGHTING_POLICY_VERSION",
+    "INSPIRE_CATEGORY_TAXONOMY",
+    "PHYSICS_DOMAIN_ID",
+    "PHYSICS_FIELD_DEFINITIONS_V1",
+    "PHYSICS_FIELD_ONTOLOGY_PROVENANCE",
+    "PHYSICS_FIELD_ONTOLOGY_V1",
+    "PHYSICS_FIELD_ONTOLOGY_VERSION",
+    "PROVIDER_FIELD_MAPPING_RULES_V1",
+    "PROVIDER_FIELD_MAPPING_VERSION",
+    "AtlasFieldAssignment",
+    "CategoryMapping",
+    "FieldDefinition",
+    "FieldMappingResult",
+    "FieldMappingRule",
+    "FieldOntologyProvenance",
+    "PhysicsFieldOntology",
+    "Provider",
+    "ProviderCategoryEvidence",
+    "ProviderCategoryRole",
+    "map_provider_categories",
+]

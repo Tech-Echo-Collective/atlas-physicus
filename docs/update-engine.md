@@ -11,6 +11,7 @@ source cursor
     → normalization
     → authority-gated identity resolution
     → canonical upsert or review item
+    → paper-time affiliation and field-assignment materialization
     → affected metric partitions
     → dataset version and status
 ```
@@ -31,7 +32,17 @@ The source high-water cursor advances only after the complete closed window succ
 
 ## Identity and graph changes
 
-Normalization never merges entities. The engine first checks compatible authority identifiers, then canonical/alias evidence, and otherwise records unresolved or ambiguous evidence for review. Only matched or explicitly created canonical records enter the graph. Temporal affiliations remain dated relationship rows; a new affiliation must not overwrite history. The v3.0.4 scheduled materializer does not yet promote provider affiliation/reference structures into those canonical edges, so their exact raw evidence is retained for a later reviewed policy.
+Normalization never merges entities. The engine first checks compatible
+authority identifiers, then canonical/alias evidence, and otherwise records
+unresolved or ambiguous evidence for review. Only matched or explicitly created
+canonical records enter the graph. Every provider paper author slot now enters
+the exact Fractional Attribution v1 ledger. Paper-time institutions resolve
+only from supported authority identifiers or a unique reviewed exact name;
+unresolved, ambiguous, and absent affiliation mass remains withheld. Each new
+snapshot supersedes the current materialization without deleting earlier
+evidence. Separate profile affiliations remain dated relationship rows and
+cannot overwrite it. Provider reference and citation structures remain raw
+evidence until their own reviewed canonicalization rules pass.
 
 The alpha stores the persistent review queue but does not provide a review UI or automatic approval. Corrections should be reversible and must preserve prior source and resolution provenance.
 
@@ -43,7 +54,14 @@ Changed records produce partitions across the relevant dimensions:
 entity type + entity + field + country + institution + period + metric
 ```
 
-`MetricRecomputationPlanner` records only affected partitions. `NoFormulaMetricRecalculator` intentionally writes no scientific values: it proves the orchestration boundary without inventing formulas. A later validated calculator can append new observations carrying metric-definition version, algorithm version, dataset version, and calculation timestamp. Historical observations must not be silently overwritten, and missing remains missing rather than zero.
+`MetricRecomputationPlanner` records only affected partitions. Five v1
+calculators now exist as deterministic scientific framework code, but
+`NoFormulaMetricRecalculator` remains the production implementation and writes
+no values. A future explicitly activated recalculator may append observations
+only after the exact-five Joint Activation Gate passes and must retain all
+definition, algorithm, normalization, attribution, ontology, mapping, threshold,
+dataset, and calculation lineage. Historical observations must not be silently
+overwritten, and missing remains missing rather than zero.
 
 ## Scheduling
 
@@ -88,11 +106,11 @@ This is lightweight operational visibility, not a full monitoring platform. Oper
 ## Current limitations
 
 - There is no hosted queue, distributed lock service, or administrative review interface.
-- The default calculator records partitions but does not implement final scientific formulas.
+- The default production calculator records partitions but intentionally does not execute the implemented, still-withheld v1 formulas.
 - Closed-window cursors are validated for bounded paging but still need long-running provider-scale and schema-change testing.
 - There is no general historical backfill command yet; backfills, deletion/tombstone policy, retractions, and cross-provider conflict adjudication need further reviewed rules.
 - ROR target IDs are operator-configured rather than automatically derived from reviewed affiliation evidence.
 - Targeted ORCID/Crossref enrichment is not yet orchestrated automatically from every newly discovered identifier.
 - arXiv scheduled acquisition is a `submittedDate` new-submission stream; complete revision discovery requires a future reviewed provider strategy.
-- INSPIRE affiliation/reference/citation structures are preserved as evidence but are not yet canonicalized into affiliation or citation edges.
+- Paper-time INSPIRE affiliations can now materialize conservatively when exact institution evidence exists; unresolved affiliations, references, and citation structures remain evidence rather than guessed edges.
 - A successful fixture run demonstrates deterministic behavior, not live provider completeness.

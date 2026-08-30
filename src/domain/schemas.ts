@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import type { DataProvenance, RawEntityAttribute } from './models';
+import {
+  metricSystemV1Ids,
+  type DataProvenance,
+  type RawEntityAttribute,
+} from './models';
 
 const entityIdSchema = z.string().min(1).regex(/^[a-z0-9-]+$/);
 const fieldIdSchema = z.string().min(1).regex(/^[a-z0-9-]+$/);
@@ -86,6 +90,12 @@ export const researchFieldSchema = z.object({
   id: fieldIdSchema,
   label: z.string().min(1),
   description: z.string().min(1),
+  parentFieldId: optionalFromNullable(fieldIdSchema),
+  aliases: z.array(z.string().trim().min(1)).default([]),
+  ontologyVersion: z.string().min(1).default('legacy-flat-physics-fields-v1'),
+  nodeKind: z.enum(['domain-root', 'branch', 'field']).default('field'),
+  isExplorable: z.boolean().default(true),
+  displayOrder: z.number().int().min(0).default(0),
   provenance: recordProvenanceSchema,
 });
 
@@ -363,6 +373,11 @@ export const paperSchema = z.object({
   title: z.string().min(1),
   summary: z.string(),
   year: z.number().int().min(1000).max(9999),
+  publicationDate: optionalFromNullable(temporalDateSchema),
+  publicationDatePrecision: optionalFromNullable(
+    z.enum(['year', 'month', 'day']),
+  ),
+  documentType: z.string().trim().min(1).default('article'),
   fieldIds: z.array(fieldIdSchema),
   doi: optionalFromNullable(z.string().regex(/^10\.\d{4,9}\/\S+$/)),
   arxivId: optionalFromNullable(
@@ -534,19 +549,28 @@ export const metricWeightConfigurationSchema = z
   .object({
     id: entityIdSchema,
     name: z.string().min(1),
-    weights: z.record(metricIdSchema, z.number().min(0).max(100)),
+    weights: z.record(
+      metricIdSchema,
+      z.number().min(0).max(100).multipleOf(0.5),
+    ),
   })
   .superRefine((configuration, context) => {
-    const weights = Object.values(configuration.weights);
-    if (weights.length === 0) {
+    const suppliedMetricIds = Object.keys(configuration.weights).sort();
+    const expectedMetricIds = [...metricSystemV1Ids].sort();
+    if (
+      suppliedMetricIds.length !== expectedMetricIds.length ||
+      suppliedMetricIds.some(
+        (metricId, index) => metricId !== expectedMetricIds[index],
+      )
+    ) {
       context.addIssue({
         code: 'custom',
         path: ['weights'],
-        message: 'At least one metric weight is required',
+        message: 'Metric System v1 requires exactly the five canonical dimensions',
       });
       return;
     }
-
+    const weights = Object.values(configuration.weights);
     const total = weights.reduce((sum, weight) => sum + weight, 0);
     if (Math.abs(total - 100) > 0.0001) {
       context.addIssue({

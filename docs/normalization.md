@@ -17,9 +17,9 @@ unlike scientific contexts interchangeable.
 6. Keep metric-specific transforms. A single global min/max rule is not
    scientifically defensible for every distribution.
 
-## Heavy-tailed counts
+## Research Activity
 
-Activity and Connectivity use a two-stage candidate transform:
+Research Activity uses a two-stage transform:
 
 \[
 x_e=\log(1+r_e)
@@ -42,19 +42,40 @@ or rank. A value near 100 means that the transformed observation is near or
 above the stored upper bound; it does not mean “better than 100%” or “better
 than most.”
 
-## Field- and age-normalized citations
+## Research Impact
 
-Impact uses midrank percentiles of `log1p` citation observations inside the
-same reviewed field and publication-year cohort. A tie receives the midpoint
-of its occupied ranks. This controls basic field and citation-age differences;
-it does not eliminate database coverage, self-citation, or social biases.
+Impact first calculates each eligible paper's normalized citation score against
+the same canonical field, publication year, document type, and common citation
+cutoff. The fractionally attributed weighted mean is retained as raw MNCS.
+PP(top 10%) is companion evidence; its threshold uses tie-aware `log1p`
+midranks inside the paper cohort. Entity MNCS values receive a
+presentation-only stored robust `log1p` 5th/95th transform inside the compatible
+entity cohort. Neither transformation removes source coverage or social bias.
 
-## Naturally bounded transforms
+## Collaboration / Connectivity
 
-Diversity uses normalized Shannon evenness and Momentum uses a symmetric
-two-window change. These formulas already have fixed mathematical bounds and
-must not be run through an unrelated cohort min/max transform merely to widen
-their colors.
+The primary collaboration indicator is an entity-appropriate fraction:
+collaborative-paper share for researchers, cross-institution share for
+institutions, and international share for countries. It maps directly from
+`0–1` to `0–100`. Partner counts and graph edges remain companion evidence and
+do not replace this scalar with centrality or prestige.
+
+## Research Diversity
+
+Diversity uses normalized Shannon evenness over an explicit, versioned
+canonical category universe and maps directly from `0–1` to `0–100`. A valid
+concentration can therefore produce zero, while insufficient field coverage
+produces no observation.
+
+## Research Momentum / Sustainability
+
+Momentum preserves the log ratio between adjacent complete three-year
+Activity windows. Within the same field cohort it subtracts the cohort median,
+uses `1.4826 × MAD` with `IQR / 1.349` as a deterministic fallback, clips at
+the configured robust-z bound, and maps the centered result around `50`. A
+fully tied eligible cohort maps to neutral `50`; incomplete or insufficient
+history remains missing. This is backward-looking normalization, not a
+forecast.
 
 ## Reconstruction record
 
@@ -72,3 +93,7 @@ A normalized observation is reconstructable only when it retains:
 
 Changing a formula, cohort rule, minimum, or transform creates a new algorithm
 or metric version. Older values retain their original meaning.
+
+The exact v1 algorithms and method versions are canonical in
+[Metric System v1](metrics-spec-v1.md). Thresholds and publication rules are
+canonical in [Metric System v1 validation](metric-validation.md).

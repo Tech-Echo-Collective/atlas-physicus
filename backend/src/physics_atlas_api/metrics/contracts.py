@@ -69,9 +69,9 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
             "and closed time window; it describes output volume, not research quality."
         ),
         formula=(
-            "A(e,f,t) = count(distinct canonical papers attributed to entity e, "
-            "classified in field f, and published in the closed years t-2..t). "
-            "For a science-domain scope, papers are deduplicated across field links."
+            "A(e,f,t) = sum_p w(p,e) * s(p,f) over canonical papers in the "
+            "closed years t-2..t. w(p,e) is the conserved paper-time fractional "
+            "entity attribution and s(p,f) is the versioned field share."
         ),
         input_observations=(
             "canonical paper identifier and publication year",
@@ -88,10 +88,9 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
             "science-domain",
         ),
         aggregation_rule=(
-            "Deduplicate canonical papers within each entity partition. Attribute a "
-            "multi-institution paper to every reviewed participating affiliation; "
-            "do not divide or assign ownership. Deduplicate papers again for field "
-            "and science-domain totals."
+            "Each paper has total attribution one. Equal author shares are divided "
+            "equally across each author's valid paper-time affiliations, then by the "
+            "versioned paper-field shares. Unresolved mass is not redistributed."
         ),
         time_window="Three complete calendar years ending at the selected year.",
         field_normalization=(
@@ -108,15 +107,16 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
         ),
         minimum_data_requirements=(
             "complete acquisition coverage for all three years",
-            "at least 3 attributed distinct papers for the entity",
+            "at least 10 fractional papers for the entity",
+            "at least 5 distinct identifiable researchers",
             "at least 30 eligible entities in the normalization cohort",
             "non-degenerate robust cohort bounds",
             "reviewed affiliation coverage for geographic observations",
         ),
-        version="activity-output-participation-v1",
-        algorithm_version="activity-distinct-paper-window-v1",
+        version="activity-fractional-output-v1",
+        algorithm_version="activity-field-weighted-fractional-publication-v1",
         normalization_version="robust-log-winsorized-cohort-v1",
-        raw_unit="distinct attributed canonical papers",
+        raw_unit="fractional attributed canonical papers",
         normalized_range=(0.0, 100.0),
         provenance=_PROVENANCE,
         high_score_meaning=(
@@ -137,7 +137,8 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
         known_limitations=(
             "Publication databases have field-, source-, and language-dependent "
             "coverage.",
-            "Full participation attribution does not measure contribution size.",
+            "Equal fractional attribution is a conservative counting policy, not a "
+            "claim about intellectual contribution.",
             "Entity size and collaboration practices affect output counts.",
             "The winsorized linear display score is cohort-relative; it is neither "
             "an absolute quantity nor a percentile.",
@@ -151,10 +152,10 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
             "it is not a measure of scientific value or institutional quality."
         ),
         formula=(
-            "For each eligible paper p, I_p is the midrank percentile of "
-            "log1p(non-self citation count at the calculation cutoff) within the same "
-            "field and publication-year cohort. I(e,f,t) is the arithmetic mean of "
-            "I_p over eligible papers attributed to entity e in the selected window."
+            "For each mature eligible paper p, NCS_p is its citation count divided "
+            "by the mean citation count in the same field, publication year, and "
+            "document type at a common cutoff. I(e,f,t) is the fractional-attribution "
+            "weighted mean NCS (MNCS). PP(top 10%) is preserved as companion evidence."
         ),
         input_observations=(
             "canonical paper identifier and publication year",
@@ -165,22 +166,21 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
         ),
         aggregation_levels=("researcher", "institution", "country"),
         aggregation_rule=(
-            "Deduplicate canonical papers, compute one eligible percentile per paper, "
-            "then take the arithmetic mean for each supported entity partition. "
-            "Multi-institution work may support every reviewed affiliation; output "
-            "volume does not add a separate bonus."
+            "Deduplicate canonical papers and weight each eligible paper by its "
+            "conserved entity and field attribution. Average paper NCS values by "
+            "those weights; publication volume does not add a separate bonus."
         ),
         time_window=(
             "Papers in the selected closed three-year output window, observed no "
             "earlier than 24 months after publication."
         ),
         field_normalization=(
-            "Calculate paper midrank percentiles only within the same field and "
-            "publication-year cohort at a common citation cutoff."
+            "Calculate expected citations within the same field, publication year, "
+            "document type, and common citation cutoff."
         ),
         entity_normalization=(
-            "Average eligible paper percentiles; do not add publication volume to the "
-            "impact score."
+            "Preserve raw MNCS and map it to the display range using stored robust "
+            "same-field entity-cohort parameters."
         ),
         missing_data_behavior=(
             "A recorded zero citation count is valid; an absent or incomparable "
@@ -188,16 +188,16 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
             "observation when coverage thresholds fail."
         ),
         minimum_data_requirements=(
-            "at least 5 mature eligible papers for the entity",
-            "at least 80 percent citation-observation coverage",
+            "at least 10 mature eligible papers for the entity",
+            "at least 90 percent citation-observation coverage",
             "at least 50 papers in every field-age normalization cohort",
             "a common recorded citation cutoff",
             "reviewed affiliation coverage for geographic observations",
         ),
-        version="impact-field-age-percentile-v1",
-        algorithm_version="impact-entity-mean-paper-percentile-v1",
-        normalization_version="field-age-log-midrank-v1",
-        raw_unit="mean same-field same-age paper percentile",
+        version="impact-fractional-mncs-pp10-v1",
+        algorithm_version="impact-field-year-document-fractional-mncs-v1",
+        normalization_version="field-year-document-mncs-robust-v1",
+        raw_unit="fractional mean normalized citation score (MNCS)",
         normalized_range=(0.0, 100.0),
         provenance=_PROVENANCE,
         high_score_meaning=(
@@ -220,7 +220,7 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
             "sources.",
             "Citation counts remain mutable and cannot remove every form of age bias.",
             "Non-self-citation metadata can be incomplete or provider-specific.",
-            "A mean percentile hides variation among an entity's papers.",
+            "MNCS and PP(top 10%) each hide variation among an entity's papers.",
         ),
     ),
     "collaboration": MetricScientificContract(
@@ -232,10 +232,9 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
             "quality."
         ),
         formula=(
-            "C(e,f,t) = count(distinct supported neighbors of entity e in papers "
-            "classified in field f and published in the closed years t-2..t). "
-            "Neighbors are coauthors for researchers, co-participating institutions "
-            "for institutions, and co-participating countries for countries."
+            "C(e,f,t) is an entity-type-specific fractional publication proportion: "
+            "collaborative papers for researchers, cross-institution papers for "
+            "institutions, and international papers for countries."
         ),
         input_observations=(
             "canonical papers and reviewed paper-field classifications",
@@ -245,18 +244,18 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
         ),
         aggregation_levels=("researcher", "institution", "country"),
         aggregation_rule=(
-            "Count each directly supported neighbor once per entity partition. "
-            "Repeated joint papers do not add neighbors, and no centrality or "
-            "prestige weighting is applied."
+            "Weight numerator and denominator by conserved entity and field "
+            "attribution. Preserve partner counts and graph edges as companion "
+            "evidence; no centrality or prestige weighting is applied."
         ),
         time_window="Three complete calendar years ending at the selected year.",
         field_normalization=(
-            "Construct and normalize a separate direct-neighbor graph for each field "
-            "or paper-deduplicated domain scope."
+            "Calculate each proportion within one field, entity type, closed window, "
+            "dataset, and acquisition scope before any Physics-wide aggregation."
         ),
         entity_normalization=(
-            "Apply log1p to distinct-neighbor count and robust 5th-to-95th-percentile "
-            "cohort scaling separately by entity type, scope, and window."
+            "The primary proportion is naturally bounded and maps directly from "
+            "[0,1] to [0,100] within the exact field/entity/window partition."
         ),
         missing_data_behavior=(
             "Emit no observation when relationship or attribution coverage is below "
@@ -264,36 +263,37 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
         ),
         minimum_data_requirements=(
             "complete acquisition coverage for all three years",
-            "at least 3 attributed distinct papers for the entity",
+            "at least 10 fractional papers for the entity",
+            "at least 5 identifiable researchers",
             "at least 90 percent resolvable relationship coverage",
             "at least 30 eligible entities in the normalization cohort",
             "reviewed affiliations for institution and country observations",
         ),
-        version="connectivity-distinct-partners-v1",
-        algorithm_version="connectivity-direct-neighbor-count-v1",
-        normalization_version="robust-log-winsorized-cohort-v1",
-        raw_unit="distinct directly supported neighbors",
+        version="connectivity-collaboration-proportions-v1",
+        algorithm_version="connectivity-fractional-collaboration-share-v1",
+        normalization_version="bounded-collaboration-proportion-v1",
+        raw_unit="fractional collaborative publication proportion",
         normalized_range=(0.0, 100.0),
         provenance=_PROVENANCE,
         high_score_meaning=(
-            "Distinct directly observed partner breadth lies nearer the upper end of "
-            "the stored robust range fitted to the same cohort."
+            "A greater share of the supported publication evidence contains the "
+            "entity-type-specific collaboration relationship."
         ),
         low_score_meaning=(
-            "Distinct directly observed partner breadth lies nearer the lower end of "
-            "the stored robust range fitted to the same cohort."
+            "A smaller share of the supported publication evidence contains the "
+            "entity-type-specific collaboration relationship."
         ),
         does_not_mean=(
             "prestige",
             "collaboration quality",
             "scientific value",
             "network centrality rank",
-            "a cohort percentile",
             "individual contribution share",
         ),
         known_limitations=(
             "Incomplete identity or affiliation resolution removes observable edges.",
-            "Large collaborations can dominate neighbor counts.",
+            "Large collaborations affect companion partner counts even though the "
+            "primary scalar is a bounded publication proportion.",
             "Direct-neighbor breadth does not describe relationship strength.",
             "The candidate deliberately avoids centrality-based prestige signals.",
         ),
@@ -319,9 +319,9 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
         ),
         aggregation_levels=("researcher", "institution", "country"),
         aggregation_rule=(
-            "Deduplicate canonical papers per entity and allocate each paper's total "
-            "category weight fractionally across its reviewed labels, so one paper "
-            "contributes one unit in total."
+            "Use conserved entity attribution and allocate each paper's field share "
+            "across its reviewed labels, so unresolved mass is not redistributed and "
+            "a paper cannot contribute more than its supported fractional share."
         ),
         time_window="Three complete calendar years ending at the selected year.",
         field_normalization=(
@@ -339,13 +339,13 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
         ),
         minimum_data_requirements=(
             "at least 2 reviewed eligible categories",
-            "at least 10 attributed distinct papers for the entity",
+            "at least 15 fractional papers for the entity",
             "at least 90 percent reviewed classification coverage",
             "complete acquisition coverage for all three years",
             "reviewed affiliation coverage for geographic observations",
         ),
         version="diversity-normalized-shannon-v1",
-        algorithm_version="diversity-fractional-category-entropy-v1",
+        algorithm_version="diversity-attributed-category-entropy-v1",
         normalization_version="normalized-shannon-evenness-v1",
         raw_unit="normalized Shannon evenness",
         normalized_range=(0.0, 100.0),
@@ -379,9 +379,9 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
             "historical windows; it is descriptive and is not a prediction."
         ),
         formula=(
-            "Let R be attributed Activity in years t-2..t and B be attributed "
-            "Activity in years t-5..t-3. M_raw=(R-B)/(R+B), and the display score "
-            "is M=50*(M_raw+1)."
+            "Let R be fractional Activity in years t-2..t and B be fractional "
+            "Activity in years t-5..t-3. g(e)=log(R/B). Subtract the same-field "
+            "cohort median g and apply the stored robust median/MAD display transform."
         ),
         input_observations=(
             "version-compatible raw Research Activity counts",
@@ -408,33 +408,33 @@ METRIC_CONTRACTS: dict[str, MetricScientificContract] = {
             "or paper-deduplicated domain scope."
         ),
         entity_normalization=(
-            "The symmetric change ratio is directly bounded to [-1,1] and linearly "
-            "mapped to [0,100]; no cohort rank is applied."
+            "Subtract the same-field cohort median log change, scale by stored robust "
+            "dispersion, clip only at documented bounds, and map to [0,100]."
         ),
         missing_data_behavior=(
             "Emit no observation if either window is incomplete, version-incompatible, "
-            "or below the minimum evidence threshold. Two absent windows are not "
-            "zero momentum."
+            "or below the minimum evidence threshold. Missing windows are not a "
+            "field-median Momentum observation."
         ),
         minimum_data_requirements=(
             "complete acquisition coverage for all six years",
-            "at least 10 attributed distinct papers across both windows",
+            "at least 10 fractional papers in each three-year window",
             "compatible Activity definition, algorithm, and dataset scope",
             "reviewed affiliation coverage for geographic observations",
         ),
-        version="momentum-symmetric-window-change-v1",
-        algorithm_version="momentum-adjacent-three-year-change-v1",
-        normalization_version="bounded-symmetric-change-v1",
-        raw_unit="symmetric activity change ratio",
+        version="momentum-field-relative-log-change-v1",
+        algorithm_version="momentum-adjacent-window-relative-log-change-v1",
+        normalization_version="field-relative-robust-log-change-v1",
+        raw_unit="relative log fractional activity change",
         normalized_range=(0.0, 100.0),
         provenance=_PROVENANCE,
         high_score_meaning=(
-            "Observed publication participation is greater in the recent window than "
-            "in the baseline window."
+            "Observed fractional publication activity changed more positively than "
+            "the same-field cohort median between the two completed windows."
         ),
         low_score_meaning=(
-            "Observed publication participation is lower in the recent window than "
-            "in the baseline window."
+            "Observed fractional publication activity changed less positively than "
+            "the same-field cohort median between the two completed windows."
         ),
         does_not_mean=(
             "future growth",

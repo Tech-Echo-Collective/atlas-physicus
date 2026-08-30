@@ -12,8 +12,8 @@ SQLAlchemy models define the application persistence layer; Alembic owns schema 
 | --- | --- |
 | Atlas vocabulary | `ScienceDomain`, `ResearchField`, `Country`, `GeographicView`, `DatasetState` |
 | Canonical entities | `Institution`, `ResearchGroup`, `Researcher`, `Paper`, `AuthorityIdentifier`, `EntitySearchTerm` |
-| Graph relationships | `PaperField`, `Authorship`, `Affiliation`, `Citation` |
-| Metrics and history | `MetricDefinition`, `MetricObservation`, `HistoricalEvent` |
+| Graph relationships | `PaperField`, `Authorship`, `Affiliation`, `PaperAffiliation`, `Citation` |
+| Metrics and history | `MetricDefinition`, `MetricObservation`, `MetricSystemRelease`, `HistoricalEvent` |
 | Resource enrichment | `ExternalResource`, `ResourceCheck` |
 | Source evidence | `SourceSnapshot`, `RawEntityRecord` |
 | Identity audit | `IdentityResolution`, `IdentityReview` |
@@ -21,9 +21,20 @@ SQLAlchemy models define the application persistence layer; Alembic owns schema 
 
 Canonical IDs are stable Atlas identifiers; source IDs belong in authority/evidence records. `Affiliation` carries start/end dates and optional research-group membership. It is never replaced by a single `Researcher.institution_id`. URLs remain `ExternalResource` rows rather than entity properties.
 
+`PaperAffiliation` preserves each resolved or withheld publication-time author
+share separately from profile-oriented `Affiliation` history. It binds exact
+fractions to source snapshot, dataset, attribution policy, resolution evidence,
+and canonical institution/country only when supported. Current-profile changes
+cannot rewrite these rows.
+
 `EntitySearchTerm` is a derived canonical index for preferred names, aliases, historical names, abbreviations/token variants, and authority identifiers. It is refreshed when supported canonical evidence changes. Unresolved raw records are never indexed as canonical results.
 
-Metric observations retain entity scope, optional domain/field, period, definition/version fields, value, source, and calculation provenance. The schema preserves a missing observation as no row; zero is a valid measured value only when explicitly written.
+Metric observations retain entity scope, optional domain/field, period,
+definition/version fields, value, source, and calculation provenance. The
+schema preserves a missing observation as no row; zero is a valid measured
+value only when explicitly written. `MetricSystemRelease` is the fail-closed
+exact-five publication manifest. An experimental withheld manifest can record
+implemented framework versions without authorizing live reads.
 
 ## Query and scale rules
 

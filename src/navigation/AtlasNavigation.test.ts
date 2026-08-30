@@ -59,6 +59,23 @@ describe('atlas URL navigation', () => {
     expect(state.selectedYear).toBe(2000);
   });
 
+  it('uses the live dataset period when the URL omits the year', () => {
+    const state = resolveAtlasLocation(
+      { pathname: '/', search: '' },
+      {
+        ...dataset,
+        metadata: {
+          ...dataset.metadata,
+          datasetKind: 'live-api',
+          period: '2026',
+        },
+        metricObservations: [],
+      },
+    );
+
+    expect(state.selectedYear).toBe(2026);
+  });
+
   it('restores the complete hierarchy for institution and researcher links', () => {
     const institutionState = resolveAtlasLocation(
       {

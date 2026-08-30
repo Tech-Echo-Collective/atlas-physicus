@@ -473,7 +473,7 @@ def test_current_candidate_observation_requires_complete_reconstruction_metadata
         "period": "2026",
         "value": 42,
         "source": "Physics Atlas candidate calculation",
-        "algorithmVersion": "activity-distinct-paper-window-v1",
+        "algorithmVersion": "activity-field-weighted-fractional-publication-v1",
         "calculationVersion": "candidate-run-v1",
         "calculatedAt": "2026-08-29T00:00:00Z",
         "provenance": {
@@ -491,11 +491,11 @@ def test_current_candidate_observation_requires_complete_reconstruction_metadata
     complete = schemas.MetricObservationOut.model_validate(
         {
             **candidate_payload,
-            "metricDefinitionVersion": "activity-output-participation-v1",
+            "metricDefinitionVersion": "activity-fractional-output-v1",
             "dataSourceVersion": "live-dataset-v1",
             "acquisitionScope": "hep-th-v1",
             "rawValue": 12,
-            "rawUnit": "distinct attributed canonical papers",
+            "rawUnit": "fractional attributed canonical papers",
             "normalizationMethod": "robust-log-winsorized-cohort-v1",
             "normalizationParameters": {
                 "cohort_size": 30,
@@ -507,7 +507,7 @@ def test_current_candidate_observation_requires_complete_reconstruction_metadata
         }
     )
 
-    assert complete.metric_definition_version == "activity-output-participation-v1"
+    assert complete.metric_definition_version == "activity-fractional-output-v1"
     assert complete.data_source_version == "live-dataset-v1"
     assert complete.input_count == 12
 

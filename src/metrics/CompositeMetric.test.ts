@@ -1,7 +1,11 @@
-import type { MetricObservation } from '../domain/models';
+import {
+  metricSystemV1Ids,
+  type MetricObservation,
+} from '../domain/models';
 import {
   buildCompositeMetricObservations,
   defaultMetricWeightConfiguration,
+  hasCompositeMetricInputs,
   prepareMetricObservationBatch,
   validateMetricWeightConfiguration,
 } from './CompositeMetric';
@@ -61,6 +65,12 @@ describe('composite metric weighting', () => {
         0,
       );
       expect(total).toBe(100);
+      expect(Object.keys(profile.weights).sort()).toEqual(
+        [...metricSystemV1Ids].sort(),
+      );
+      expect(
+        Object.values(profile.weights).every((weight) => weight * 2 % 1 === 0),
+      ).toBe(true);
       expect(() => validateMetricWeightConfiguration(profile)).not.toThrow();
     });
   });
@@ -87,9 +97,29 @@ describe('composite metric weighting', () => {
         source: 'user-defined-composite',
         algorithmVersion: 'metric-engine-weighted-sum-v1',
         normalizationParameters: expect.objectContaining({
+          profileId: defaultMetricWeightConfiguration.id,
+          profileName: defaultMetricWeightConfiguration.name,
           'weight:research_activity_score': 25,
           'weight:research_impact': 25,
+          'weight:collaboration': 20,
+          'weight:research_diversity': 15,
+          'weight:momentum': 15,
+          componentManifestVersion: 'composite-component-manifest-v1',
+          componentManifest: expect.objectContaining({
+            research_activity_score: expect.objectContaining({
+              observationId: 'observation-research-activity-score',
+              normalizedValue: 80,
+              metricDefinitionVersion: 'legacy-v1',
+              algorithmVersion: 'metric-engine-test-v1',
+              calculationVersion: 'v3.0.1-alpha',
+              dataSourceVersion: null,
+              acquisitionScope: null,
+              provenanceVersion: 'v3.0.1-alpha',
+              provenanceStatus: 'synthetic',
+            }),
+          }),
         }),
+        inputCount: 5,
       }),
     ]);
     expect(rawObservations.map((item) => item.value)).toEqual(originalValues);
@@ -116,6 +146,36 @@ describe('composite metric weighting', () => {
       buildCompositeMetricObservations(
         observations,
         defaultMetricWeightConfiguration,
+        definitions,
+      ),
+    ).toEqual([]);
+  });
+
+  it('rejects a partial metric system even when omitted dimensions have zero weight', () => {
+    const observations = [
+      observation('research_activity_score', 80),
+      observation('research_impact', 60),
+      observation('collaboration', 40),
+      observation('research_diversity', 30),
+    ];
+    const configuration = {
+      id: 'partial-zero-profile',
+      name: 'Partial zero profile',
+      weights: {
+        research_activity_score: 50,
+        research_impact: 50,
+        collaboration: 0,
+        research_diversity: 0,
+        momentum: 0,
+      },
+    };
+    const definitions = observations.map((item) => definition(item.metricId));
+
+    expect(hasCompositeMetricInputs(definitions, configuration)).toBe(false);
+    expect(
+      buildCompositeMetricObservations(
+        observations,
+        configuration,
         definitions,
       ),
     ).toEqual([]);
@@ -167,8 +227,23 @@ describe('composite metric weighting', () => {
         acquisitionScope: 'hep-th-v1',
         provenance: expect.objectContaining({
           sourceType: 'derived',
-          status: 'verified',
+          status: 'unverified',
           acquisitionScope: 'hep-th-v1',
+        }),
+        normalizationParameters: expect.objectContaining({
+          componentManifest: expect.objectContaining({
+            research_activity_score: expect.objectContaining({
+              observationId: 'observation-research-activity-score',
+              normalizedValue: 80,
+              metricDefinitionVersion: 'test-v1',
+              algorithmVersion: 'metric-engine-test-v1',
+              calculationVersion: 'v3.0.1-alpha',
+              dataSourceVersion: 'live-test-v1',
+              acquisitionScope: 'hep-th-v1',
+              provenanceVersion: 'live-test-v1',
+              provenanceStatus: 'verified',
+            }),
+          }),
         }),
       }),
     ]);
@@ -215,14 +290,33 @@ describe('composite metric weighting', () => {
     ).toEqual([]);
   });
 
-  it('accepts direct decimal inputs and rejects invalid totals or negatives', () => {
+  it('accepts 0.5% resolution and rejects partial, off-grid, invalid-total, or negative configurations', () => {
     expect(() =>
       validateMetricWeightConfiguration({
         id: 'decimal-profile',
         name: 'Decimal profile',
-        weights: { research_activity_score: 33.3, research_impact: 66.7 },
+        weights: {
+          research_activity_score: 33.5,
+          research_impact: 31.5,
+          collaboration: 15,
+          research_diversity: 10,
+          momentum: 10,
+        },
       }),
     ).not.toThrow();
+    expect(() =>
+      validateMetricWeightConfiguration({
+        id: 'off-grid-profile',
+        name: 'Off-grid profile',
+        weights: {
+          research_activity_score: 33.3,
+          research_impact: 31.7,
+          collaboration: 15,
+          research_diversity: 10,
+          momentum: 10,
+        },
+      }),
+    ).toThrow();
     expect(() =>
       validateMetricWeightConfiguration({
         ...defaultMetricWeightConfiguration,
@@ -233,7 +327,26 @@ describe('composite metric weighting', () => {
       validateMetricWeightConfiguration({
         id: 'negative-profile',
         name: 'Negative profile',
-        weights: { research_activity_score: -10, research_impact: 110 },
+        weights: {
+          research_activity_score: -10,
+          research_impact: 80,
+          collaboration: 10,
+          research_diversity: 10,
+          momentum: 10,
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      validateMetricWeightConfiguration({
+        id: 'wrong-total-profile',
+        name: 'Wrong total profile',
+        weights: {
+          research_activity_score: 30,
+          research_impact: 30,
+          collaboration: 20,
+          research_diversity: 15,
+          momentum: 10,
+        },
       }),
     ).toThrow();
   });

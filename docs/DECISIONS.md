@@ -1,6 +1,6 @@
 # Physics Atlas durable decisions
 
-Last reviewed: 2026-08-29
+Last reviewed: 2026-08-30
 
 These decisions constrain implementation and public communication. Add a dated superseding entry when a durable decision changes; do not silently rewrite project history.
 
@@ -29,6 +29,14 @@ These decisions constrain implementation and public communication. Add a dated s
 | PA-021 | Normalized metric values must be reconstructable from preserved raw evidence and fitted parameters. | Retain the raw value/unit, exact cohort and transform, definition/algorithm/dataset versions, calculation time, scope, partition, input count, and quality flags; a method change emits a new version. |
 | PA-022 | Identity quality is measured against independent review, not the resolver's own decisions. | Keep outcomes separate from review workflow, stratify deterministic samples, withhold precision/recall/calibration without enough labels, and append superseding decisions instead of rewriting history. |
 | PA-023 | Public metric reads are bound to one current definition and immutable dataset lineage. | Exclude stale definition or dataset versions, choose the newest calculation only when the current rows agree on algorithm, and fail the partition closed when algorithms conflict. Apply the same rule to map and profile reads. |
+| PA-024 | Scientific attribution is based primarily on paper-time affiliations. | Current homepages and profile affiliations cannot overwrite historical paper evidence. Preserve source snapshots, subunits, identity decisions, and versioned supersession; ambiguous, unresolved, or absent affiliations remain explicit. |
+| PA-025 | Fractional Attribution v1 conserves one paper of evidence without claiming intellectual-contribution weights. | Divide equally among provider author slots and then among each author's effective paper-time affiliations unless a separately reviewed numeric policy exists. Keep unresolved mass withheld; author order and corresponding-author status do not alter the share. |
+| PA-026 | Provider taxonomies remain separate from the versioned Atlas field ontology. | Preserve raw INSPIRE/arXiv categories and roles, map only through explicit versioned rules, allow multiple Atlas fields, and use equal unique-field shares when no reviewed unequal policy exists. Unmapped evidence stays unmapped. |
+| PA-027 | Metric System v1 consists of exactly Activity, Impact, Connectivity, Diversity, and Momentum and activates only as one coherent system. | Reject partial production manifests. After global activation, an individual entity may still have a missing observation when its own evidence is insufficient; that absence does not disable the system or become zero. |
+| PA-028 | Metric normalization is dimension-specific and Physics-wide aggregation occurs only after field-specific calculation and normalization. | Preserve raw values and fitted parameters. Do not pool raw publication or citation counts across fields; use an explicit versioned field-balanced, coverage-aware aggregation so large fields do not dominate by volume alone. |
+| PA-029 | Metric Validation Thresholds v1 are versioned first-pass evidence gates, not scientific truth. | Count, coverage, maturity, complete-window, and cohort minimums can change only through a new documented configuration and review; passing them is necessary but not sufficient for activation. |
+| PA-030 | The five-weight composite is a user-defined exploratory perspective, not an official score. | Require nonnegative weights totaling exactly 100% and explicit confirmation. Invalid drafts or missing components do not update the map, and no preset may be framed as a ranking or overall scientific value. |
+| PA-031 | Reference research ecosystems are linked validation fixtures, not ranking ground truth. | Validate Paper ↔ Researcher ↔ paper-time Affiliation ↔ Institution relationships and reconstruction. Never tune metrics to force IAS, Princeton, Harvard, Caltech, UCSB/KITP, Stony Brook, Perimeter, or another anchor into a preferred order. |
 
 ## Current activation decision
 
@@ -52,3 +60,21 @@ values remain confined to their isolated modes. A corpus-wide readiness count
 cannot activate a layer: the exact entity type, field/domain, period, dataset
 version, acquisition scope, update sequence, per-entity minimums, cohort, and
 missing-data checks must be independently certified.
+
+## Post-v3.0.5 Metric System v1 decision
+
+The repository may implement and deterministically test all five metric
+algorithms without publishing live observations. The scientific system is
+versioned by `physics-atlas-metric-system-v1` and depends on
+`fractional-attribution-v1`, `physics-field-ontology-v1`,
+`provider-field-mapping-v1`, and `metric-validation-thresholds-v1`.
+
+The system-wide activation manifest must name exactly the five accepted
+definitions, matching algorithm/normalization/data versions, validated
+attribution and field mapping, sufficient coverage and history, and passing
+reproduction evidence. It fails closed if any required evidence is missing or
+incompatible. Passing code tests does not itself satisfy scientific review, and
+the current `hep-th-v1` production evidence does not pass this gate. All five
+live layers therefore remain jointly withheld; no source-level implementation
+change authorizes a production migration, backfill, recalculation, or public
+activation by itself.

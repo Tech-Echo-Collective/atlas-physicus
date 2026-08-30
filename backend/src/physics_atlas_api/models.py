@@ -1,4 +1,5 @@
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
@@ -11,6 +12,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -57,8 +59,29 @@ class ResearchField(Base, TimestampMixin, ProvenanceMixin):
     )
     label: Mapped[str] = mapped_column(String(240), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
+    parent_field_id: Mapped[str | None] = mapped_column(
+        ForeignKey("research_fields.id", ondelete="RESTRICT"), index=True
+    )
+    aliases: Mapped[list[str]] = mapped_column(JsonType, default=list, nullable=False)
+    ontology_version: Mapped[str] = mapped_column(
+        String(120), default="legacy-flat-physics-fields-v1", nullable=False, index=True
+    )
+    node_kind: Mapped[str] = mapped_column(String(40), default="field", nullable=False)
+    is_explorable: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     provider_mappings: Mapped[dict[str, Any]] = mapped_column(
         JsonType, default=dict, nullable=False
+    )
+    __table_args__ = (
+        CheckConstraint(
+            "parent_field_id IS NULL OR parent_field_id != id",
+            name="research_field_not_own_parent",
+        ),
+        CheckConstraint(
+            "node_kind IN ('domain-root', 'branch', 'field')",
+            name="research_field_node_kind",
+        ),
+        CheckConstraint("display_order >= 0", name="research_field_display_order"),
     )
 
 
@@ -197,6 +220,11 @@ class Paper(Base, TimestampMixin, ProvenanceMixin):
     title: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[str] = mapped_column(Text, default="", nullable=False)
     publication_year: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    publication_date: Mapped[date | None] = mapped_column(Date)
+    publication_date_precision: Mapped[str | None] = mapped_column(String(20))
+    document_type: Mapped[str] = mapped_column(
+        String(80), default="article", nullable=False
+    )
     doi: Mapped[str | None] = mapped_column(String(500), unique=True, index=True)
     arxiv_id: Mapped[str | None] = mapped_column(String(100), unique=True, index=True)
     external_ids: Mapped[list[dict[str, str]]] = mapped_column(
@@ -214,6 +242,32 @@ class PaperField(Base, TimestampMixin, ProvenanceMixin):
     )
     classification_method: Mapped[str] = mapped_column(String(120), nullable=False)
     confidence: Mapped[float | None] = mapped_column(Float)
+    weight: Mapped[Decimal] = mapped_column(
+        Numeric(14, 12), default=Decimal("1"), nullable=False
+    )
+    classification_role: Mapped[str] = mapped_column(
+        String(40), default="unspecified", nullable=False
+    )
+    ontology_version: Mapped[str] = mapped_column(
+        String(120), default="legacy-flat-physics-fields-v1", nullable=False, index=True
+    )
+    mapping_rule_version: Mapped[str] = mapped_column(
+        String(120), default="provider-category-rules-v1", nullable=False, index=True
+    )
+    weighting_policy_version: Mapped[str] = mapped_column(
+        String(120), default="legacy-full-membership-v1", nullable=False
+    )
+    provider_categories: Mapped[list[dict[str, Any]]] = mapped_column(
+        JsonType, default=list, nullable=False
+    )
+    uncertainty_note: Mapped[str | None] = mapped_column(Text)
+    __table_args__ = (
+        CheckConstraint("weight > 0 AND weight <= 1", name="paper_field_weight"),
+        CheckConstraint(
+            "classification_role IN ('primary', 'secondary', 'mixed', 'unspecified')",
+            name="paper_field_classification_role",
+        ),
+    )
 
 
 class Authorship(Base, TimestampMixin, ProvenanceMixin):
@@ -256,6 +310,120 @@ class Affiliation(Base, TimestampMixin, ProvenanceMixin):
     )
 
 
+class PaperAffiliation(Base, TimestampMixin, ProvenanceMixin):
+    """Paper-time affiliation assertion and conserved attribution share.
+
+    Rows include unresolved and missing affiliation slots.  Current/profile
+    affiliations remain a separate relationship and never overwrite this
+    historical evidence.
+    """
+
+    __tablename__ = "paper_affiliations"
+    id: Mapped[str] = mapped_column(String(240), primary_key=True)
+    paper_id: Mapped[str] = mapped_column(
+        ForeignKey("papers.id", ondelete="CASCADE"), index=True
+    )
+    authorship_id: Mapped[str | None] = mapped_column(
+        ForeignKey("authorships.id", ondelete="SET NULL"), index=True
+    )
+    researcher_id: Mapped[str | None] = mapped_column(
+        ForeignKey("researchers.id", ondelete="SET NULL"), index=True
+    )
+    institution_id: Mapped[str | None] = mapped_column(
+        ForeignKey("institutions.id", ondelete="RESTRICT"), index=True
+    )
+    country_id: Mapped[str | None] = mapped_column(
+        ForeignKey("countries.id", ondelete="RESTRICT"), index=True
+    )
+    source_snapshot_id: Mapped[str] = mapped_column(
+        ForeignKey("source_snapshots.id", ondelete="RESTRICT"), index=True
+    )
+    dataset_version: Mapped[str] = mapped_column(
+        String(160), nullable=False, index=True
+    )
+    provider: Mapped[str] = mapped_column(String(120), nullable=False)
+    source_record_id: Mapped[str] = mapped_column(String(400), nullable=False)
+    author_position: Mapped[int] = mapped_column(Integer, nullable=False)
+    raw_author_name: Mapped[str] = mapped_column(Text, nullable=False)
+    raw_affiliation: Mapped[str | None] = mapped_column(Text)
+    provider_affiliation_id: Mapped[str | None] = mapped_column(String(500))
+    subunit_label: Mapped[str | None] = mapped_column(Text)
+    author_resolution_status: Mapped[str] = mapped_column(String(40), nullable=False)
+    affiliation_resolution_status: Mapped[str] = mapped_column(
+        String(40), nullable=False
+    )
+    author_weight: Mapped[Decimal] = mapped_column(Numeric(24, 22), nullable=False)
+    affiliation_weight: Mapped[Decimal] = mapped_column(Numeric(24, 22), nullable=False)
+    attribution_weight: Mapped[Decimal] = mapped_column(Numeric(24, 22), nullable=False)
+    author_weight_numerator: Mapped[int] = mapped_column(Integer, nullable=False)
+    author_weight_denominator: Mapped[int] = mapped_column(Integer, nullable=False)
+    attribution_weight_numerator: Mapped[int] = mapped_column(Integer, nullable=False)
+    attribution_weight_denominator: Mapped[int] = mapped_column(Integer, nullable=False)
+    effective_affiliation_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    attribution_policy_version: Mapped[str] = mapped_column(
+        String(160), nullable=False, index=True
+    )
+    materialization_version: Mapped[str] = mapped_column(String(160), nullable=False)
+    contribution_evidence: Mapped[list[dict[str, Any]]] = mapped_column(
+        JsonType, default=list, nullable=False
+    )
+    resolution_evidence: Mapped[list[dict[str, Any]]] = mapped_column(
+        JsonType, default=list, nullable=False
+    )
+    is_current: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, index=True
+    )
+    __table_args__ = (
+        CheckConstraint("author_position > 0", name="paper_affiliation_position"),
+        CheckConstraint(
+            "author_resolution_status IN ('resolved', 'unresolved', 'ambiguous')",
+            name="paper_affiliation_author_status",
+        ),
+        CheckConstraint(
+            "affiliation_resolution_status IN "
+            "('resolved', 'unresolved', 'ambiguous', 'missing')",
+            name="paper_affiliation_status",
+        ),
+        CheckConstraint(
+            "author_weight > 0 AND author_weight <= 1",
+            name="paper_affiliation_author_weight",
+        ),
+        CheckConstraint(
+            "affiliation_weight > 0 AND affiliation_weight <= 1",
+            name="paper_affiliation_affiliation_weight",
+        ),
+        CheckConstraint(
+            "attribution_weight > 0 AND attribution_weight <= 1",
+            name="paper_affiliation_attribution_weight",
+        ),
+        CheckConstraint(
+            "author_weight_numerator > 0 AND author_weight_denominator > 0",
+            name="paper_affiliation_author_fraction",
+        ),
+        CheckConstraint(
+            "attribution_weight_numerator > 0 AND attribution_weight_denominator > 0",
+            name="paper_affiliation_attribution_fraction",
+        ),
+        CheckConstraint(
+            "effective_affiliation_count > 0",
+            name="paper_affiliation_effective_count",
+        ),
+        CheckConstraint(
+            "(affiliation_resolution_status = 'resolved' AND "
+            "institution_id IS NOT NULL AND country_id IS NOT NULL) OR "
+            "(affiliation_resolution_status != 'resolved' AND "
+            "institution_id IS NULL AND country_id IS NULL)",
+            name="paper_affiliation_resolution_target",
+        ),
+        Index(
+            "ix_paper_affiliation_current_dataset",
+            "paper_id",
+            "is_current",
+            "dataset_version",
+        ),
+    )
+
+
 class Citation(Base, TimestampMixin, ProvenanceMixin):
     __tablename__ = "citations"
     id: Mapped[str] = mapped_column(String(240), primary_key=True)
@@ -283,6 +451,34 @@ class MetricDefinition(Base, TimestampMixin, ProvenanceMixin):
         JsonType, default=list, nullable=False
     )
     implementation_status: Mapped[str] = mapped_column(String(80), nullable=False)
+
+
+class MetricSystemRelease(Base, TimestampMixin, ProvenanceMixin):
+    """Versioned joint activation manifest for the complete five-metric system."""
+
+    __tablename__ = "metric_system_releases"
+    id: Mapped[str] = mapped_column(String(160), primary_key=True)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    metric_ids: Mapped[list[str]] = mapped_column(JsonType, nullable=False)
+    algorithm_versions: Mapped[dict[str, str]] = mapped_column(JsonType, nullable=False)
+    attribution_policy_version: Mapped[str] = mapped_column(String(160), nullable=False)
+    ontology_version: Mapped[str] = mapped_column(String(160), nullable=False)
+    mapping_policy_version: Mapped[str] = mapped_column(String(160), nullable=False)
+    threshold_version: Mapped[str] = mapped_column(String(160), nullable=False)
+    validation_evidence: Mapped[dict[str, Any]] = mapped_column(
+        JsonType, default=dict, nullable=False
+    )
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('experimental-withheld', 'eligible', 'active', 'retired')",
+            name="metric_system_release_status",
+        ),
+        CheckConstraint(
+            "(status = 'active' AND activated_at IS NOT NULL) OR status != 'active'",
+            name="metric_system_release_activation_time",
+        ),
+    )
 
 
 class MetricObservation(Base, TimestampMixin, ProvenanceMixin):

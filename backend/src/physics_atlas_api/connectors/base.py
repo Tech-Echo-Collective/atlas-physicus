@@ -272,6 +272,13 @@ def normalize_external_id(scheme: str, value: Any) -> tuple[str, str] | None:
         ).strip("/")
         if not identifier:
             return None
+    elif normalized_scheme == "inspire-institution":
+        identifier = _strip_identifier_url(identifier, "inspirehep.net", "institutions")
+        identifier = re.sub(
+            r"^inspire(?:-institution)?:\s*", "", identifier, flags=re.IGNORECASE
+        ).strip("/")
+        if not identifier:
+            return None
 
     return normalized_scheme, identifier
 

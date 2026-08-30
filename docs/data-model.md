@@ -27,11 +27,17 @@ Represents a physics classification used to filter the atlas.
 
 | Property | Meaning |
 | --- | --- |
-| `id` | Stable field identifier, initially based on arXiv-style categories |
+| `id` | Stable Atlas field identifier; provider category strings remain separate evidence |
 | `label` | Human-readable field name |
 | `description` | Short scope description |
+| `parentFieldId` | Optional parent in the versioned Atlas hierarchy |
+| `aliases` | Reviewed discovery labels, not provider-classification evidence |
+| `ontologyVersion`, `nodeKind` | Exact ontology lineage and branch/field role |
+| `isExplorable`, `displayOrder` | Navigation eligibility and deterministic ordering |
 
-The synthetic dataset contains `hep-th`, `gr-qc`, `quant-ph`, and `cond-mat`. The INSPIRE-HEP pilot contains only the primary `hep-th` scope.
+The local synthetic dataset still exercises a small subset. The reference
+bootstrap now stores the broad [Physics Field Ontology v1](field-ontology.md),
+while the live acquisition scope remains bounded to `hep-th-v1`.
 
 ### Country
 
@@ -164,6 +170,20 @@ Preserves an immutable institution, researcher, or paper source input before res
 | `ingestedAt` | Ingestion timestamp |
 | `provenance` | Source/version record |
 
+`Affiliation` represents a profile or bounded temporal relationship. It is not
+allowed to overwrite publication-time evidence.
+
+### PaperAffiliation
+
+Stores one resolved or explicitly withheld paper-time affiliation share. It
+records paper, provider author slot, optional canonical researcher,
+institution/country only when resolved, raw affiliation/subunit evidence,
+source snapshot and dataset version, exact fraction numerators/denominators,
+resolution statuses, contribution statements, and attribution/materialization
+versions. Current rows may be superseded by a new source snapshot, but older
+materializations remain auditable. See
+[Scientific Attribution](scientific-attribution.md).
+
 ### IdentityResolution
 
 Records an auditable decision between a raw record and a canonical entity.
@@ -278,6 +298,15 @@ one exact entity/scope/period partition, a newer calculation is selected only
 when all current rows use one algorithm version; conflicting algorithms fail
 closed. Historical rows remain stored for audit but cannot compete with the
 current map or profile value.
+
+### MetricSystemRelease
+
+Records the joint publication state for exactly the five Metric System v1
+dimensions. The manifest binds metric and algorithm IDs to attribution,
+ontology, mapping, and threshold versions plus validation evidence. Live API
+reads fail closed unless one `active` manifest contains all five exact IDs and
+records that the Joint Activation Gate passed; partial metric publication is
+not a valid state.
 
 ## Preserved pilot canonical records
 

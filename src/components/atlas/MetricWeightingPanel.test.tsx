@@ -1,5 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { MetricDefinition } from '../../domain/models';
+import {
+  metricSystemV1Ids,
+  type MetricDefinition,
+} from '../../domain/models';
 import { defaultMetricWeightConfiguration } from '../../metrics/CompositeMetric';
 import { MetricWeightingPanel } from './MetricWeightingPanel';
 
@@ -10,18 +13,26 @@ const provenance = {
   status: 'verified' as const,
 };
 
-const definition: MetricDefinition = {
-  id: 'research_activity_score',
-  name: 'Research Activity',
-  category: 'Research Activity',
-  description: 'A reviewed activity observation.',
-  interpretation: 'Describes observed research activity.',
+const metricNames: Record<(typeof metricSystemV1Ids)[number], string> = {
+  research_activity_score: 'Research Activity',
+  research_impact: 'Research Impact',
+  collaboration: 'Collaboration',
+  research_diversity: 'Research Diversity',
+  momentum: 'Momentum',
+};
+
+const definitions: MetricDefinition[] = metricSystemV1Ids.map((id) => ({
+  id,
+  name: metricNames[id],
+  category: metricNames[id],
+  description: `A reviewed ${metricNames[id]} observation.`,
+  interpretation: `Describes observed ${metricNames[id]}.`,
   unit: 'normalized score',
-  version: '1.0.0',
+  version: `${id}-v1`,
   requiredData: ['publications'],
   implementationStatus: 'live-calculated',
   provenance,
-};
+}));
 
 describe('metric weighting availability', () => {
   it('withholds the metric controls when no validated layers are supplied', () => {
@@ -45,11 +56,11 @@ describe('metric weighting availability', () => {
     expect(markup).not.toContain('<select');
   });
 
-  it('enables the metric controls only when a validated definition is supplied', () => {
+  it('withholds a partial set even when its supplied definition is individually validated', () => {
     const markup = renderToStaticMarkup(
       <MetricWeightingPanel
-        definitions={[definition]}
-        selectedMetricId={definition.id}
+        definitions={definitions.slice(0, 1)}
+        selectedMetricId={definitions[0].id}
         configuration={defaultMetricWeightConfiguration}
         hasConfirmedProfile={false}
         compositeAvailable={false}
@@ -60,9 +71,31 @@ describe('metric weighting availability', () => {
       />,
     );
 
-    expect(markup).toContain('Choose a metric');
-    expect(markup).toContain('<select');
-    expect(markup).toContain('Research Activity');
+    expect(markup).toContain('Metrics withheld');
+    expect(markup).not.toContain('<select');
+  });
+
+  it('exposes all five layers and five 0.5% controls only for a complete system', () => {
+    const markup = renderToStaticMarkup(
+      <MetricWeightingPanel
+        definitions={definitions}
+        selectedMetricId={definitions[0].id}
+        configuration={defaultMetricWeightConfiguration}
+        hasConfirmedProfile={false}
+        compositeAvailable
+        datasetKind="live-api"
+        defaultOpen
+        onMetricSelect={() => undefined}
+        onApply={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain('Define a perspective');
+    metricSystemV1Ids.forEach((id) => {
+      expect(markup).toContain(`value="${defaultMetricWeightConfiguration.weights[id]}"`);
+    });
+    expect(markup.match(/step="0\.5"/g)).toHaveLength(5);
+    expect(markup).toContain('Ready to confirm. Draft total is exactly 100%.');
     expect(markup).not.toContain('Metrics withheld');
   });
 });

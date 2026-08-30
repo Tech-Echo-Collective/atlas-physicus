@@ -30,7 +30,7 @@ normalization + provider-category mapping
         ↓
 identifier-led entity resolution
         ↓
-canonical PostgreSQL entities and temporal relationships
+canonical PostgreSQL entities, paper-time affiliations, and temporal relationships
         ↓
 affected metric-partition planning
         ↓
@@ -57,7 +57,11 @@ Real-data records retain, where applicable:
 - identity-resolution method, confidence, and status;
 - metric definition, algorithm, calculation version, and calculation time.
 
-Affiliation is a temporal relationship, not a permanent researcher property. Missing bounds remain unknown. Missing metric observations remain missing and are never converted to zero.
+Profile `Affiliation` is a temporal relationship, not a permanent researcher
+property. `PaperAffiliation` separately preserves each publication-time slot,
+exact fractional share, resolution state, and snapshot lineage; a current
+profile cannot overwrite it. Missing bounds, relationships, or observations
+remain unknown and are never converted to zero.
 
 ## Incremental operation
 
@@ -96,3 +100,9 @@ Institution cores and both decorative pulse rings inherit the active metric colo
 Deployment-ready means the code, migrations, container configuration, fixtures, and health/status interfaces are present. Truly live means the separately operated PostgreSQL database, API, and scheduled worker are reachable and current. Production claims must be reverified for each release.
 
 The worker bootstraps only non-observational reference data when the database is empty: the Physics domain, broader field taxonomy, ISO country records, geographic views, and metric definitions. It does not copy synthetic institutions, people, papers, or metric observations into a live database. Deterministic fixture runs remain visibly synthetic throughout provenance and dataset status.
+
+The production recalculator remains `NoFormulaMetricRecalculator`. The five v1
+algorithms are testable scientific framework code, but no live observation is
+readable unless one exact-five `MetricSystemRelease` is explicitly active and
+records a passed Joint Activation Gate. The current release manifest is
+`experimental-withheld`; partial activation is not supported.

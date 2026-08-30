@@ -10,6 +10,7 @@ import {
   type MetricWeightConfiguration,
 } from '../../domain/models';
 import { metricProfiles } from '../../metrics/MetricProfiles';
+import { getVisualizationReadyMetricDefinitions } from '../../metrics/MetricRegistry';
 
 interface MetricWeightingPanelProps {
   definitions: MetricDefinition[];
@@ -50,7 +51,12 @@ export function MetricWeightingPanel({
   onApply,
 }: MetricWeightingPanelProps) {
   const presentation = getDatasetPresentation(datasetKind);
-  const hasValidatedMetricLayer = definitions.length > 0;
+  const visualizationDefinitions = useMemo(
+    () => getVisualizationReadyMetricDefinitions(definitions),
+    [definitions],
+  );
+  const hasValidatedMetricLayer = visualizationDefinitions.length > 0;
+  const canBuildComposite = hasValidatedMetricLayer && compositeAvailable;
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [selectedProfileId, setSelectedProfileId] = useState(configuration.id);
   const [draftWeights, setDraftWeights] = useState(() =>
@@ -61,10 +67,19 @@ export function MetricWeightingPanel({
     const parsedWeights: Record<MetricId, number> = {};
     const invalidMetricIds: MetricId[] = [];
 
-    definitions.forEach((definition) => {
+    visualizationDefinitions.forEach((definition) => {
       const rawValue = draftWeights[definition.id]?.trim() ?? '';
       const value = Number(rawValue);
-      if (rawValue === '' || !Number.isFinite(value) || value < 0) {
+      const isHalfPercentIncrement =
+        Number.isFinite(value) &&
+        Math.abs(value * 2 - Math.round(value * 2)) < 0.0001;
+      if (
+        rawValue === '' ||
+        !Number.isFinite(value) ||
+        value < 0 ||
+        value > 100 ||
+        !isHalfPercentIncrement
+      ) {
         invalidMetricIds.push(definition.id);
         return;
       }
@@ -84,7 +99,7 @@ export function MetricWeightingPanel({
       parsedWeights,
       total,
     };
-  }, [definitions, draftWeights]);
+  }, [draftWeights, visualizationDefinitions]);
 
   const activePreset = metricProfiles.find(
     (profile) => profile.id === selectedProfileId,
@@ -115,7 +130,7 @@ export function MetricWeightingPanel({
   };
 
   const validationMessage = validation.invalidMetricIds.length
-    ? 'Enter a non-negative numeric value for every metric.'
+    ? 'Enter a value from 0% to 100% in 0.5% increments for every metric.'
     : validation.isValid
       ? 'Ready to confirm. Draft total is exactly 100%.'
       : `Total must equal 100%. Current draft: ${validation.total.toFixed(2)}%.`;
@@ -141,12 +156,12 @@ export function MetricWeightingPanel({
               <h2>
                 {!hasValidatedMetricLayer
                   ? 'Metrics withheld'
-                  : compositeAvailable
+                  : canBuildComposite
                   ? 'Define a perspective'
                   : 'Choose a metric'}
               </h2>
             </div>
-            {compositeAvailable && (
+            {canBuildComposite && (
               <span className="metric-total" data-valid={validation.isValid}>
                 {validation.total.toFixed(2)}%
               </span>
@@ -160,14 +175,14 @@ export function MetricWeightingPanel({
                 value={selectedMetricId}
                 onChange={(event) => onMetricSelect(event.target.value)}
               >
-                {definitions.map((definition) => (
+                {visualizationDefinitions.map((definition) => (
                   <option key={definition.id} value={definition.id}>
                     {definition.name}
                   </option>
                 ))}
                 <option
                   value={compositeMetricId}
-                  disabled={!hasConfirmedProfile || !compositeAvailable}
+                  disabled={!hasConfirmedProfile || !canBuildComposite}
                 >
                   Applied composite · {configuration.name}
                 </option>
@@ -181,7 +196,7 @@ export function MetricWeightingPanel({
                 presentation.dataLabelLower,
               )}
             </p>
-          ) : compositeAvailable ? (
+          ) : canBuildComposite ? (
             <>
               <label className="metric-layer-select">
                 <span>Predefined perspective</span>
@@ -203,7 +218,7 @@ export function MetricWeightingPanel({
               </p>
 
               <div className="metric-weight-list">
-                {definitions.map((definition) => {
+                {visualizationDefinitions.map((definition) => {
                   const isInvalid = validation.invalidMetricIds.includes(
                     definition.id,
                   );
@@ -217,7 +232,7 @@ export function MetricWeightingPanel({
                         <input
                           type="number"
                           min="0"
-                          step="any"
+                          step="0.5"
                           inputMode="decimal"
                           value={draftWeights[definition.id] ?? ''}
                           aria-label={`${definition.name} weight`}

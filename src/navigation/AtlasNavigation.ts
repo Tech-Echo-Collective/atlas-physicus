@@ -85,7 +85,11 @@ export function resolveAtlasLocation(
     .filter(Number.isFinite);
   const minimumYear = Math.min(...availableYears);
   const maximumYear = Math.max(...availableYears);
-  const requestedYear = Number(parameters.get('year'));
+  const requestedYearParameter = parameters.get('year');
+  const requestedYear =
+    requestedYearParameter === null || requestedYearParameter.trim() === ''
+      ? Number.NaN
+      : Number(requestedYearParameter);
   const selectedYear =
     Number.isInteger(requestedYear) &&
     (dataset.metadata.datasetKind === 'live-api' ||

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal, Self
 
 from pydantic import (
@@ -65,6 +65,12 @@ class ResearchFieldOut(ApiModel):
     id: str
     label: str
     description: str
+    parent_field_id: str | None = None
+    aliases: list[str] = Field(default_factory=list)
+    ontology_version: str
+    node_kind: Literal["domain-root", "branch", "field"]
+    is_explorable: bool
+    display_order: int = Field(ge=0)
     provenance: Provenance
 
 
@@ -131,6 +137,9 @@ class PaperOut(ApiModel):
     title: str
     summary: str
     year: int
+    publication_date: date | None = None
+    publication_date_precision: Literal["year", "month", "day"] | None = None
+    document_type: str
     field_ids: list[str]
     doi: str | None = None
     arxiv_id: str | None = None

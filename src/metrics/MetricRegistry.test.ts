@@ -1,5 +1,7 @@
-import type { MetricDefinition } from '../domain/models';
+import { metricSystemV1Ids, type MetricDefinition } from '../domain/models';
 import {
+  getVisualizationReadyMetricDefinitions,
+  hasCompleteVisualizationMetricSystem,
   isVisualizationReadyMetricDefinition,
   MetricRegistry,
 } from './MetricRegistry';
@@ -7,81 +9,108 @@ import {
 const provenance = {
   source: 'Synthetic metric test',
   sourceType: 'synthetic-demo' as const,
-  version: 'v3.0.1-alpha',
+  version: 'metric-system-test-v1',
   status: 'synthetic' as const,
 };
 
-const definitions: MetricDefinition[] = [
-  {
-    id: 'activity',
-    name: 'Activity',
-    category: 'Activity',
-    description: 'Synthetic activity test metric.',
+function definition(
+  id: string,
+  implementationStatus: MetricDefinition['implementationStatus'] =
+    'synthetic-demo',
+): MetricDefinition {
+  return {
+    id,
+    name: id,
+    category: id,
+    description: 'Synthetic metric test definition.',
     interpretation: 'Synthetic test interpretation.',
     unit: 'index',
-    version: 'v1',
+    version: `${id}-v1`,
     requiredData: ['demo fixture'],
-    implementationStatus: 'synthetic-demo',
+    implementationStatus,
     provenance,
-  },
-  {
-    id: 'impact',
-    name: 'Impact',
-    category: 'Impact',
-    description: 'Synthetic impact test metric.',
-    interpretation: 'Synthetic test interpretation.',
-    unit: 'index',
-    version: 'v1',
-    requiredData: ['demo fixture'],
-    implementationStatus: 'synthetic-demo',
-    provenance,
-  },
-  {
-    id: 'candidate-connectivity',
-    name: 'Candidate Connectivity',
-    category: 'Collaboration',
-    description: 'Candidate method under scientific review.',
-    interpretation: 'Not yet available as an observation.',
-    unit: 'normalized score',
-    version: 'connectivity-distinct-partners-v1',
-    requiredData: ['source-scope:hep-th-v1'],
-    implementationStatus: 'experimental-candidate',
-    provenance,
-  },
-  {
-    id: 'talent-ecosystem',
-    name: 'Talent Ecosystem',
-    category: 'Talent Ecosystem',
-    description: 'Future taxonomy test definition.',
-    interpretation: 'No observation is calculated in this test.',
-    unit: 'taxonomy definition only',
-    version: 'v1',
-    requiredData: ['future data'],
-    implementationStatus: 'taxonomy-only',
-    provenance,
-  },
+  };
+}
+
+const completeDefinitions = metricSystemV1Ids.map((id) => definition(id));
+const candidateDefinition = definition(
+  'candidate-connectivity',
+  'experimental-candidate',
+);
+const taxonomyDefinition = definition('talent-ecosystem', 'taxonomy-only');
+const definitions = [
+  ...completeDefinitions,
+  candidateDefinition,
+  taxonomyDefinition,
 ];
 
 describe('MetricRegistry', () => {
-  it('discovers metrics by identifier and category', () => {
+  it('publishes exactly the five canonical dimensions in canonical order', () => {
     const registry = new MetricRegistry(definitions);
 
-    expect(registry.getMetrics()).toHaveLength(4);
-    expect(registry.getMetricDefinition('impact')).toEqual(definitions[1]);
-    expect(registry.getMetricsByCategory('activity')).toEqual([
-      definitions[0],
+    expect(registry.getMetrics()).toHaveLength(7);
+    expect(registry.getMetricDefinition('research_impact')).toEqual(
+      completeDefinitions[1],
+    );
+    expect(registry.getMetricsByCategory('research_impact')).toEqual([
+      completeDefinitions[1],
     ]);
-    expect(registry.getVisualizationMetrics()).toEqual(definitions.slice(0, 2));
-    expect(registry.getExperimentalCandidateMetrics()).toEqual([definitions[2]]);
-    expect(registry.getTaxonomyOnlyMetrics()).toEqual([definitions[3]]);
+    expect(registry.getVisualizationMetrics().map(({ id }) => id)).toEqual(
+      metricSystemV1Ids,
+    );
+    expect(registry.getExperimentalCandidateMetrics()).toEqual([
+      candidateDefinition,
+    ]);
+    expect(registry.getTaxonomyOnlyMetrics()).toEqual([taxonomyDefinition]);
     expect(registry.getMetricDefinition('missing')).toBeNull();
   });
 
-  it('uses an explicit visualization-ready allowlist', () => {
-    expect(isVisualizationReadyMetricDefinition(definitions[0])).toBe(true);
-    expect(isVisualizationReadyMetricDefinition(definitions[1])).toBe(true);
-    expect(isVisualizationReadyMetricDefinition(definitions[2])).toBe(false);
-    expect(isVisualizationReadyMetricDefinition(definitions[3])).toBe(false);
+  it('withholds every visualization metric when the system is partial', () => {
+    const partialDefinitions = completeDefinitions.slice(0, -1);
+
+    expect(hasCompleteVisualizationMetricSystem(partialDefinitions)).toBe(false);
+    expect(getVisualizationReadyMetricDefinitions(partialDefinitions)).toEqual(
+      [],
+    );
+    expect(
+      new MetricRegistry(partialDefinitions).getVisualizationMetrics(),
+    ).toEqual([]);
+  });
+
+  it('withholds every visualization metric when one canonical dimension is only a candidate', () => {
+    const definitionsWithCandidate = completeDefinitions.map((item) =>
+      item.id === 'research_diversity'
+        ? { ...item, implementationStatus: 'experimental-candidate' as const }
+        : item,
+    );
+
+    expect(
+      getVisualizationReadyMetricDefinitions(definitionsWithCandidate),
+    ).toEqual([]);
+  });
+
+  it('withholds a mixed synthetic/live definition set', () => {
+    const mixedDefinitions = completeDefinitions.map((item, index) =>
+      index === 0
+        ? { ...item, implementationStatus: 'live-calculated' as const }
+        : item,
+    );
+
+    expect(getVisualizationReadyMetricDefinitions(mixedDefinitions)).toEqual(
+      [],
+    );
+  });
+
+  it('uses an explicit visualization-ready status allowlist', () => {
+    expect(isVisualizationReadyMetricDefinition(completeDefinitions[0])).toBe(
+      true,
+    );
+    expect(isVisualizationReadyMetricDefinition(candidateDefinition)).toBe(
+      false,
+    );
+    expect(isVisualizationReadyMetricDefinition(taxonomyDefinition)).toBe(
+      false,
+    );
     expect(
       isVisualizationReadyMetricDefinition({
         implementationStatus: 'live-calculated',
@@ -90,8 +119,15 @@ describe('MetricRegistry', () => {
   });
 
   it('rejects duplicate metric identifiers', () => {
-    expect(() => new MetricRegistry([definitions[0], definitions[0]])).toThrow(
-      /unique identifiers/,
-    );
+    expect(
+      getVisualizationReadyMetricDefinitions([
+        ...completeDefinitions,
+        completeDefinitions[0],
+      ]),
+    ).toEqual([]);
+    expect(
+      () =>
+        new MetricRegistry([completeDefinitions[0], completeDefinitions[0]]),
+    ).toThrow(/unique identifiers/);
   });
 });

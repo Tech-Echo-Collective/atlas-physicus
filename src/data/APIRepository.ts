@@ -54,7 +54,7 @@ import {
   sourceSnapshotSchema,
 } from '../domain/schemas';
 import { KnowledgeGraphService } from '../knowledge/KnowledgeGraph';
-import { isVisualizationReadyMetricDefinition } from '../metrics/MetricRegistry';
+import { getVisualizationReadyMetricDefinitions } from '../metrics/MetricRegistry';
 import type { ScientificKnowledgeGraph } from '../knowledge/KnowledgeGraph';
 import type {
   InstitutionProfileData,
@@ -305,13 +305,12 @@ export class APIRepository
     requestedMetricIds: MetricId[],
   ): Promise<Map<MetricId, MetricDefinition>> {
     const requestedIds = new Set(requestedMetricIds);
+    const visualizationDefinitions = getVisualizationReadyMetricDefinitions(
+      await this.getMetricDefinitions(),
+    );
     return new Map(
-      (await this.getMetricDefinitions())
-        .filter(
-          (definition) =>
-            requestedIds.has(definition.id) &&
-            isVisualizationReadyMetricDefinition(definition),
-        )
+      visualizationDefinitions
+        .filter((definition) => requestedIds.has(definition.id))
         .map((definition) => [definition.id, definition]),
     );
   }
@@ -347,8 +346,9 @@ export class APIRepository
       this.getHistoricalEvents(),
       this.getMetricDefinitions(),
     ]);
-    const implementedMetricIds = metricDefinitions
-      .filter(isVisualizationReadyMetricDefinition)
+    const implementedMetricIds = getVisualizationReadyMetricDefinitions(
+      metricDefinitions,
+    )
       .map((definition) => definition.id);
     const bootstrapMetricId = implementedMetricIds.includes(defaultMetricId)
       ? defaultMetricId

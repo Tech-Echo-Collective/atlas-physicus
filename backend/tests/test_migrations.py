@@ -27,6 +27,8 @@ def test_initial_migration_upgrades_and_downgrades(tmp_path: Path, monkeypatch) 
         "identity_reviews",
         "update_runs",
         "entity_search_terms",
+        "paper_affiliations",
+        "metric_system_releases",
     }.issubset(tables)
     cursor_columns = {
         column["name"] for column in inspector.get_columns("source_cursors")
@@ -67,6 +69,44 @@ def test_initial_migration_upgrades_and_downgrades(tmp_path: Path, monkeypatch) 
         for constraint in inspector.get_check_constraints("metric_observations")
     }
     assert "ck_metric_observations_reconstruction_metadata" in metric_check_names
+    research_field_columns = {
+        column["name"] for column in inspector.get_columns("research_fields")
+    }
+    assert {
+        "parent_field_id",
+        "aliases",
+        "ontology_version",
+        "node_kind",
+        "is_explorable",
+        "display_order",
+    }.issubset(research_field_columns)
+    paper_field_columns = {
+        column["name"] for column in inspector.get_columns("paper_fields")
+    }
+    assert {
+        "weight",
+        "classification_role",
+        "ontology_version",
+        "mapping_rule_version",
+        "weighting_policy_version",
+        "provider_categories",
+        "uncertainty_note",
+    }.issubset(paper_field_columns)
+    paper_affiliation_columns = {
+        column["name"] for column in inspector.get_columns("paper_affiliations")
+    }
+    assert {
+        "paper_id",
+        "author_position",
+        "institution_id",
+        "country_id",
+        "attribution_weight",
+        "attribution_weight_numerator",
+        "attribution_weight_denominator",
+        "attribution_policy_version",
+        "dataset_version",
+        "is_current",
+    }.issubset(paper_affiliation_columns)
 
     command.downgrade(config, "base")
     remaining = set(inspect(create_engine(database_url)).get_table_names())

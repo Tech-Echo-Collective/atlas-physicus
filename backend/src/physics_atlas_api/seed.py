@@ -10,9 +10,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import InstrumentedAttribute, Session
 
 from . import models
+from .attribution import FRACTIONAL_ATTRIBUTION_V1
 from .config import get_settings
 from .database import SessionLocal
-from .metrics.contracts import get_metric_contract
+from .fields import PHYSICS_FIELD_ONTOLOGY_V1, PHYSICS_FIELD_ONTOLOGY_VERSION
+from .fields.mapping import PROVIDER_FIELD_MAPPING_VERSION
+from .metrics.contracts import METRIC_CONTRACTS, get_metric_contract
+from .metrics.thresholds import METRIC_VALIDATION_THRESHOLDS_V1
 from .search_index import refresh_search_terms
 
 ISO_ALPHA3_TO_ALPHA2 = {
@@ -35,22 +39,7 @@ REFERENCE_PROVENANCE = {
 }
 
 BROAD_PHYSICS_FIELDS = {
-    "hep-th": ("High Energy Theory", "Theoretical high-energy physics."),
-    "hep-ph": ("High Energy Phenomenology", "Phenomenology of high-energy physics."),
-    "hep-ex": ("High Energy Experiment", "Experimental high-energy physics."),
-    "gr-qc": ("General Relativity / Quantum Cosmology", "Gravitation and cosmology."),
-    "quant-ph": ("Quantum Information", "Quantum information and foundations."),
-    "astro-ph": ("Astrophysics", "Astrophysics and cosmology."),
-    "cond-mat": ("Condensed Matter", "Condensed-matter physics."),
-    "amo": (
-        "Atomic / Molecular / Optical Physics",
-        "Atomic, molecular, and optical physics.",
-    ),
-    "nucl-th": ("Nuclear Theory", "Theoretical nuclear physics."),
-    "nucl-ex": ("Nuclear Experiment", "Experimental nuclear physics."),
-    "plasma": ("Plasma Physics", "Plasma physics."),
-    "biophysics": ("Biophysics", "Physics methods applied to biological systems."),
-    "math-ph": ("Mathematical Physics", "Mathematical structures in physics."),
+    item.id: (item.label, item.description) for item in PHYSICS_FIELD_ONTOLOGY_V1.fields
 }
 
 REFERENCE_METRIC_TEXT = {
@@ -90,6 +79,40 @@ REFERENCE_METRIC_TEXT = {
         "No resilience or vulnerability claim is calculated in this release.",
     ),
 }
+
+
+def _metric_system_versions_are_current(
+    release: models.MetricSystemRelease | None,
+) -> bool:
+    """Compare a persisted manifest with the implemented system tuple."""
+    if release is None:
+        return False
+    return (
+        set(release.metric_ids) == set(METRIC_CONTRACTS)
+        and release.algorithm_versions
+        == {
+            metric_id: contract.algorithm_version
+            for metric_id, contract in METRIC_CONTRACTS.items()
+        }
+        and release.attribution_policy_version == FRACTIONAL_ATTRIBUTION_V1.version
+        and release.ontology_version == PHYSICS_FIELD_ONTOLOGY_VERSION
+        and release.mapping_policy_version == PROVIDER_FIELD_MAPPING_VERSION
+        and release.threshold_version == METRIC_VALIDATION_THRESHOLDS_V1.version
+    )
+
+
+def _reviewed_metric_system_is_current(
+    release: models.MetricSystemRelease | None,
+) -> bool:
+    """Recognize reviewed state without creating or promoting it."""
+    if release is None or release.status not in {"eligible", "active"}:
+        return False
+    if release.status == "active" and release.activated_at is None:
+        return False
+    return (
+        _metric_system_versions_are_current(release)
+        and release.validation_evidence.get("jointGatePassed") is True
+    )
 
 
 def _reference_metric_values(item: dict[str, Any]) -> dict[str, Any]:
@@ -135,6 +158,10 @@ def _reference_metric_values(item: dict[str, Any]) -> dict[str, Any]:
 
 def seed_reference_data(session: Session, payload: dict[str, Any]) -> None:
     """Seed non-observational reference data without copying demo entities."""
+    metric_system_release = session.get(models.MetricSystemRelease, "metric-system-v1")
+    preserve_reviewed_metrics = _reviewed_metric_system_is_current(
+        metric_system_release
+    )
     session.merge(
         models.ScienceDomain(
             id="physics",
@@ -144,7 +171,9 @@ def seed_reference_data(session: Session, payload: dict[str, Any]) -> None:
         )
     )
     demo_fields = {item["id"]: item for item in payload.get("fields", [])}
-    for field_id, (label, description) in BROAD_PHYSICS_FIELDS.items():
+    for definition in PHYSICS_FIELD_ONTOLOGY_V1.fields:
+        field_id = definition.id
+        label, description = BROAD_PHYSICS_FIELDS[field_id]
         item = demo_fields.get(field_id, {})
         session.merge(
             models.ResearchField(
@@ -152,8 +181,20 @@ def seed_reference_data(session: Session, payload: dict[str, Any]) -> None:
                 domain_id="physics",
                 label=item.get("label", label),
                 description=item.get("description", description),
+                parent_field_id=definition.parent_id,
+                aliases=list(definition.aliases),
+                ontology_version=definition.ontology_version,
+                node_kind=definition.node_kind,
+                is_explorable=definition.node_kind == "field",
+                display_order=definition.display_order,
                 provider_mappings={},
-                provenance_json=REFERENCE_PROVENANCE,
+                provenance_json={
+                    **REFERENCE_PROVENANCE,
+                    "source": definition.provenance.source,
+                    "version": definition.ontology_version,
+                    "ontologyStatus": definition.provenance.status,
+                    "note": definition.provenance.note,
+                },
             )
         )
     for country in pycountry.countries:
@@ -195,6 +236,15 @@ def seed_reference_data(session: Session, payload: dict[str, Any]) -> None:
         )
     for item in payload.get("metricDefinitions", []):
         values = _reference_metric_values(item)
+        existing_definition = session.get(models.MetricDefinition, item["id"])
+        if (
+            preserve_reviewed_metrics
+            and get_metric_contract(item["id"]) is not None
+            and existing_definition is not None
+            and existing_definition.version == values["version"]
+            and existing_definition.implementation_status == "live-calculated"
+        ):
+            continue
         session.merge(
             models.MetricDefinition(
                 id=item["id"],
@@ -209,6 +259,58 @@ def seed_reference_data(session: Session, payload: dict[str, Any]) -> None:
                 provenance_json=values["provenance_json"],
             )
         )
+    if metric_system_release is None:
+        session.add(
+            models.MetricSystemRelease(
+                id="metric-system-v1",
+                status="experimental-withheld",
+                metric_ids=list(METRIC_CONTRACTS),
+                algorithm_versions={
+                    metric_id: contract.algorithm_version
+                    for metric_id, contract in METRIC_CONTRACTS.items()
+                },
+                attribution_policy_version=FRACTIONAL_ATTRIBUTION_V1.version,
+                ontology_version=PHYSICS_FIELD_ONTOLOGY_VERSION,
+                mapping_policy_version=PROVIDER_FIELD_MAPPING_VERSION,
+                threshold_version=METRIC_VALIDATION_THRESHOLDS_V1.version,
+                validation_evidence={
+                    "jointGatePassed": False,
+                    "reason": (
+                        "Algorithms are implemented as an experimental framework; "
+                        "live coverage and scientific validation gates have not passed."
+                    ),
+                },
+                activated_at=None,
+                provenance_json={
+                    "source": "Physics Atlas Metric System v1 activation gate",
+                    "sourceType": "derived",
+                    "version": "metric-system-v1",
+                    "status": "unverified",
+                },
+            )
+        )
+    elif metric_system_release.status == "experimental-withheld":
+        metric_system_release.metric_ids = list(METRIC_CONTRACTS)
+        metric_system_release.algorithm_versions = {
+            metric_id: contract.algorithm_version
+            for metric_id, contract in METRIC_CONTRACTS.items()
+        }
+        metric_system_release.attribution_policy_version = (
+            FRACTIONAL_ATTRIBUTION_V1.version
+        )
+        metric_system_release.ontology_version = PHYSICS_FIELD_ONTOLOGY_VERSION
+        metric_system_release.mapping_policy_version = PROVIDER_FIELD_MAPPING_VERSION
+        metric_system_release.threshold_version = (
+            METRIC_VALIDATION_THRESHOLDS_V1.version
+        )
+        metric_system_release.validation_evidence = {
+            "jointGatePassed": False,
+            "reason": (
+                "Algorithms are implemented as an experimental framework; "
+                "live coverage and scientific validation gates have not passed."
+            ),
+        }
+        metric_system_release.activated_at = None
     session.commit()
 
 
@@ -228,6 +330,10 @@ def _reference_data_is_complete(session: Session, payload: dict[str, Any]) -> bo
         for item in payload.get("metricDefinitions", [])
     }
     metric_ids = set(metric_items)
+    metric_system_release = session.get(models.MetricSystemRelease, "metric-system-v1")
+    reviewed_metric_system_is_current = _reviewed_metric_system_is_current(
+        metric_system_release
+    )
 
     def present(id_column: InstrumentedAttribute[str], expected: set[str]) -> bool:
         if not expected:
@@ -245,18 +351,59 @@ def _reference_data_is_complete(session: Session, payload: dict[str, Any]) -> bo
     }
     metric_definitions_are_current = set(metric_definitions) == metric_ids and all(
         definition.version == metric_items[metric_id]["version"]
-        and definition.implementation_status
-        == metric_items[metric_id]["implementation_status"]
-        and definition.required_data == metric_items[metric_id]["required_data"]
+        and (
+            definition.implementation_status == "live-calculated"
+            if reviewed_metric_system_is_current
+            and get_metric_contract(metric_id) is not None
+            else (
+                definition.implementation_status
+                == metric_items[metric_id]["implementation_status"]
+                and definition.required_data == metric_items[metric_id]["required_data"]
+            )
+        )
         for metric_id, definition in metric_definitions.items()
     )
 
+    field_definitions = {
+        item.id: item
+        for item in session.scalars(
+            select(models.ResearchField).where(
+                models.ResearchField.id.in_(set(BROAD_PHYSICS_FIELDS))
+            )
+        )
+    }
+    ontology_is_current = len(field_definitions) == len(BROAD_PHYSICS_FIELDS) and all(
+        field_definitions[definition.id].domain_id == "physics"
+        and field_definitions[definition.id].parent_field_id == definition.parent_id
+        and field_definitions[definition.id].aliases == list(definition.aliases)
+        and field_definitions[definition.id].ontology_version
+        == definition.ontology_version
+        and field_definitions[definition.id].node_kind == definition.node_kind
+        and field_definitions[definition.id].is_explorable
+        == (definition.node_kind == "field")
+        and field_definitions[definition.id].display_order == definition.display_order
+        for definition in PHYSICS_FIELD_ONTOLOGY_V1.fields
+    )
     return (
         session.get(models.ScienceDomain, "physics") is not None
-        and present(models.ResearchField.id, set(BROAD_PHYSICS_FIELDS))
+        and ontology_is_current
         and present(models.Country.id, country_ids)
         and present(models.GeographicView.id, geographic_view_ids)
         and metric_definitions_are_current
+        and metric_system_release is not None
+        and (
+            reviewed_metric_system_is_current
+            or (
+                metric_system_release.status == "experimental-withheld"
+                and _metric_system_versions_are_current(metric_system_release)
+                and metric_system_release.validation_evidence.get("jointGatePassed")
+                is False
+            )
+            or (
+                metric_system_release.status == "retired"
+                and _metric_system_versions_are_current(metric_system_release)
+            )
+        )
     )
 
 
@@ -330,13 +477,69 @@ def seed_dataset(session: Session, payload: dict[str, Any]) -> None:
         for domain in payload.get("scienceDomains", [])
         for field_id in domain.get("fieldIds", [])
     }
+    payload_field_ids = {
+        str(item["id"]) for item in payload.get("fields", []) if item.get("id")
+    }
+    required_ancestors = {
+        ancestor.id: ancestor
+        for field_id in payload_field_ids
+        if PHYSICS_FIELD_ONTOLOGY_V1.contains(field_id)
+        for ancestor in PHYSICS_FIELD_ONTOLOGY_V1.ancestors_of(field_id)
+        if ancestor.id not in payload_field_ids
+    }
+    for ancestor_definition in sorted(
+        required_ancestors.values(), key=lambda item: item.display_order
+    ):
+        session.merge(
+            models.ResearchField(
+                id=ancestor_definition.id,
+                domain_id="physics",
+                label=ancestor_definition.label,
+                description=ancestor_definition.description,
+                parent_field_id=ancestor_definition.parent_id,
+                aliases=list(ancestor_definition.aliases),
+                ontology_version=ancestor_definition.ontology_version,
+                node_kind=ancestor_definition.node_kind,
+                is_explorable=ancestor_definition.node_kind == "field",
+                display_order=ancestor_definition.display_order,
+                provider_mappings={},
+                provenance_json={
+                    **default_provenance,
+                    "source": ancestor_definition.provenance.source,
+                    "version": ancestor_definition.ontology_version,
+                    "ontologyStatus": ancestor_definition.provenance.status,
+                    "note": ancestor_definition.provenance.note,
+                },
+            )
+        )
     for item in payload.get("fields", []):
+        field_definition = (
+            PHYSICS_FIELD_ONTOLOGY_V1.get(item["id"])
+            if PHYSICS_FIELD_ONTOLOGY_V1.contains(item["id"])
+            else None
+        )
         session.merge(
             models.ResearchField(
                 id=item["id"],
                 domain_id=field_domain[item["id"]],
                 label=item["label"],
                 description=item["description"],
+                parent_field_id=(
+                    field_definition.parent_id if field_definition else None
+                ),
+                aliases=list(field_definition.aliases) if field_definition else [],
+                ontology_version=(
+                    field_definition.ontology_version
+                    if field_definition
+                    else "legacy-flat-physics-fields-v1"
+                ),
+                node_kind=field_definition.node_kind if field_definition else "field",
+                is_explorable=(
+                    field_definition is None or field_definition.node_kind == "field"
+                ),
+                display_order=(
+                    field_definition.display_order if field_definition else 0
+                ),
                 provider_mappings={},
                 provenance_json=provenance(item, default_provenance),
             )
@@ -446,6 +649,18 @@ def seed_dataset(session: Session, payload: dict[str, Any]) -> None:
                 title=item["title"],
                 summary=item["summary"],
                 publication_year=item["year"],
+                publication_date=parsed_date(
+                    item.get("publicationDate"), item.get("year")
+                ),
+                publication_date_precision=(
+                    "day"
+                    if item.get("publicationDate")
+                    and len(item["publicationDate"]) == 10
+                    else "month"
+                    if item.get("publicationDate") and len(item["publicationDate"]) == 7
+                    else "year"
+                ),
+                document_type=item.get("documentType", "article"),
                 doi=item.get("doi"),
                 arxiv_id=item.get("arxivId"),
                 external_ids=item.get("externalIdentifiers", []),
@@ -477,6 +692,19 @@ def seed_dataset(session: Session, payload: dict[str, Any]) -> None:
                     field_id=field_id,
                     classification_method="checked-in-dataset",
                     confidence=None,
+                    weight=1,
+                    classification_role="unspecified",
+                    ontology_version=(
+                        PHYSICS_FIELD_ONTOLOGY_VERSION
+                        if PHYSICS_FIELD_ONTOLOGY_V1.contains(field_id)
+                        else "legacy-flat-physics-fields-v1"
+                    ),
+                    mapping_rule_version="checked-in-dataset-field-label-v1",
+                    weighting_policy_version="synthetic-fixture-membership-v1",
+                    provider_categories=[],
+                    uncertainty_note=(
+                        "Checked-in fixture membership; not provider-mapped evidence."
+                    ),
                     provenance_json=provenance(item, default_provenance),
                 )
             )

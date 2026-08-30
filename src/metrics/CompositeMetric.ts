@@ -1,12 +1,16 @@
 import {
   compositeMetricId,
+  metricSystemV1Ids,
   type MetricDefinition,
   type MetricId,
   type MetricObservation,
   type MetricWeightConfiguration,
 } from '../domain/models';
 import { metricWeightConfigurationSchema } from '../domain/schemas';
-import { isVisualizationReadyMetricDefinition } from './MetricRegistry';
+import {
+  hasCompleteVisualizationMetricSystem,
+  isVisualizationReadyMetricDefinition,
+} from './MetricRegistry';
 export { defaultMetricWeightConfiguration } from './MetricProfiles';
 
 export function validateMetricWeightConfiguration(
@@ -19,13 +23,12 @@ export function hasCompositeMetricInputs(
   definitions: MetricDefinition[],
   configuration: MetricWeightConfiguration,
 ): boolean {
-  return Object.keys(configuration.weights).every((metricId) =>
-    definitions.some(
-      (definition) =>
-        definition.id === metricId &&
-        isVisualizationReadyMetricDefinition(definition),
-    ),
-  );
+  try {
+    validateMetricWeightConfiguration(configuration);
+  } catch {
+    return false;
+  }
+  return hasCompleteVisualizationMetricSystem(definitions);
 }
 
 function observationScopeKey(observation: MetricObservation): string {
@@ -44,6 +47,9 @@ export function buildCompositeMetricObservations(
   definitions: MetricDefinition[],
 ): MetricObservation[] {
   const validatedConfiguration = validateMetricWeightConfiguration(configuration);
+  if (!hasCompleteVisualizationMetricSystem(definitions)) {
+    return [];
+  }
   const activeMetricIds = Object.entries(validatedConfiguration.weights)
     .filter(([, weight]) => weight > 0)
     .map(([metricId]) => metricId);
@@ -121,9 +127,7 @@ export function buildCompositeMetricObservations(
       const provenanceStatus =
         componentStatuses.size === 1 && componentStatuses.has('synthetic')
           ? 'synthetic'
-          : componentStatuses.size === 1 && componentStatuses.has('verified')
-            ? 'verified'
-            : 'unverified';
+          : 'unverified';
       const dataSourceVersion = baselineObservation.dataSourceVersion;
       const acquisitionScope =
         baselineObservation.acquisitionScope ??
@@ -147,10 +151,41 @@ export function buildCompositeMetricObservations(
           acquisitionScope,
           normalizationMethod: 'weighted-sum-of-normalized-inputs-v1',
           normalizationParameters: Object.fromEntries(
-            activeMetricIds.map((metricId) => [
-              `weight:${metricId}`,
-              validatedConfiguration.weights[metricId],
-            ]),
+            [
+              ['profileId', validatedConfiguration.id],
+              ['profileName', validatedConfiguration.name],
+              ...metricSystemV1Ids.map((metricId) => [
+                `weight:${metricId}`,
+                validatedConfiguration.weights[metricId],
+              ]),
+              [
+                'componentManifestVersion',
+                'composite-component-manifest-v1',
+              ],
+              [
+                'componentManifest',
+                Object.fromEntries(
+                  componentObservations.map((observation) => [
+                    observation.metricId,
+                    {
+                      observationId: observation.id,
+                      normalizedValue: observation.value,
+                      metricDefinitionVersion:
+                        observation.metricDefinitionVersion ?? 'legacy-v1',
+                      algorithmVersion: observation.algorithmVersion,
+                      calculationVersion: observation.calculationVersion,
+                      dataSourceVersion: observation.dataSourceVersion ?? null,
+                      acquisitionScope:
+                        observation.acquisitionScope ??
+                        observation.provenance.acquisitionScope ??
+                        null,
+                      provenanceVersion: observation.provenance.version,
+                      provenanceStatus: observation.provenance.status,
+                    },
+                  ]),
+                ),
+              ],
+            ],
           ),
           inputCount: activeMetricIds.length,
           qualityFlags: [

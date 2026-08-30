@@ -35,7 +35,7 @@ import {
   hasCompositeMetricInputs,
   prepareMetricObservationBatch,
 } from '../../metrics/CompositeMetric';
-import { isVisualizationReadyMetricDefinition } from '../../metrics/MetricRegistry';
+import { getVisualizationReadyMetricDefinitions } from '../../metrics/MetricRegistry';
 import { ProfileService } from '../../profiles/ProfileService';
 import {
   buildAtlasUrl,
@@ -447,6 +447,10 @@ export function AtlasExplorer() {
     () => dataset?.metricDefinitions ?? [],
     [dataset?.metricDefinitions],
   );
+  const visualizationMetricDefinitions = useMemo(
+    () => getVisualizationReadyMetricDefinitions(metricDefinitions),
+    [metricDefinitions],
+  );
   const isLiveApiRepository =
     repository instanceof APIRepository && selectedDataSourceId === 'live-api';
   const loadLiveStatus = useCallback(async () => {
@@ -464,20 +468,20 @@ export function AtlasExplorer() {
       selectedMetricId === compositeMetricId
         ? (Object.keys(metricWeightConfiguration.weights) as MetricId[]).filter(
             (metricId) =>
-              dataset?.metricDefinitions.some(
-                (definition) =>
-                  definition.id === metricId &&
-                  isVisualizationReadyMetricDefinition(definition),
+              visualizationMetricDefinitions.some(
+                (definition) => definition.id === metricId,
               ),
           )
-        : dataset?.metricDefinitions.some(
-              (definition) =>
-                definition.id === selectedMetricId &&
-                isVisualizationReadyMetricDefinition(definition),
+        : visualizationMetricDefinitions.some(
+              (definition) => definition.id === selectedMetricId,
             )
           ? [selectedMetricId]
           : [],
-    [dataset?.metricDefinitions, metricWeightConfiguration.weights, selectedMetricId],
+    [
+      metricWeightConfiguration.weights,
+      selectedMetricId,
+      visualizationMetricDefinitions,
+    ],
   );
   const liveWorldRequestKey =
     datasetVersion &&
@@ -846,16 +850,19 @@ export function AtlasExplorer() {
           metricWeightConfiguration,
           dataset.metricDefinitions,
         )
-      : dataset.metricDefinitions.some(
-            (definition) =>
-              definition.id === selectedMetricId &&
-              isVisualizationReadyMetricDefinition(definition),
+      : visualizationMetricDefinitions.some(
+            (definition) => definition.id === selectedMetricId,
           )
         ? dataset.metricObservations.filter(
             (observation) => observation.metricId === selectedMetricId,
           )
         : [];
-  }, [dataset, metricWeightConfiguration, selectedMetricId]);
+  }, [
+    dataset,
+    metricWeightConfiguration,
+    selectedMetricId,
+    visualizationMetricDefinitions,
+  ]);
 
   const availableYears = useMemo(() => {
     if (!dataset) {
@@ -976,9 +983,6 @@ export function AtlasExplorer() {
     : null;
   const activeMetricDefinition = dataset.metricDefinitions.find(
     (definition) => definition.id === selectedMetricId,
-  );
-  const visualizationMetricDefinitions = dataset.metricDefinitions.filter(
-    isVisualizationReadyMetricDefinition,
   );
   const compositeAvailable = hasCompositeMetricInputs(
     visualizationMetricDefinitions,
