@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from typing import Literal
 
-from sqlalchemy import distinct, func, select
+from sqlalchemy import case, distinct, func, select
 from sqlalchemy.orm import Session
 
 from .. import models
@@ -87,6 +87,9 @@ class MetricValidationSummary:
     authorship_count: int
     authored_paper_count: int
     affiliation_count: int
+    paper_time_affiliation_count: int
+    paper_time_affiliation_coverage: float | None
+    collaboration_relationship_coverage: float | None
     countries_with_institutions: int
     paper_time_affiliation_attribution_certified: bool
     citation_edge_count: int
@@ -117,12 +120,6 @@ class MetricValidationSummary:
             self.matched_papers_with_citation_observation
             / self.matched_paper_evidence_examined
         )
-
-    @property
-    def authored_paper_coverage(self) -> float | None:
-        if self.canonical_paper_count == 0:
-            return None
-        return self.authored_paper_count / self.canonical_paper_count
 
     def has_complete_window(self, years: int) -> bool:
         if self.terminal_year is None or years <= 0:
@@ -274,6 +271,36 @@ def _raw_evidence_counts(
     )
 
 
+def _paper_time_affiliation_measurement(
+    session: Session,
+) -> tuple[int, float | None]:
+    """Measure allocated current attribution mass without certifying its review."""
+    count, allocated_mass = session.execute(
+        select(
+            func.count(),
+            func.sum(
+                case(
+                    (
+                        (
+                            models.PaperAffiliation.affiliation_resolution_status
+                            == "resolved"
+                        )
+                        & models.PaperAffiliation.institution_id.is_not(None),
+                        models.PaperAffiliation.attribution_weight,
+                    ),
+                    else_=0,
+                )
+            ),
+        )
+        .select_from(models.PaperAffiliation)
+        .where(models.PaperAffiliation.is_current)
+    ).one()
+    canonical_paper_count = _count(session, models.Paper)
+    if canonical_paper_count == 0:
+        return int(count), None
+    return int(count), float(allocated_mass or 0) / canonical_paper_count
+
+
 def build_metric_validation_summary(
     session: Session,
     *,
@@ -358,6 +385,9 @@ def build_metric_validation_summary(
         raw_examined, citation_observed, raw_affiliations, truncated = (
             _raw_evidence_counts(session, max_evidence_records)
         )
+        paper_affiliation_count, paper_time_affiliation_coverage = (
+            _paper_time_affiliation_measurement(session)
+        )
         provenance = dataset.provenance_json if dataset else {}
 
         return MetricValidationSummary(
@@ -417,12 +447,17 @@ def build_metric_validation_summary(
             )
             or 0,
             affiliation_count=_count(session, models.Affiliation),
+            paper_time_affiliation_count=paper_affiliation_count,
+            paper_time_affiliation_coverage=paper_time_affiliation_coverage,
+            # Collaboration-indicator coverage needs its own reviewed evidence.
+            # Authored-paper presence is not a valid substitute.
+            collaboration_relationship_coverage=None,
             countries_with_institutions=session.scalar(
                 select(func.count(distinct(models.Institution.country_id)))
             )
             or 0,
-            # Current affiliations are entity relationships; the schema does not
-            # certify that each one applied to a specific paper at publication time.
+            # Materialized allocation coverage is measured above, but review is a
+            # separate scientific gate and is never inferred from row presence.
             paper_time_affiliation_attribution_certified=False,
             citation_edge_count=_count(session, models.Citation),
             # Publication month/cutoff, non-self derivation, and reviewed taxonomy
@@ -480,7 +515,10 @@ def _data_gate_reasons(
         ):
             reasons.append("the institution normalization cohort is too small")
         if (
-            summary.affiliation_count == 0
+            summary.paper_time_affiliation_count == 0
+            or summary.paper_time_affiliation_coverage is None
+            or summary.paper_time_affiliation_coverage
+            < thresholds.coverage.paper_time_affiliation
             or not summary.paper_time_affiliation_attribution_certified
         ):
             reasons.append("reviewed paper-time affiliation attribution is unavailable")
@@ -509,14 +547,17 @@ def _data_gate_reasons(
         ):
             reasons.append("a field-age cohort is below the v1 minimum")
         if (
-            summary.affiliation_count == 0
+            summary.paper_time_affiliation_count == 0
+            or summary.paper_time_affiliation_coverage is None
+            or summary.paper_time_affiliation_coverage
+            < thresholds.coverage.paper_time_affiliation
             or not summary.paper_time_affiliation_attribution_certified
         ):
             reasons.append("reviewed paper-time affiliation attribution is unavailable")
     elif contract.metric_id == "collaboration":
         if not summary.has_complete_window(3):
             reasons.append("three complete source years are not certified")
-        relationship_coverage = summary.authored_paper_coverage
+        relationship_coverage = summary.collaboration_relationship_coverage
         if (
             relationship_coverage is None
             or relationship_coverage
@@ -534,7 +575,10 @@ def _data_gate_reasons(
         ):
             reasons.append("fewer than five identifiable researchers are available")
         if (
-            summary.affiliation_count == 0
+            summary.paper_time_affiliation_count == 0
+            or summary.paper_time_affiliation_coverage is None
+            or summary.paper_time_affiliation_coverage
+            < thresholds.coverage.paper_time_affiliation
             or not summary.paper_time_affiliation_attribution_certified
         ):
             reasons.append(
@@ -560,7 +604,10 @@ def _data_gate_reasons(
                 "the hep-th-conditioned corpus is not a reviewed broad-field taxonomy"
             )
         if (
-            summary.affiliation_count == 0
+            summary.paper_time_affiliation_count == 0
+            or summary.paper_time_affiliation_coverage is None
+            or summary.paper_time_affiliation_coverage
+            < thresholds.coverage.paper_time_affiliation
             or not summary.paper_time_affiliation_attribution_certified
         ):
             reasons.append("reviewed paper-time affiliation attribution is unavailable")
@@ -573,7 +620,10 @@ def _data_gate_reasons(
         ):
             reasons.append("fewer than ten papers exist in each Momentum window")
         if (
-            summary.affiliation_count == 0
+            summary.paper_time_affiliation_count == 0
+            or summary.paper_time_affiliation_coverage is None
+            or summary.paper_time_affiliation_coverage
+            < thresholds.coverage.paper_time_affiliation
             or not summary.paper_time_affiliation_attribution_certified
         ):
             reasons.append("stable paper-time affiliation attribution is unavailable")

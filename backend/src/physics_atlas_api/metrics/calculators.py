@@ -621,7 +621,10 @@ def calculate_connectivity(
     fractional_papers = math.fsum(paper.attribution_weight for paper in papers)
     researchers = {item for paper in papers for item in paper.researcher_ids}
     reasons = _base_coverage_reasons(
-        partition, thresholds, require_geographic_attribution=True
+        partition,
+        thresholds,
+        require_geographic_attribution=partition.entity_type
+        in {"institution", "country"},
     )
     if reason := _complete_window_reason(partition, 3):
         reasons.append(reason)

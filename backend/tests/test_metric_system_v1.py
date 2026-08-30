@@ -307,6 +307,25 @@ def test_connectivity_withholds_unresolved_relationships_instead_of_zeroing() ->
     assert "relationship coverage" in " ".join(result.missing_reasons)
 
 
+def test_researcher_connectivity_does_not_require_geographic_attribution() -> None:
+    papers = tuple(paper(index, 2025, collaborative=True) for index in range(10))
+    result = calculate_connectivity(
+        partition(
+            "researcher-network",
+            papers,
+            entity_type="researcher",
+            coverage=complete_coverage(
+                paper_time_affiliation=None,
+                canonical_institution=None,
+            ),
+        )
+    )
+
+    assert result.raw_value == 1
+    assert result.normalized_value == 100
+    assert result.missing_reasons == ()
+
+
 def test_diversity_distinguishes_concentration_from_missing_classification() -> None:
     balanced = calculate_diversity(
         partition(

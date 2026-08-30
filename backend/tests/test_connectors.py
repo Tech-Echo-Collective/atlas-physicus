@@ -8,6 +8,7 @@ from physics_atlas_api.config import Settings
 from physics_atlas_api.connectors.base import (
     ConnectorConfigurationError,
     ConnectorError,
+    SourceRecord,
     normalize_external_id,
 )
 from physics_atlas_api.connectors.factory import build_connectors
@@ -120,6 +121,24 @@ def test_all_provider_connectors_normalize_deterministic_fixtures(
     assert crossref_record is not None
     crossref_normalized = crossref.normalize_record(crossref_record)
     assert "math-ph" in crossref_normalized.attributes["atlas_field_candidates"]
+
+
+def test_inspire_uses_valid_earliest_date_when_journal_year_is_absent() -> None:
+    connector = InspireConnector(JsonPayloadTransport({}), "https://provider.test/api")
+    normalized = connector.normalize_record(
+        SourceRecord(
+            provider="inspire",
+            source_record_id="123",
+            raw={
+                "titles": [{"title": "Preprint without journal metadata"}],
+                "earliest_date": "2025-03-14",
+                "inspire_categories": [{"term": "Theory-HEP"}],
+            },
+        )
+    )
+
+    assert normalized.attributes["publication_year"] == 2025
+    assert normalized.attributes["publication_date"] == "2025-03-14"
 
 
 def test_factory_rejects_an_unsupported_acquisition_scope(

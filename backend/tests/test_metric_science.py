@@ -2,6 +2,7 @@ import json
 import math
 from dataclasses import replace
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -309,6 +310,9 @@ def test_database_validation_reports_insufficient_live_coverage_without_writes(
     assert report.summary.canonical_paper_count == 1
     assert report.summary.canonical_institution_count == 0
     assert report.summary.affiliation_count == 0
+    assert report.summary.paper_time_affiliation_count == 0
+    assert report.summary.paper_time_affiliation_coverage == 0
+    assert report.summary.collaboration_relationship_coverage is None
     assert report.summary.paper_time_affiliation_attribution_certified is False
     assert report.summary.citation_edge_count == 0
     assert report.summary.citation_age_control_certified is False
@@ -380,6 +384,130 @@ def test_database_validation_reports_insufficient_live_coverage_without_writes(
     assert deduplicated_report.summary.matched_papers_with_citation_observation == 1
     assert deduplicated_report.summary.citation_observation_coverage == 1.0
 
+    session.add_all(
+        [
+            models.Country(
+                id="country-validation-test",
+                iso_alpha3="TST",
+                iso_alpha2="TS",
+                iso_numeric="999",
+                name="Test Country",
+                region="Test",
+                provenance_json=PROVENANCE,
+            ),
+            models.Institution(
+                id="institution-validation-test",
+                canonical_name="Test Institution",
+                aliases=[],
+                historical_names=[],
+                external_ids=[],
+                identity_confidence=1.0,
+                country_id="country-validation-test",
+                city="Test City",
+                longitude=0,
+                latitude=0,
+                field_ids=["hep-th"],
+                provenance_json=PROVENANCE,
+            ),
+        ]
+    )
+    session.flush()
+    session.add(
+        models.Affiliation(
+            id="profile-affiliation-validation-test",
+            researcher_id="researcher-live-test",
+            institution_id="institution-validation-test",
+            research_group_id=None,
+            start_date=None,
+            end_date=None,
+            provenance_json=PROVENANCE,
+        )
+    )
+    session.commit()
+
+    profile_only_report = build_metric_validation_report(session, terminal_year=2026)
+    assert profile_only_report.summary.affiliation_count == 1
+    assert profile_only_report.summary.paper_time_affiliation_count == 0
+    assert profile_only_report.summary.paper_time_affiliation_coverage == 0
+
+    session.add(
+        models.Paper(
+            id="paper-live-unmaterialized",
+            title="An unmaterialized paper",
+            summary="",
+            publication_year=2026,
+            document_type="article",
+            external_ids=[],
+            provenance_json=PROVENANCE,
+        )
+    )
+
+    common_values = {
+        "paper_id": "paper-live-test",
+        "authorship_id": "authorship-live-test",
+        "researcher_id": "researcher-live-test",
+        "source_snapshot_id": "snapshot-test",
+        "dataset_version": "live-test-v1",
+        "provider": "inspire",
+        "source_record_id": "paper-1",
+        "author_position": 1,
+        "raw_author_name": "Example, Ada",
+        "provider_affiliation_id": None,
+        "subunit_label": None,
+        "author_resolution_status": "resolved",
+        "author_weight": Decimal("1"),
+        "author_weight_numerator": 1,
+        "author_weight_denominator": 1,
+        "effective_affiliation_count": 2,
+        "attribution_policy_version": "fractional-attribution-v1",
+        "materialization_version": "paper-time-affiliation-materialization-v1",
+        "contribution_evidence": [],
+        "resolution_evidence": [],
+        "is_current": True,
+        "provenance_json": PROVENANCE,
+    }
+    session.add_all(
+        [
+            models.PaperAffiliation(
+                id="paper-affiliation-validation-resolved",
+                institution_id="institution-validation-test",
+                country_id="country-validation-test",
+                raw_affiliation="Test Institution",
+                affiliation_resolution_status="resolved",
+                affiliation_weight=Decimal("0.5"),
+                attribution_weight=Decimal("0.5"),
+                attribution_weight_numerator=1,
+                attribution_weight_denominator=2,
+                **common_values,
+            ),
+            models.PaperAffiliation(
+                id="paper-affiliation-validation-unresolved",
+                institution_id=None,
+                country_id=None,
+                raw_affiliation="Unknown Institute",
+                affiliation_resolution_status="unresolved",
+                affiliation_weight=Decimal("0.5"),
+                attribution_weight=Decimal("0.5"),
+                attribution_weight_numerator=1,
+                attribution_weight_denominator=2,
+                **common_values,
+            ),
+        ]
+    )
+    session.commit()
+
+    materialized_report = build_metric_validation_report(session, terminal_year=2026)
+    assert materialized_report.summary.affiliation_count == 1
+    assert materialized_report.summary.paper_time_affiliation_count == 2
+    assert materialized_report.summary.paper_time_affiliation_coverage == pytest.approx(
+        0.25
+    )
+    assert (
+        materialized_report.summary.paper_time_affiliation_attribution_certified
+        is False
+    )
+    assert materialized_report.summary.collaboration_relationship_coverage is None
+
 
 def _sufficient_activity_summary() -> MetricValidationSummary:
     return MetricValidationSummary(
@@ -406,6 +534,9 @@ def _sufficient_activity_summary() -> MetricValidationSummary:
         authorship_count=1_000,
         authored_paper_count=500,
         affiliation_count=900,
+        paper_time_affiliation_count=900,
+        paper_time_affiliation_coverage=1.0,
+        collaboration_relationship_coverage=1.0,
         countries_with_institutions=30,
         paper_time_affiliation_attribution_certified=True,
         citation_edge_count=5_000,

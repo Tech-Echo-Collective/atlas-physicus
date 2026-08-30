@@ -243,6 +243,22 @@ Canonical specifications are [Scientific Attribution](scientific-attribution.md)
   unresolved); institution outcomes remain zero. These counts describe
   workflow and evidence coverage, not precision, error rate, or scientific
   validity.
+- A bounded Metric System v1 activation diagnostic on 2026-08-30 found 603
+  incremental raw paper occurrences and 177 canonical papers. Raw records
+  contain 1,643 author slots, of which 1,499 (91.236%) carry at least one of
+  2,021 affiliation assertions, but there are still zero canonical institutions
+  and therefore zero allocatable canonical institution mass. All 177 matched
+  canonical papers have at least one finite raw citation count and a provider-
+  derived field label; neither result is reviewed activation evidence. The
+  reviewed field-attribution numerator and the set of certified complete years
+  are both zero.
+- The same diagnostic corrected four bounded implementation defects: live
+  validation now measures current `PaperAffiliation` mass rather than profile
+  `Affiliation` rows, does not treat "paper has an author" as collaboration
+  relationship coverage, and does not require geographic attribution for a
+  researcher-only Connectivity partition. INSPIRE normalization also now uses
+  a valid `earliest_date` when journal-year metadata is absent. No production
+  records were reprocessed and no metric was activated.
 - No independently labeled live truth sample exists, so precision, recall, and
   confidence calibration remain withheld. Institution/ROR validation cannot be
   measured against the operated canonical graph until reviewed production
@@ -288,5 +304,7 @@ foundation without activating it, then gather reviewed evidence:
    alerting evidence for the operated Railway services.
 
 Do not begin v3.1, expand to all Physics, or activate a live heatmap merely to
-fill the map. The next release scope must be chosen from evidence after this
-bounded review.
+fill the map. Before any historical write, review the cross-provider field and
+paper-time-affiliation selection policy and prepare a dry-run manifest for the
+smallest common closed window: `hep-th-v1`, calendar years 2020–2025. The next
+release scope must be chosen from evidence after that bounded review.

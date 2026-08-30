@@ -22,6 +22,31 @@ from .field_mapping import (
 )
 
 
+def _publication_year(raw: dict[str, Any]) -> int | None:
+    publication_info = raw.get("publication_info")
+    if isinstance(publication_info, list) and publication_info:
+        first = publication_info[0]
+        if isinstance(first, dict):
+            value = first.get("year")
+            if isinstance(value, int) and not isinstance(value, bool):
+                return value
+
+    earliest_date = raw.get("earliest_date")
+    if not isinstance(earliest_date, str):
+        return None
+    normalized = earliest_date.strip()[:10]
+    try:
+        if len(normalized) == 4 and normalized.isdigit():
+            return int(normalized)
+        if len(normalized) == 7:
+            return datetime.fromisoformat(f"{normalized}-01").year
+        if len(normalized) == 10:
+            return datetime.fromisoformat(normalized).year
+    except ValueError:
+        return None
+    return None
+
+
 class InspireConnector(SourceConnector):
     provider = "inspire"
     source_version = "INSPIRE REST API"
@@ -250,7 +275,7 @@ class InspireConnector(SourceConnector):
             attributes={
                 "title": title,
                 "abstract": (raw.get("abstracts") or [{}])[0].get("value", ""),
-                "publication_year": raw.get("publication_info", [{}])[0].get("year"),
+                "publication_year": _publication_year(raw),
                 "publication_date": raw.get("earliest_date"),
                 "document_type": (
                     (raw.get("document_type") or ["article"])[0]
