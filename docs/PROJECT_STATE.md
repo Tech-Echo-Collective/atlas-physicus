@@ -88,7 +88,7 @@ This file records the factual operating state of the project. Read it with [dura
 ## Public deployment state
 
 - The public entry point is the separate `Tech-Echo-Collective/Physics-Atlas-Web` GitHub Pages project.
-- The public Pages application at <https://tech-echo-collective.github.io/Physics-Atlas-Web/> is built with `VITE_ATLAS_API_URL=https://physics-atlas-api-production.up.railway.app/api` and uses `APIRepository` on normal clean routes.
+- The public Pages application at <https://techecho.org/Physics-Atlas-Web/> is built with `VITE_ATLAS_API_URL=https://physics-atlas-api-production.up.railway.app/api` and uses `APIRepository` on normal clean routes.
 - The normal public source selector exposes only the live API. Synthetic framework and historical pilot repositories remain available only through explicit internal routes for tests, reproducibility, and first-load failure fallback.
 - Data-source resolution, repository boundaries, dataset-kind validation, and scoped live merges prevent live/static record mixing.
 - The production API currently publishes no reviewed metric observations. All

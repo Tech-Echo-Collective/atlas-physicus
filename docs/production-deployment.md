@@ -24,7 +24,12 @@ The production stack fixes `PHYSICS_ATLAS_ACQUISITION_SCOPE` to `hep-th-v1`, the
   and an operator-managed encrypted off-host backup destination.
 - Enough persistent storage for PostgreSQL and Caddy certificate state.
 
-Caddy obtains and renews the TLS certificate automatically. The only browser origin accepted by FastAPI is `https://tech-echo-collective.github.io`. An origin contains scheme and host only, so the `/Physics-Atlas-Web/` path must not be added to the CORS value.
+Caddy obtains and renews the TLS certificate automatically. During the Pages
+custom-domain transition, FastAPI accepts both
+`https://tech-echo-collective.github.io` and `https://techecho.org`. An origin
+contains scheme and host only, so the `/Physics-Atlas-Web/` path must not be
+added to either CORS value. The legacy origin may be removed after redirects
+and client caches have settled.
 
 ## Configure and start the API
 
@@ -101,7 +106,7 @@ PHYSICS_ATLAS_ENVIRONMENT=production
 PHYSICS_ATLAS_FIXTURE_MODE=false
 PHYSICS_ATLAS_ACQUISITION_SCOPE=hep-th-v1
 PHYSICS_ATLAS_REFERENCE_DATA_PATH=/app/reference/atlas.json
-PHYSICS_ATLAS_CORS_ORIGINS=https://tech-echo-collective.github.io
+PHYSICS_ATLAS_CORS_ORIGINS=https://tech-echo-collective.github.io,https://techecho.org
 PHYSICS_ATLAS_ROR_RECORD_IDS=
 ```
 

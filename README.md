@@ -7,7 +7,7 @@ map-first interface.
 It is not a ranking, recommendation, or prediction system, and it is not a
 replacement for scholarly databases such as arXiv or INSPIRE.
 
-[Open the public Atlas](https://tech-echo-collective.github.io/Physics-Atlas-Web/)
+[Open the public Atlas](https://techecho.org/Physics-Atlas-Web/)
 · [View the source repository](https://github.com/Tech-Echo-Collective/Physics-Atlas)
 
 ## What it does
@@ -115,7 +115,7 @@ licensing.
 
 ## Public access
 
-- Atlas: <https://tech-echo-collective.github.io/Physics-Atlas-Web/>
+- Atlas: <https://techecho.org/Physics-Atlas-Web/>
 - Production API: <https://physics-atlas-api-production.up.railway.app/api>
 - Source: <https://github.com/Tech-Echo-Collective/Physics-Atlas>
 
