@@ -2,6 +2,7 @@
 
 from .mapping import (
     ARXIV_CATEGORY_TAXONOMY,
+    CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
     CROSSREF_SUBJECT_TAXONOMY,
     FIELD_WEIGHTING_POLICY_VERSION,
     INSPIRE_CATEGORY_TAXONOMY,
@@ -9,12 +10,16 @@ from .mapping import (
     PROVIDER_FIELD_MAPPING_VERSION,
     AtlasFieldAssignment,
     CategoryMapping,
+    CrossProviderFieldLedger,
     FieldMappingResult,
     FieldMappingRule,
     Provider,
     ProviderCategoryEvidence,
     ProviderCategoryRole,
+    ProviderFieldProjection,
+    ReconciledCategoryMapping,
     map_provider_categories,
+    reconcile_cross_provider_field_evidence,
 )
 from .ontology import (
     PHYSICS_DOMAIN_ID,
@@ -29,6 +34,7 @@ from .ontology import (
 
 __all__ = [
     "ARXIV_CATEGORY_TAXONOMY",
+    "CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION",
     "CROSSREF_SUBJECT_TAXONOMY",
     "FIELD_WEIGHTING_POLICY_VERSION",
     "INSPIRE_CATEGORY_TAXONOMY",
@@ -41,6 +47,7 @@ __all__ = [
     "PROVIDER_FIELD_MAPPING_VERSION",
     "AtlasFieldAssignment",
     "CategoryMapping",
+    "CrossProviderFieldLedger",
     "FieldDefinition",
     "FieldMappingResult",
     "FieldMappingRule",
@@ -49,5 +56,8 @@ __all__ = [
     "Provider",
     "ProviderCategoryEvidence",
     "ProviderCategoryRole",
+    "ProviderFieldProjection",
+    "ReconciledCategoryMapping",
     "map_provider_categories",
+    "reconcile_cross_provider_field_evidence",
 ]

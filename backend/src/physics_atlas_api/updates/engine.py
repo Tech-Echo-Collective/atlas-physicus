@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -23,6 +23,17 @@ from ..connectors.base import (
     SourceRecord,
     compact_ids,
     external_id,
+)
+from ..fields import (
+    CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+    FIELD_WEIGHTING_POLICY_VERSION,
+    PHYSICS_FIELD_ONTOLOGY_VERSION,
+    PROVIDER_FIELD_MAPPING_VERSION,
+    Provider,
+    ProviderCategoryEvidence,
+    ProviderCategoryRole,
+    ProviderFieldProjection,
+    reconcile_cross_provider_field_evidence,
 )
 from ..metrics.recomputation import (
     MetricRecalculationContract,
@@ -88,6 +99,68 @@ def _publication_date(value: Any) -> tuple[date | None, str | None]:
 
 def _external_id_dicts(record: NormalizedRecord) -> list[dict[str, str]]:
     return [{"scheme": scheme, "value": value} for scheme, value in record.external_ids]
+
+
+def _provider_field_projection(
+    provider: str,
+    source_record_id: str,
+    attributes: dict[str, Any],
+    *,
+    source_snapshot_id: str | None,
+) -> ProviderFieldProjection | None:
+    """Recover raw provider classifications without trusting mapped weights."""
+
+    if provider not in {"arxiv", "inspire", "crossref"}:
+        return None
+    category_items: list[dict[str, Any]] = []
+    mapping_provenance = attributes.get("field_mapping_provenance")
+    if isinstance(mapping_provenance, dict):
+        raw_mappings = mapping_provenance.get("category_mappings")
+        if isinstance(raw_mappings, list):
+            category_items = [item for item in raw_mappings if isinstance(item, dict)]
+    if not category_items:
+        raw_evidence = attributes.get("raw_category_evidence")
+        if isinstance(raw_evidence, list):
+            category_items = [item for item in raw_evidence if isinstance(item, dict)]
+
+    categories: list[ProviderCategoryEvidence] = []
+    for item in category_items:
+        category = item.get("category")
+        if not isinstance(category, str) or not category:
+            continue
+        role = item.get("role", "unspecified")
+        if role not in {"primary", "secondary", "unspecified"}:
+            role = "unspecified"
+        taxonomy = item.get("taxonomy")
+        scheme = item.get("scheme")
+        classification_source = item.get("source")
+        categories.append(
+            ProviderCategoryEvidence(
+                category=category,
+                role=cast(ProviderCategoryRole, role),
+                taxonomy=taxonomy if isinstance(taxonomy, str) else None,
+                scheme=scheme if isinstance(scheme, str) else None,
+                source=(
+                    classification_source
+                    if isinstance(classification_source, str)
+                    else None
+                ),
+            )
+        )
+    if not categories:
+        raw_categories = attributes.get("raw_categories")
+        if isinstance(raw_categories, list):
+            categories.extend(
+                ProviderCategoryEvidence(category=item)
+                for item in raw_categories
+                if isinstance(item, str) and item
+            )
+    return ProviderFieldProjection(
+        provider=cast(Provider, provider),
+        source_record_id=source_record_id,
+        categories=tuple(categories),
+        source_snapshot_id=source_snapshot_id,
+    )
 
 
 def _authority_schemes(kind: str) -> tuple[str, ...]:
@@ -1316,6 +1389,150 @@ class IncrementalUpdateEngine:
         )
         return candidates
 
+    def _selected_field_projections(
+        self,
+        paper_id: str,
+        incoming: NormalizedRecord,
+    ) -> tuple[ProviderFieldProjection, ...]:
+        """Select the latest linked raw projection for each provider record."""
+
+        selected: dict[
+            tuple[str, str],
+            tuple[datetime, datetime, str, ProviderFieldProjection],
+        ] = {}
+        rows = self.session.execute(
+            select(models.RawEntityRecord, models.SourceSnapshot)
+            .join(
+                models.IdentityResolution,
+                models.IdentityResolution.raw_entity_record_id
+                == models.RawEntityRecord.id,
+            )
+            .join(
+                models.SourceSnapshot,
+                models.SourceSnapshot.id == models.RawEntityRecord.source_snapshot_id,
+            )
+            .where(
+                models.RawEntityRecord.entity_type == "paper",
+                models.IdentityResolution.entity_type == "paper",
+                models.IdentityResolution.status == "matched",
+                models.IdentityResolution.canonical_entity_id == paper_id,
+            )
+        )
+        for raw, snapshot in rows:
+            projection = _provider_field_projection(
+                raw.source,
+                raw.source_record_id,
+                raw.attributes_json,
+                source_snapshot_id=raw.source_snapshot_id,
+            )
+            if projection is None:
+                continue
+            key = (raw.source, raw.source_record_id)
+            rank = (snapshot.captured_at, raw.ingested_at, raw.id, projection)
+            current = selected.get(key)
+            if current is None or rank[:3] > current[:3]:
+                selected[key] = rank
+
+        snapshot_id = incoming.provenance.get("sourceSnapshotId")
+        incoming_projection = _provider_field_projection(
+            incoming.provider,
+            incoming.source_record_id,
+            incoming.attributes,
+            source_snapshot_id=(snapshot_id if isinstance(snapshot_id, str) else None),
+        )
+        if incoming_projection is not None:
+            incoming_key = (incoming.provider, incoming.source_record_id)
+            selected[incoming_key] = (
+                datetime.max.replace(tzinfo=UTC),
+                datetime.max.replace(tzinfo=UTC),
+                incoming.source_record_id,
+                incoming_projection,
+            )
+        return tuple(
+            item[3] for _, item in sorted(selected.items(), key=lambda entry: entry[0])
+        )
+
+    def _reconcile_paper_fields(
+        self,
+        paper: models.Paper,
+        incoming: NormalizedRecord,
+    ) -> None:
+        projections = self._selected_field_projections(paper.id, incoming)
+        ledger = reconcile_cross_provider_field_evidence(projections)
+        ledger_provenance = ledger.provenance_payload()
+        assignment_field_ids = set(ledger.atlas_field_ids)
+        known_fields = set(
+            self.session.scalars(
+                select(models.ResearchField.id).where(
+                    models.ResearchField.id.in_(assignment_field_ids)
+                )
+            )
+        )
+        missing_fields = assignment_field_ids - known_fields
+        if missing_fields:
+            raise ValueError(
+                "field reconciliation targets fields absent from the ontology: "
+                f"{sorted(missing_fields)}"
+            )
+
+        for existing_link in self.session.scalars(
+            select(models.PaperField).where(models.PaperField.paper_id == paper.id)
+        ):
+            if existing_link.field_id not in assignment_field_ids:
+                self.session.delete(existing_link)
+
+        category_mappings = ledger_provenance["category_mappings"]
+        assert isinstance(category_mappings, list)
+        for assignment in ledger.assignments:
+            classification_role = (
+                assignment.provider_roles[0]
+                if len(assignment.provider_roles) == 1
+                else "mixed"
+                if assignment.provider_roles
+                else "unspecified"
+            )
+            supporting_categories = [
+                item
+                for item in category_mappings
+                if isinstance(item, dict)
+                and assignment.field_id in item.get("atlas_field_ids", [])
+            ]
+            values: dict[str, Any] = {
+                "classification_method": CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+                "confidence": None,
+                "weight": Decimal(str(assignment.weight)),
+                "classification_role": classification_role,
+                "ontology_version": PHYSICS_FIELD_ONTOLOGY_VERSION,
+                "mapping_rule_version": PROVIDER_FIELD_MAPPING_VERSION,
+                "weighting_policy_version": FIELD_WEIGHTING_POLICY_VERSION,
+                "provider_categories": supporting_categories,
+                "uncertainty_note": ledger.uncertainty_note,
+                "provenance_json": {
+                    "source": "Physics Atlas cross-provider field reconciliation",
+                    "sourceType": "derived",
+                    "version": CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+                    "status": "unverified",
+                    "fieldMapping": ledger_provenance,
+                },
+            }
+            link = self.session.get(models.PaperField, (paper.id, assignment.field_id))
+            if link is None:
+                self.session.add(
+                    models.PaperField(
+                        paper_id=paper.id,
+                        field_id=assignment.field_id,
+                        **values,
+                    )
+                )
+            else:
+                for key, value in values.items():
+                    setattr(link, key, value)
+
+        paper.provenance_json = {
+            **paper.provenance_json,
+            "fieldMapping": ledger_provenance,
+        }
+
     def _upsert_paper(
         self, record: NormalizedRecord
     ) -> tuple[str | None, str, list[dict[str, object]]]:
@@ -1386,6 +1603,12 @@ class IncrementalUpdateEngine:
             self.session.flush()
             outcome = "created"
         else:
+            current_record_provenance = {
+                key: value
+                for key, value in paper.provenance_json.items()
+                if key != "fieldMapping"
+            }
+            existing_field_ledger = paper.provenance_json.get("fieldMapping")
             incoming_title = record.attributes.get("title") or record.canonical_name
             incoming_summary = record.attributes.get("abstract") or paper.summary
             supplied_year = record.attributes.get("publication_year")
@@ -1423,7 +1646,7 @@ class IncrementalUpdateEngine:
                 or (ids.get("doi") is not None and paper.doi is None)
                 or (ids.get("arxiv") is not None and paper.arxiv_id is None)
                 or incoming_external_ids != paper.external_ids
-                or record.provenance != paper.provenance_json
+                or record.provenance != current_record_provenance
             )
             if changed:
                 paper.title = incoming_title
@@ -1438,128 +1661,16 @@ class IncrementalUpdateEngine:
                 if paper.arxiv_id is None:
                     paper.arxiv_id = ids.get("arxiv")
                 paper.external_ids = incoming_external_ids
-                paper.provenance_json = record.provenance
-            outcome = "updated" if changed else "unchanged"
-        raw_assignments = record.attributes.get("atlas_field_assignments", [])
-        assignments = (
-            [item for item in raw_assignments if isinstance(item, dict)]
-            if isinstance(raw_assignments, list)
-            else []
-        )
-        if not assignments:
-            assignments = [
-                {"field_id": field_id, "weight": 1.0}
-                for field_id in record.attributes.get("atlas_field_candidates", [])
-                if isinstance(field_id, str)
-            ]
-        assignment_field_ids = {
-            str(item["field_id"])
-            for item in assignments
-            if item.get("field_id") is not None
-        }
-        known_fields = set(
-            self.session.scalars(
-                select(models.ResearchField.id).where(
-                    models.ResearchField.id.in_(assignment_field_ids)
-                )
-            )
-        )
-        mapping_provenance = record.attributes.get("field_mapping_provenance", {})
-        if not isinstance(mapping_provenance, dict):
-            mapping_provenance = {}
-        provenance_assignments = mapping_provenance.get("assignments", [])
-        assignment_metadata = (
-            {
-                str(item.get("field_id")): item
-                for item in provenance_assignments
-                if isinstance(item, dict) and item.get("field_id")
-            }
-            if isinstance(provenance_assignments, list)
-            else {}
-        )
-        category_mappings = mapping_provenance.get("category_mappings", [])
-        all_category_mappings = (
-            [item for item in category_mappings if isinstance(item, dict)]
-            if isinstance(category_mappings, list)
-            else []
-        )
-
-        for existing_link in self.session.scalars(
-            select(models.PaperField).where(models.PaperField.paper_id == paper.id)
-        ):
-            link_provenance = existing_link.provenance_json or {}
-            same_source_record = (
-                link_provenance.get("mappingProvider") == record.provider
-                and link_provenance.get(
-                    "mappingSourceRecordId",
-                    link_provenance.get("sourceRecordId"),
-                )
-                == record.source_record_id
-            )
-            if same_source_record and existing_link.field_id not in known_fields:
-                self.session.delete(existing_link)
-
-        for assignment in assignments:
-            field_id = str(assignment.get("field_id", ""))
-            if field_id not in known_fields:
-                continue
-            metadata = assignment_metadata.get(field_id, {})
-            raw_roles = metadata.get("provider_roles", [])
-            roles = (
-                [str(item) for item in raw_roles] if isinstance(raw_roles, list) else []
-            )
-            classification_role = (
-                roles[0]
-                if len(set(roles)) == 1
-                else "mixed"
-                if roles
-                else "unspecified"
-            )
-            weight = Decimal(str(assignment.get("weight", 0)))
-            if weight <= 0 or weight > 1:
-                raise ValueError("field attribution weights must be within (0, 1]")
-            supporting_categories = [
-                item
-                for item in all_category_mappings
-                if field_id in item.get("atlas_field_ids", [])
-            ]
-            link = self.session.get(models.PaperField, (paper.id, field_id))
-            values: dict[str, Any] = {
-                "classification_method": record.attributes.get(
-                    "field_mapping_method", "provider-category-rules-v1"
-                ),
-                "confidence": record.attributes.get("field_mapping_confidence"),
-                "weight": weight,
-                "classification_role": classification_role,
-                "ontology_version": record.attributes.get(
-                    "field_ontology_version", "legacy-flat-physics-fields-v1"
-                ),
-                "mapping_rule_version": record.attributes.get(
-                    "field_mapping_method", "provider-category-rules-v1"
-                ),
-                "weighting_policy_version": record.attributes.get(
-                    "field_weighting_policy_version", "legacy-full-membership-v1"
-                ),
-                "provider_categories": supporting_categories,
-                "uncertainty_note": record.attributes.get("field_mapping_uncertainty"),
-                "provenance_json": {
+                paper.provenance_json = {
                     **record.provenance,
-                    "mappingProvider": record.provider,
-                    "mappingSourceRecordId": record.source_record_id,
-                    "fieldMapping": mapping_provenance,
-                },
-            }
-            if link is None:
-                self.session.add(
-                    models.PaperField(
-                        paper_id=paper.id,
-                        field_id=field_id,
-                        **values,
-                    )
-                )
-            else:
-                for key, value in values.items():
-                    setattr(link, key, value)
+                    **(
+                        {"fieldMapping": existing_field_ledger}
+                        if existing_field_ledger is not None
+                        else {}
+                    ),
+                }
+            outcome = "updated" if changed else "unchanged"
+        self._reconcile_paper_fields(paper, record)
         self._attach_authority_ids(record, paper.id)
         self._upsert_resources(record, paper.id)
         refresh_search_terms(

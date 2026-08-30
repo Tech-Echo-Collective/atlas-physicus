@@ -87,6 +87,28 @@ physics-atlas-worker --once --source all --check-resources
 physics-atlas-worker --check-resources
 ```
 
+## Bounded historical raw acquisition
+
+`physics-atlas-backfill` is a staging-only acquisition boundary for the fixed
+`hep-th-v1`, 2020--2025 trial. It has no database, canonical-entity, source-
+cursor, or metric imports. Preview is network-free; provider access and output
+require the explicit `--execute` flag:
+
+```bash
+physics-atlas-backfill plan --output /external/staging/path --execute
+physics-atlas-backfill acquire --output /external/staging/path --execute
+```
+
+The output path must be outside the repository. Each provider/year partition
+records the exact query and version, expected provider total, unique record
+count, page checksums, terminal status, and resumable checkpoint. A partition
+is raw-acquisition-complete only when it reaches its terminal page with no
+duplicates and its unique count equals the provider total. This is not a
+complete-year metric certificate and it performs no canonical materialization.
+INSPIRE partitions use its earliest-record date (`de`); arXiv partitions use
+submission date. Neither is silently relabeled as a normalized publication-year
+cohort.
+
 Fixture mode is the default. Provider-backed operation requires an explicitly prepared `live-api` dataset state, provider-policy review, credentials where required, and an operated database.
 
 On an empty database the worker seeds only reference vocabulary: Physics, the broader field taxonomy, ISO countries, geographic views, and metric definitions. It does not copy demonstration institutions, researchers, papers, relationships, or metric observations. Fixture ingestion labels snapshots, raw records, entity provenance, and dataset metadata as deterministic synthetic fixtures, even though it exercises the same API/database path.
@@ -108,7 +130,11 @@ This is lightweight operational visibility, not a full monitoring platform. Oper
 - There is no hosted queue, distributed lock service, or administrative review interface.
 - The default production calculator records partitions but intentionally does not execute the implemented, still-withheld v1 formulas.
 - Closed-window cursors are validated for bounded paging but still need long-running provider-scale and schema-change testing.
-- There is no general historical backfill command yet; backfills, deletion/tombstone policy, retractions, and cross-provider conflict adjudication need further reviewed rules.
+- There is no approved historical canonical-materialization/import command.
+  The raw acquisition tool deliberately stops before identity resolution,
+  institution promotion, citation cohorts, or database writes. Deletion/
+  tombstone policy, retractions, and unresolved cross-provider bibliographic
+  conflicts still require reviewed rules.
 - ROR target IDs are operator-configured rather than automatically derived from reviewed affiliation evidence.
 - Targeted ORCID/Crossref enrichment is not yet orchestrated automatically from every newly discovered identifier.
 - arXiv scheduled acquisition is a `submittedDate` new-submission stream; complete revision discovery requires a future reviewed provider strategy.

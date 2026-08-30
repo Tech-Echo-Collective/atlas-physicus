@@ -1,11 +1,13 @@
 from datetime import UTC, datetime
 from fractions import Fraction
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from physics_atlas_api import models
 from physics_atlas_api.attribution.materialization import (
+    AFFILIATION_EVIDENCE_PRECEDENCE_VERSION,
     MATERIALIZATION_VERSION,
     MaterializedAuthorIdentity,
     materialize_paper_time_affiliations,
@@ -13,11 +15,11 @@ from physics_atlas_api.attribution.materialization import (
 from physics_atlas_api.connectors.base import NormalizedRecord
 
 
-def _snapshot(session: Session, snapshot_id: str) -> None:
+def _snapshot(session: Session, snapshot_id: str, *, source: str = "inspire") -> None:
     session.add(
         models.SourceSnapshot(
             id=snapshot_id,
-            source="inspire",
+            source=source,
             source_version="fixture-v1",
             captured_at=datetime(2026, 8, 30, tzinfo=UTC),
             update_mode="incremental",
@@ -100,9 +102,9 @@ def _seed_linked_entities(session: Session) -> None:
         )
 
 
-def _record() -> NormalizedRecord:
+def _record(*, provider: str = "inspire") -> NormalizedRecord:
     return NormalizedRecord(
-        provider="inspire",
+        provider=provider,
         kind="paper",
         source_record_id="1001",
         canonical_name="Paper-time attribution fixture",
@@ -245,3 +247,399 @@ def test_new_snapshot_supersedes_projection_without_erasing_history(
     assert sum(row.is_current for row in rows) == 3
     assert {row.dataset_version for row in rows if row.is_current} == {"dataset-2"}
     assert {row.dataset_version for row in rows if not row.is_current} == {"dataset-1"}
+
+
+def test_lower_precedence_provider_does_not_replace_inspire_projection(
+    session: Session,
+) -> None:
+    session.add(
+        models.Paper(
+            id="paper-1",
+            title="Paper-time attribution fixture",
+            summary="",
+            publication_year=2025,
+            publication_date=None,
+            publication_date_precision=None,
+            document_type="article",
+            doi=None,
+            arxiv_id=None,
+            external_ids=[],
+            provenance_json={"source": "fixture"},
+        )
+    )
+    _seed_linked_entities(session)
+    _snapshot(session, "snapshot-inspire")
+    _snapshot(session, "snapshot-arxiv", source="arxiv")
+    session.flush()
+    identities = {
+        position: MaterializedAuthorIdentity(
+            author_position=position,
+            raw_author_name=f"Researcher {position}",
+            researcher_id=f"researcher-{position}",
+            authorship_id=f"authorship-{position}",
+            resolution_status="resolved",
+        )
+        for position in (1, 2)
+    }
+
+    materialize_paper_time_affiliations(
+        session,
+        record=_record(),
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-inspire",
+        dataset_version="dataset-inspire",
+        author_identities=identities,
+    )
+    materialize_paper_time_affiliations(
+        session,
+        record=_record(provider="arxiv"),
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-arxiv",
+        dataset_version="dataset-arxiv",
+        author_identities=identities,
+    )
+    session.flush()
+
+    rows = list(session.scalars(select(models.PaperAffiliation)))
+    current_rows = [row for row in rows if row.is_current]
+    superseded_rows = [row for row in rows if not row.is_current]
+    assert len(rows) == 6
+    assert {row.provider for row in current_rows} == {"inspire"}
+    assert {row.dataset_version for row in current_rows} == {"dataset-inspire"}
+    assert {row.provider for row in superseded_rows} == {"arxiv"}
+    assert all(
+        row.provenance_json["affiliationEvidencePrecedenceVersion"]
+        == AFFILIATION_EVIDENCE_PRECEDENCE_VERSION
+        for row in rows
+    )
+    assert all(
+        row.provenance_json["selectedAsCurrentProjection"] is False
+        for row in superseded_rows
+    )
+
+
+def test_current_profile_source_is_rejected_for_paper_time_history(
+    session: Session,
+) -> None:
+    with pytest.raises(
+        ValueError, match="not an approved paper-time affiliation provider"
+    ):
+        materialize_paper_time_affiliations(
+            session,
+            record=_record(provider="homepage"),
+            paper_id="paper-1",
+            source_snapshot_id="snapshot-homepage",
+            dataset_version="dataset-homepage",
+            author_identities={},
+        )
+
+
+def test_orcid_cannot_become_a_paper_time_projection_without_dated_cross_check(
+    session: Session,
+) -> None:
+    with pytest.raises(
+        ValueError, match="not an approved paper-time affiliation provider"
+    ):
+        materialize_paper_time_affiliations(
+            session,
+            record=_record(provider="orcid"),
+            paper_id="paper-1",
+            source_snapshot_id="snapshot-orcid",
+            dataset_version="dataset-orcid",
+            author_identities={},
+        )
+
+
+def test_partial_cross_provider_evidence_cannot_erase_resolved_author_slots(
+    session: Session,
+) -> None:
+    session.add(
+        models.Paper(
+            id="paper-1",
+            title="Paper-time attribution fixture",
+            summary="",
+            publication_year=2025,
+            publication_date=None,
+            publication_date_precision=None,
+            document_type="article",
+            doi=None,
+            arxiv_id=None,
+            external_ids=[],
+            provenance_json={"source": "fixture"},
+        )
+    )
+    _seed_linked_entities(session)
+    _snapshot(session, "snapshot-inspire")
+    _snapshot(session, "snapshot-crossref", source="crossref")
+    session.flush()
+    identities = {
+        position: MaterializedAuthorIdentity(
+            author_position=position,
+            raw_author_name=f"Researcher {position}",
+            researcher_id=f"researcher-{position}",
+            authorship_id=f"authorship-{position}",
+            resolution_status="resolved",
+        )
+        for position in (1, 2)
+    }
+    materialize_paper_time_affiliations(
+        session,
+        record=_record(),
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-inspire",
+        dataset_version="dataset-inspire",
+        author_identities=identities,
+    )
+    partial = _record(provider="crossref")
+    partial.attributes["authors"][1]["affiliations"] = []
+    materialize_paper_time_affiliations(
+        session,
+        record=partial,
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-crossref",
+        dataset_version="dataset-crossref",
+        author_identities=identities,
+    )
+    session.flush()
+
+    rows = list(session.scalars(select(models.PaperAffiliation)))
+    current_rows = [row for row in rows if row.is_current]
+    partial_rows = [row for row in rows if row.provider == "crossref"]
+    assert {(row.author_position, row.provider) for row in current_rows} == {
+        (1, "crossref"),
+        (2, "inspire"),
+        (2, "inspire"),
+    }
+    assert {row.author_position for row in current_rows} == {1, 2}
+    assert {row.author_position for row in partial_rows if row.is_current} == {1}
+    assert {row.author_position for row in partial_rows if not row.is_current} == {2}
+    assert all(
+        row.provenance_json["crossProviderEvidenceLossPrevented"] is True
+        for row in partial_rows
+    )
+
+
+def test_equal_precedence_conflict_is_withheld_without_erasing_sources(
+    session: Session,
+) -> None:
+    session.add(
+        models.Paper(
+            id="paper-1",
+            title="Paper-time attribution fixture",
+            summary="",
+            publication_year=2025,
+            publication_date=None,
+            publication_date_precision=None,
+            document_type="article",
+            doi=None,
+            arxiv_id=None,
+            external_ids=[],
+            provenance_json={"source": "fixture"},
+        )
+    )
+    _seed_linked_entities(session)
+    _snapshot(session, "snapshot-inspire")
+    _snapshot(session, "snapshot-crossref", source="crossref")
+    session.flush()
+    identities = {
+        position: MaterializedAuthorIdentity(
+            author_position=position,
+            raw_author_name=f"Researcher {position}",
+            researcher_id=f"researcher-{position}",
+            authorship_id=f"authorship-{position}",
+            resolution_status="resolved",
+        )
+        for position in (1, 2)
+    }
+    materialize_paper_time_affiliations(
+        session,
+        record=_record(),
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-inspire",
+        dataset_version="dataset-inspire",
+        author_identities=identities,
+    )
+    crossref_record = _record(provider="crossref")
+    crossref_record.attributes["authors"][0]["affiliations"][0]["identifiers"] = [
+        {"schema": "ROR", "value": "00hx57361"}
+    ]
+    result = materialize_paper_time_affiliations(
+        session,
+        record=crossref_record,
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-crossref",
+        dataset_version="dataset-crossref",
+        author_identities=identities,
+    )
+    session.flush()
+
+    rows = list(session.scalars(select(models.PaperAffiliation)))
+    current_rows = [row for row in rows if row.is_current]
+    historical_rows = [row for row in rows if not row.is_current]
+    conflicting_rows = [row for row in current_rows if row.author_position == 1]
+    assert result.allocated_weight == Fraction(1, 4)
+    assert result.withheld_weight == Fraction(3, 4)
+    assert {row.provider for row in current_rows} == {"crossref"}
+    assert {row.provider for row in historical_rows} == {"inspire"}
+    assert len(conflicting_rows) == 1
+    assert conflicting_rows[0].affiliation_resolution_status == "unresolved"
+    assert conflicting_rows[0].institution_id is None
+    assert conflicting_rows[0].resolution_evidence[-1] == {
+        "method": "cross-provider-affiliation-precedence",
+        "status": "unresolved-conflict",
+        "providers": ["crossref", "inspire"],
+        "version": AFFILIATION_EVIDENCE_PRECEDENCE_VERSION,
+    }
+
+
+def test_higher_precedence_conflict_stays_unresolved_without_dated_evidence(
+    session: Session,
+) -> None:
+    session.add(
+        models.Paper(
+            id="paper-1",
+            title="Paper-time attribution fixture",
+            summary="",
+            publication_year=2025,
+            publication_date=None,
+            publication_date_precision=None,
+            document_type="article",
+            doi=None,
+            arxiv_id=None,
+            external_ids=[],
+            provenance_json={"source": "fixture"},
+        )
+    )
+    _seed_linked_entities(session)
+    _snapshot(session, "snapshot-arxiv", source="arxiv")
+    _snapshot(session, "snapshot-inspire")
+    session.flush()
+    identities = {
+        position: MaterializedAuthorIdentity(
+            author_position=position,
+            raw_author_name=f"Researcher {position}",
+            researcher_id=f"researcher-{position}",
+            authorship_id=f"authorship-{position}",
+            resolution_status="resolved",
+        )
+        for position in (1, 2)
+    }
+    materialize_paper_time_affiliations(
+        session,
+        record=_record(provider="arxiv"),
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-arxiv",
+        dataset_version="dataset-arxiv",
+        author_identities=identities,
+    )
+    conflicting_inspire = _record()
+    conflicting_inspire.attributes["authors"][0]["affiliations"][0]["identifiers"] = [
+        {"schema": "ROR", "value": "00hx57361"}
+    ]
+
+    result = materialize_paper_time_affiliations(
+        session,
+        record=conflicting_inspire,
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-inspire",
+        dataset_version="dataset-inspire",
+        author_identities=identities,
+    )
+    session.flush()
+
+    current_conflict = session.scalar(
+        select(models.PaperAffiliation).where(
+            models.PaperAffiliation.is_current,
+            models.PaperAffiliation.author_position == 1,
+        )
+    )
+    assert current_conflict is not None
+    assert current_conflict.provider == "inspire"
+    assert current_conflict.affiliation_resolution_status == "unresolved"
+    assert current_conflict.institution_id is None
+    assert current_conflict.provenance_json["crossProviderConflictUnresolved"] is True
+    assert result.withheld_weight == Fraction(3, 4)
+
+
+def test_lower_precedence_conflict_does_not_replace_nonconflicting_stronger_slot(
+    session: Session,
+) -> None:
+    session.add(
+        models.Paper(
+            id="paper-1",
+            title="Paper-time attribution fixture",
+            summary="",
+            publication_year=2025,
+            publication_date=None,
+            publication_date_precision=None,
+            document_type="article",
+            doi=None,
+            arxiv_id=None,
+            external_ids=[],
+            provenance_json={"source": "fixture"},
+        )
+    )
+    _seed_linked_entities(session)
+    _snapshot(session, "snapshot-inspire")
+    _snapshot(session, "snapshot-arxiv", source="arxiv")
+    session.flush()
+    identities = {
+        position: MaterializedAuthorIdentity(
+            author_position=position,
+            raw_author_name=f"Researcher {position}",
+            researcher_id=f"researcher-{position}",
+            authorship_id=f"authorship-{position}",
+            resolution_status="resolved",
+        )
+        for position in (1, 2)
+    }
+    materialize_paper_time_affiliations(
+        session,
+        record=_record(),
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-inspire",
+        dataset_version="dataset-inspire",
+        author_identities=identities,
+    )
+    conflicting_arxiv = _record(provider="arxiv")
+    conflicting_arxiv.attributes["authors"][0]["affiliations"][0]["identifiers"] = [
+        {"schema": "ROR", "value": "00hx57361"}
+    ]
+    materialize_paper_time_affiliations(
+        session,
+        record=conflicting_arxiv,
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-arxiv",
+        dataset_version="dataset-arxiv",
+        author_identities=identities,
+    )
+    session.flush()
+
+    current_rows = list(
+        session.scalars(
+            select(models.PaperAffiliation).where(models.PaperAffiliation.is_current)
+        )
+    )
+    conflicting_rows = [row for row in current_rows if row.author_position == 1]
+    nonconflicting_rows = [row for row in current_rows if row.author_position == 2]
+    assert len(conflicting_rows) == 1
+    assert conflicting_rows[0].provider == "arxiv"
+    assert conflicting_rows[0].affiliation_resolution_status == "unresolved"
+    assert {row.provider for row in nonconflicting_rows} == {"inspire"}
+    assert {
+        Fraction(row.attribution_weight_numerator, row.attribution_weight_denominator)
+        for row in current_rows
+    } == {Fraction(1, 2), Fraction(1, 4)}
+    assert (
+        sum(
+            (
+                Fraction(
+                    row.attribution_weight_numerator,
+                    row.attribution_weight_denominator,
+                )
+                for row in current_rows
+            ),
+            start=Fraction(0),
+        )
+        == 1
+    )

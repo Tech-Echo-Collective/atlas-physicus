@@ -67,7 +67,8 @@ relationship is structural, not a second provider classification.
 Current mapping versions:
 
 - mapping catalog: `provider-field-mapping-v1`;
-- field weighting: `equal-supported-fields-v1`;
+- field weighting: `provider-evidence-conservation-v2`;
+- cross-provider reconciliation: `cross-provider-field-reconciliation-v1`;
 - Atlas target ontology: `physics-field-ontology-v1`.
 
 The boundary is:
@@ -99,25 +100,51 @@ stays visible as unmapped; it does not generate a guessed Atlas field.
 
 A paper may receive several canonical Atlas assignments. Duplicate rules or
 provider categories supporting the same canonical field do not give that field
-extra weight. When no reviewed evidence justifies unequal weights, v1 assigns:
+extra weight. When no reviewed evidence justifies unequal weights, the
+conserved v2 ledger assigns:
 
 ```text
-field share = 1 / number of unique supported Atlas fields
+field share = mapped field mass / number of unique supported Atlas fields
 ```
 
-The shares across the unique mapped fields total one. Primary and secondary
-roles remain provenance and do not create an arbitrary permanent weight
-difference. A future unequal policy must use a new, explicit policy version.
+Mapped field mass is one minus explicit unmapped mass. The mapped shares and
+unmapped mass together total one. Primary and secondary roles remain
+provenance and do not create an arbitrary permanent weight difference. A
+future unequal policy must use a new, explicit policy version.
 
 For example, a reviewed category can support both `astro-ph` and `gr-qc`; each
-receives one half under the v1 policy. This is classification allocation, not
-paper-contribution attribution. It is multiplied by the separate paper-time
-entity attribution only when a field-specific metric is calculated.
+receives one half under the conserved v2 policy. This is classification
+allocation, not paper-contribution attribution. It is multiplied by the
+separate paper-time entity attribution only when a field-specific metric is
+calculated.
+
+### Cross-provider conservation
+
+Provider classifications remain separate evidence records, but the selected
+field-evidence ledger for one canonical paper must satisfy:
+
+```text
+Σ mapped canonical-field weights + explicit unmapped field mass = 1
+```
+
+Primary and secondary roles are preserved as provenance. A versioned,
+configurable unequal policy may use them only after scientific justification;
+otherwise the unique mapped Atlas fields receive equal shares of the mapped
+mass. Evidence from a second provider can support or extend the unique field
+set, but it cannot give the same paper another independent unit of mass.
+Duplicate field support is collapsed without discarding its provider
+provenance.
+
+If some provider evidence is unmapped, its share remains explicit ledger mass.
+It is not reassigned to the mapped fields to make the source look complete. A
+paper with no mapped field evidence has unmapped mass `1` and receives no
+canonical field projection rather than an invented default field.
 
 ### Coverage and uncertainty
 
-Mapping coverage is the proportion of supplied raw category evidence matched
-by an exact rule. No supplied categories means coverage is missing, not zero.
+Mapping coverage is the proportion of unique supplied raw category evidence
+matched by an exact rule. No supplied categories means coverage is missing,
+not zero.
 Exact rule matching is deterministic but does not provide a calibrated
 probability that the scientific classification is correct. The provenance
 therefore keeps uncertainty visible even for mapped categories.
@@ -171,4 +198,4 @@ and the broad ontology must not be used to imply that it is.
 
 Ontology and mapping tests verify canonical IDs, parent validity, acyclicity,
 version consistency, raw-category preservation, multi-field conservation, role
-preservation, and explicit unmapped behavior.
+preservation, cross-provider conservation, and explicit unmapped behavior.

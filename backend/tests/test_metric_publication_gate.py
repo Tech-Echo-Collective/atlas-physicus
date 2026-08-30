@@ -3,6 +3,10 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
 from physics_atlas_api import models
+from physics_atlas_api.fields import (
+    CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+    FIELD_WEIGHTING_POLICY_VERSION,
+)
 from physics_atlas_api.metrics import METRIC_CONTRACTS
 from physics_atlas_api.repository import AtlasDatabaseRepository
 
@@ -126,6 +130,30 @@ def test_live_public_reads_require_the_complete_joint_release_manifest(
 
     definitions["momentum"].implementation_status = "live-calculated"
     session.flush()
+    missing_field_proof, missing_field_proof_total = repository.metric_observations(
+        limit=10, offset=0
+    )
+    assert missing_field_proof == []
+    assert missing_field_proof_total == 0
+
+    release.validation_evidence = {
+        "jointGatePassed": True,
+        "fieldWeightingPolicyVersion": FIELD_WEIGHTING_POLICY_VERSION,
+        "fieldReconciliationVersion": CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+        "fieldWeightConservationPassed": True,
+    }
+    session.flush()
     visible, visible_total = repository.metric_observations(limit=10, offset=0)
     assert [item["id"] for item in visible] == ["metric-live-candidate"]
     assert visible_total == 1
+
+    release.validation_evidence = {
+        **release.validation_evidence,
+        "fieldWeightingPolicyVersion": "stale-field-weighting",
+    }
+    session.flush()
+    stale_field_policy, stale_field_policy_total = repository.metric_observations(
+        limit=10, offset=0
+    )
+    assert stale_field_policy == []
+    assert stale_field_policy_total == 0

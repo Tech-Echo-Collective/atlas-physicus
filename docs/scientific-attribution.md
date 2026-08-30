@@ -59,6 +59,35 @@ Paper-time affiliation rows are distinct from current or interval-based profile
 affiliations. Reprocessing a provider revision creates versioned materialized
 evidence; a current-profile update cannot overwrite the historical assertion.
 
+### Cross-provider evidence precedence
+
+When several sources describe the same paper-time affiliation, the selected
+historical projection follows this fixed order:
+
+1. paper-native or INSPIRE paper-time affiliation evidence;
+2. arXiv paper metadata;
+3. dated ORCID employment or affiliation evidence, used to cross-check the
+   paper-time claim;
+4. a current researcher or institution homepage, used only for current-profile
+   evidence and never to overwrite historical paper-time attribution.
+
+Precedence selects the strongest applicable evidence; it does not manufacture
+agreement. Raw evidence from every source remains preserved with its date and
+provenance. If cross-provider evidence genuinely conflicts and dated evidence
+does not support one historical relationship, the affiliation remains
+`unresolved`. A lower-precedence source cannot replace a stronger current
+paper-time projection merely because it was processed later.
+
+`paper-time-affiliation-materialization-v2` enforces this order for supported
+paper projections. Lower-precedence replays remain as inactive lineage when
+they do not conflict; a resolved cross-provider target conflict is withheld
+regardless of provider tier rather than resolved by precedence or processing
+order. A partial cross-provider record cannot erase non-missing author-slot
+evidence from the current projection. Dated ORCID evidence remains
+cross-checking evidence and is not a substitute for missing paper-native
+history. Until a dated cross-check adapter is reviewed, an ORCID record cannot
+itself become the current paper-time projection.
+
 ## Fractional Attribution v1
 
 Let a paper have `N` provider author slots. In the absence of reliable numeric
@@ -141,8 +170,8 @@ assertion that all authors made identical intellectual contributions.
 
 Tests use exact rational arithmetic at the policy boundary and cover
 conservation, partial coverage, multi-affiliation authors, unresolved evidence,
-and large author lists. Persistence stores both exact fractions and a high
-precision decimal representation.
+large author lists, and cross-provider precedence. Persistence stores both exact
+fractions and a high precision decimal representation.
 
 ## Institution identity and subunits
 

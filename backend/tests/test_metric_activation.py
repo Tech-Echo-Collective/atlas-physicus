@@ -1,5 +1,9 @@
 from dataclasses import replace
 
+from physics_atlas_api.fields import (
+    CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+    FIELD_WEIGHTING_POLICY_VERSION,
+)
 from physics_atlas_api.metrics import (
     CANDIDATE_METRIC_IDS,
     METRIC_CONTRACTS,
@@ -46,6 +50,9 @@ def complete_evidence() -> MetricSystemActivationEvidence:
         normalization_validated=True,
         provenance_complete=True,
         deterministic_reproduction_passed=True,
+        field_weighting_policy_version=FIELD_WEIGHTING_POLICY_VERSION,
+        field_reconciliation_version=CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+        field_weight_conservation_passed=True,
     )
 
 
@@ -84,6 +91,9 @@ def test_joint_gate_enforces_versions_and_every_validation_dimension() -> None:
             normalization_validated=False,
             provenance_complete=False,
             deterministic_reproduction_passed=False,
+            field_weighting_policy_version="stale-field-weighting",
+            field_reconciliation_version="stale-reconciliation",
+            field_weight_conservation_passed=False,
         )
     )
     reasons = " ".join(failed.reasons)
@@ -97,6 +107,25 @@ def test_joint_gate_enforces_versions_and_every_validation_dimension() -> None:
     assert "normalization validation" in reasons
     assert "provenance is incomplete" in reasons
     assert "system-level deterministic reproduction" in reasons
+    assert "field weighting policy version" in reasons
+    assert "cross-provider field reconciliation version" in reasons
+    assert "field-weight conservation" in reasons
+
+
+def test_joint_gate_fails_closed_for_a_legacy_manifest_without_field_proof() -> None:
+    evidence = complete_evidence()
+
+    decision = assess_joint_metric_activation(
+        replace(
+            evidence,
+            field_weighting_policy_version=None,
+            field_reconciliation_version=None,
+            field_weight_conservation_passed=False,
+        )
+    )
+
+    assert decision.status == "withheld"
+    assert decision.may_activate is False
 
 
 def test_entity_level_missing_observation_does_not_disable_eligible_system() -> None:

@@ -1,8 +1,14 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
 
 from ..attribution import FRACTIONAL_ATTRIBUTION_V1
-from ..fields import PHYSICS_FIELD_ONTOLOGY_VERSION, PROVIDER_FIELD_MAPPING_VERSION
+from ..fields import (
+    CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+    FIELD_WEIGHTING_POLICY_VERSION,
+    PHYSICS_FIELD_ONTOLOGY_VERSION,
+    PROVIDER_FIELD_MAPPING_VERSION,
+)
 from .contracts import CANDIDATE_METRIC_IDS, get_metric_contract
 from .thresholds import (
     METRIC_VALIDATION_THRESHOLDS_V1,
@@ -56,6 +62,9 @@ class MetricSystemActivationEvidence:
     normalization_validated: bool
     provenance_complete: bool
     deterministic_reproduction_passed: bool
+    field_weighting_policy_version: str | None = None
+    field_reconciliation_version: str | None = None
+    field_weight_conservation_passed: bool = False
 
     def __post_init__(self) -> None:
         metric_ids = [item.metric_id for item in self.algorithms]
@@ -76,6 +85,26 @@ class JointMetricActivationDecision:
     @property
     def may_activate(self) -> bool:
         return self.status == "eligible-for-reviewed-activation"
+
+
+def field_validation_manifest_is_current(
+    validation_evidence: Mapping[str, object],
+) -> bool:
+    """Fail closed unless a persisted release records the selected-ledger proof.
+
+    These keys live in the existing JSON validation manifest so tightening the
+    scientific gate does not require a schema migration. Older reviewed
+    manifests remain readable, but cannot publish observations until they are
+    re-reviewed against the conserved cross-provider ledger.
+    """
+
+    return (
+        validation_evidence.get("fieldWeightingPolicyVersion")
+        == FIELD_WEIGHTING_POLICY_VERSION
+        and validation_evidence.get("fieldReconciliationVersion")
+        == CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION
+        and validation_evidence.get("fieldWeightConservationPassed") is True
+    )
 
 
 def assess_joint_metric_activation(
@@ -126,6 +155,15 @@ def assess_joint_metric_activation(
     for provider in ("inspire", "arxiv"):
         if mappings.get(provider) != PROVIDER_FIELD_MAPPING_VERSION:
             reasons.append(f"{provider} field mapping version does not match v1")
+    if evidence.field_weighting_policy_version != FIELD_WEIGHTING_POLICY_VERSION:
+        reasons.append("field weighting policy version does not match the contract")
+    if (
+        evidence.field_reconciliation_version
+        != CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION
+    ):
+        reasons.append("cross-provider field reconciliation version does not match")
+    if not evidence.field_weight_conservation_passed:
+        reasons.append("per-paper field-weight conservation has not passed")
     if evidence.threshold_version != thresholds.version:
         reasons.append("metric validation threshold version does not match v1")
 

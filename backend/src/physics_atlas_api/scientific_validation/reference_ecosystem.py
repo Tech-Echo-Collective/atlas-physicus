@@ -88,14 +88,19 @@ class FieldAttributionEvidence:
     raw_categories: tuple[str, ...]
     field_id: str | None
     field_weight: float | None
+    unmapped_field_mass: float
     mapping_status: FieldMappingStatus
     mapping_version: str | None
     ontology_version: str | None
     provenance: ProvenanceEvidence
+    weighting_policy_version: str | None = None
+    reconciliation_version: str | None = None
 
     def __post_init__(self) -> None:
         if self.field_weight is not None and not 0 <= self.field_weight <= 1:
             raise ValueError("field_weight must be between zero and one")
+        if not 0 <= self.unmapped_field_mass <= 1:
+            raise ValueError("unmapped_field_mass must be between zero and one")
 
 
 @dataclass(frozen=True)
@@ -160,6 +165,8 @@ class ReferenceEcosystemEvidence:
     historical_coverage: HistoricalCoverageEvidence
     normalizations: tuple[NormalizationEvidence, ...]
     sanity_anchors: tuple[SanityAnchorObservation, ...] = ()
+    expected_field_weighting_policy_version: str | None = None
+    expected_field_reconciliation_version: str | None = None
 
     def __post_init__(self) -> None:
         if not self.dataset_version.strip():
@@ -529,6 +536,36 @@ def _validate_fields(evidence: ReferenceEcosystemEvidence) -> list[ValidationIss
                     "Field attribution uses a different ontology version.",
                 )
             )
+        if (
+            evidence.expected_field_weighting_policy_version is None
+            or item.weighting_policy_version
+            != evidence.expected_field_weighting_policy_version
+        ):
+            issues.append(
+                _issue(
+                    "field.weighting-policy-version-mismatch",
+                    "fault",
+                    "field-attribution",
+                    entity_id,
+                    "Field weighting policy version does not match the review "
+                    "manifest.",
+                )
+            )
+        if (
+            evidence.expected_field_reconciliation_version is None
+            or item.reconciliation_version
+            != evidence.expected_field_reconciliation_version
+        ):
+            issues.append(
+                _issue(
+                    "field.reconciliation-version-mismatch",
+                    "fault",
+                    "field-attribution",
+                    entity_id,
+                    "Cross-provider field reconciliation version does not match "
+                    "the review manifest.",
+                )
+            )
         if not item.raw_categories:
             issues.append(
                 _issue(
@@ -610,15 +647,66 @@ def _validate_fields(evidence: ReferenceEcosystemEvidence) -> list[ValidationIss
             if item.mapping_status == "mapped" and item.field_weight is not None
         ]
         mapped_count = sum(item.mapping_status == "mapped" for item in records)
-        if mapped_count and len(mapped_weights) == mapped_count:
-            if abs(sum(mapped_weights) - 1.0) > 1e-9:
+        mapped_field_ids = [
+            item.field_id
+            for item in records
+            if item.mapping_status == "mapped" and item.field_id is not None
+        ]
+        duplicate_fields = tuple(
+            sorted(
+                {
+                    field_id
+                    for field_id in mapped_field_ids
+                    if mapped_field_ids.count(field_id) > 1
+                }
+            )
+        )
+        if duplicate_fields:
+            issues.append(
+                _issue(
+                    "field.duplicate-ledger-field",
+                    "fault",
+                    "field-attribution",
+                    paper_id,
+                    "A selected cross-provider ledger must contain one row per "
+                    "canonical field.",
+                    duplicate_fields,
+                )
+            )
+        unmapped_masses = {item.unmapped_field_mass for item in records}
+        if len(unmapped_masses) != 1:
+            issues.append(
+                _issue(
+                    "field.unmapped-mass-inconsistent",
+                    "fault",
+                    "field-attribution",
+                    paper_id,
+                    "Selected paper-ledger rows disagree about explicit unmapped mass.",
+                )
+            )
+            continue
+        unmapped_mass = next(iter(unmapped_masses))
+        if unmapped_mass > 0:
+            issues.append(
+                _issue(
+                    "field.unmapped-mass",
+                    "warning",
+                    "field-attribution",
+                    paper_id,
+                    "Selected cross-provider evidence retains explicit unmapped "
+                    "field mass.",
+                )
+            )
+        if len(mapped_weights) == mapped_count:
+            if abs(sum(mapped_weights) + unmapped_mass - 1.0) > 1e-9:
                 issues.append(
                     _issue(
                         "field.weight-conservation-failed",
                         "fault",
-                        "paper",
+                        "field-attribution",
                         paper_id,
-                        "Mapped field weights do not conserve one paper across fields.",
+                        "Mapped field weights plus explicit unmapped mass do not "
+                        "conserve one selected cross-provider paper ledger.",
                     )
                 )
     return issues

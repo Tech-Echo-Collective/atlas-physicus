@@ -23,6 +23,7 @@ from physics_atlas_api.fields import PHYSICS_FIELD_ONTOLOGY_VERSION
 from physics_atlas_api.fields.mapping import (
     FIELD_WEIGHTING_POLICY_VERSION,
     PROVIDER_FIELD_MAPPING_VERSION,
+    Provider,
     ProviderCategoryEvidence,
     map_provider_categories,
 )
@@ -271,6 +272,73 @@ class SequencedAuthorityPaperConnector(SourceConnector):
                 ],
                 "field_mapping_provenance": mapping.provenance_payload(),
                 "field_mapping_uncertainty": mapping.uncertainty_note,
+            },
+            raw=record.raw,
+            provenance={
+                **PROVENANCE,
+                "sourceRecordId": record.source_record_id,
+            },
+        )
+
+
+class CrossProviderFieldPaperConnector(SourceConnector):
+    source_version = "cross-provider-field-test-v1"
+    min_interval_seconds = 0
+
+    def __init__(
+        self,
+        transport: SourceTransport,
+        provider: Provider,
+        category: str,
+    ) -> None:
+        self.provider = provider
+        self.category = category
+        super().__init__(transport, f"https://{provider}.test")
+
+    def fetch_new_records(self, cursor: str | None, limit: int = 100) -> ConnectorBatch:
+        del cursor, limit
+        return ConnectorBatch(
+            records=(
+                SourceRecord(
+                    provider=self.provider,
+                    source_record_id=f"{self.provider}-field-paper",
+                    raw={"category": self.category},
+                ),
+            ),
+            next_cursor="complete",
+        )
+
+    def fetch_record(self, record_id: str) -> SourceRecord | None:
+        del record_id
+        return None
+
+    def normalize_record(self, record: SourceRecord) -> NormalizedRecord:
+        mapping = map_provider_categories(
+            self.provider,
+            (ProviderCategoryEvidence(self.category, role="primary"),),
+        )
+        return NormalizedRecord(
+            provider=self.provider,
+            kind="paper",
+            source_record_id=record.source_record_id,
+            canonical_name="Cross-provider field reconciliation fixture",
+            external_ids=(
+                ("doi", "10.5555/cross-provider-field-fixture"),
+                ("arxiv", "2608.09999"),
+            ),
+            attributes={
+                "title": "Cross-provider field reconciliation fixture",
+                "publication_year": 2026,
+                "authors": [],
+                "raw_category_evidence": [
+                    {
+                        "category": item.evidence.category,
+                        "role": item.evidence.role,
+                        "taxonomy": item.evidence.taxonomy,
+                    }
+                    for item in mapping.category_mappings
+                ],
+                "field_mapping_provenance": mapping.provenance_payload(),
             },
             raw=record.raw,
             provenance={
@@ -946,6 +1014,91 @@ def test_update_engine_materializes_versioned_fields_and_paper_time_affiliations
     assert {
         item.dataset_version for item in all_affiliations if not item.is_current
     } == {first_update.dataset_version}
+
+
+@pytest.mark.parametrize(
+    "provider_categories",
+    [
+        (("inspire", "Theory-HEP"), ("arxiv", "gr-qc")),
+        (("arxiv", "gr-qc"), ("inspire", "Theory-HEP")),
+    ],
+)
+def test_update_engine_reconciles_one_order_independent_cross_provider_field_ledger(
+    session: Session,
+    fixture_directory: Path,
+    provider_categories: tuple[tuple[Provider, str], tuple[Provider, str]],
+) -> None:
+    ensure_reference_data(session)
+    fixture_transport = build_connectors(
+        Settings(database_url="sqlite://", fixture_mode=True), fixture_directory
+    )["inspire"].transport
+    connectors = [
+        CrossProviderFieldPaperConnector(fixture_transport, provider, category)
+        for provider, category in provider_categories
+    ]
+
+    for connector in connectors:
+        result = IncrementalUpdateEngine(session, connector).run()
+        assert result.status == "succeeded"
+
+    field_links = list(
+        session.scalars(select(models.PaperField).order_by(models.PaperField.field_id))
+    )
+    assert [(item.field_id, item.weight) for item in field_links] == [
+        ("gr-qc", Decimal("0.5")),
+        ("hep-th", Decimal("0.5")),
+    ]
+    paper = session.scalar(select(models.Paper))
+    assert paper is not None
+    ledger = paper.provenance_json["fieldMapping"]
+    assert ledger["unmapped_field_mass"] == 0.0
+    assert {item["provider"] for item in ledger["category_mappings"]} == {
+        "arxiv",
+        "inspire",
+    }
+    assert all(item.provenance_json["fieldMapping"] == ledger for item in field_links)
+
+    replay = IncrementalUpdateEngine(session, connectors[-1]).run()
+
+    assert replay.status == "succeeded"
+    assert replay.idempotent_replay is True
+    replayed_links = list(
+        session.scalars(select(models.PaperField).order_by(models.PaperField.field_id))
+    )
+    assert [(item.field_id, item.weight) for item in replayed_links] == [
+        ("gr-qc", Decimal("0.5")),
+        ("hep-th", Decimal("0.5")),
+    ]
+    assert session.scalar(select(func.count()).select_from(models.PaperField)) == 2
+
+
+def test_update_engine_stores_an_all_unmapped_ledger_and_deletes_stale_fields(
+    session: Session,
+    fixture_directory: Path,
+) -> None:
+    ensure_reference_data(session)
+    fixture_transport = build_connectors(
+        Settings(database_url="sqlite://", fixture_mode=True), fixture_directory
+    )["arxiv"].transport
+
+    first = CrossProviderFieldPaperConnector(fixture_transport, "arxiv", "hep-th")
+    assert IncrementalUpdateEngine(session, first).run().status == "succeeded"
+    assert session.scalar(select(func.count()).select_from(models.PaperField)) == 1
+
+    replacement = CrossProviderFieldPaperConnector(
+        fixture_transport,
+        "arxiv",
+        "unknown-provider-label",
+    )
+    assert IncrementalUpdateEngine(session, replacement).run().status == "succeeded"
+
+    assert session.scalar(select(func.count()).select_from(models.PaperField)) == 0
+    paper = session.scalar(select(models.Paper))
+    assert paper is not None
+    ledger = paper.provenance_json["fieldMapping"]
+    assert ledger["assignments"] == []
+    assert ledger["unmapped_field_mass"] == 1.0
+    assert ledger["category_mappings"][0]["category"] == "unknown-provider-label"
 
 
 def test_live_identity_resolution_uses_alias_history_and_ambiguity_gated_fuzzy(

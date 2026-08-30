@@ -13,8 +13,14 @@ from . import models
 from .attribution import FRACTIONAL_ATTRIBUTION_V1
 from .config import get_settings
 from .database import SessionLocal
-from .fields import PHYSICS_FIELD_ONTOLOGY_V1, PHYSICS_FIELD_ONTOLOGY_VERSION
+from .fields import (
+    CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+    FIELD_WEIGHTING_POLICY_VERSION,
+    PHYSICS_FIELD_ONTOLOGY_V1,
+    PHYSICS_FIELD_ONTOLOGY_VERSION,
+)
 from .fields.mapping import PROVIDER_FIELD_MAPPING_VERSION
+from .metrics.activation import field_validation_manifest_is_current
 from .metrics.contracts import METRIC_CONTRACTS, get_metric_contract
 from .metrics.thresholds import METRIC_VALIDATION_THRESHOLDS_V1
 from .search_index import refresh_search_terms
@@ -98,6 +104,7 @@ def _metric_system_versions_are_current(
         and release.ontology_version == PHYSICS_FIELD_ONTOLOGY_VERSION
         and release.mapping_policy_version == PROVIDER_FIELD_MAPPING_VERSION
         and release.threshold_version == METRIC_VALIDATION_THRESHOLDS_V1.version
+        and field_validation_manifest_is_current(release.validation_evidence)
     )
 
 
@@ -275,6 +282,11 @@ def seed_reference_data(session: Session, payload: dict[str, Any]) -> None:
                 threshold_version=METRIC_VALIDATION_THRESHOLDS_V1.version,
                 validation_evidence={
                     "jointGatePassed": False,
+                    "fieldWeightingPolicyVersion": FIELD_WEIGHTING_POLICY_VERSION,
+                    "fieldReconciliationVersion": (
+                        CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION
+                    ),
+                    "fieldWeightConservationPassed": False,
                     "reason": (
                         "Algorithms are implemented as an experimental framework; "
                         "live coverage and scientific validation gates have not passed."
@@ -305,6 +317,9 @@ def seed_reference_data(session: Session, payload: dict[str, Any]) -> None:
         )
         metric_system_release.validation_evidence = {
             "jointGatePassed": False,
+            "fieldWeightingPolicyVersion": FIELD_WEIGHTING_POLICY_VERSION,
+            "fieldReconciliationVersion": (CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION),
+            "fieldWeightConservationPassed": False,
             "reason": (
                 "Algorithms are implemented as an experimental framework; "
                 "live coverage and scientific validation gates have not passed."

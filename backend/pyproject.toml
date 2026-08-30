@@ -32,6 +32,7 @@ dev = [
 
 [project.scripts]
 physics-atlas-api = "physics_atlas_api.main:run"
+physics-atlas-backfill = "physics_atlas_api.backfill:run"
 physics-atlas-worker = "physics_atlas_api.worker:run"
 physics-atlas-seed = "physics_atlas_api.seed:run"
 

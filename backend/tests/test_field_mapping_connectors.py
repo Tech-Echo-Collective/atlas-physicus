@@ -44,11 +44,12 @@ def test_arxiv_parser_preserves_primary_secondary_and_foreign_taxonomy_evidence(
     assert normalized.attributes["field_mapping_confidence"] is None
     assert normalized.attributes["field_mapping_coverage"] == pytest.approx(2 / 3)
     assert normalized.attributes["atlas_field_assignments"] == [
-        {"field_id": "hep-th", "weight": 0.5},
-        {"field_id": "gr-qc", "weight": 0.5},
+        {"field_id": "hep-th", "weight": pytest.approx(1 / 3)},
+        {"field_id": "gr-qc", "weight": pytest.approx(1 / 3)},
     ]
     provenance = normalized.attributes["field_mapping_provenance"]
     assert provenance["category_mappings"][-1]["status"] == "unmapped"
+    assert provenance["unmapped_field_mass"] == pytest.approx(1 / 3)
 
 
 def test_inspire_normalizer_preserves_source_and_does_not_invent_category_role(
@@ -89,5 +90,8 @@ def test_inspire_normalizer_preserves_source_and_does_not_invent_category_role(
     assert normalized.attributes["atlas_field_candidates"] == ["hep-lat"]
     assert normalized.attributes["field_mapping_coverage"] == pytest.approx(0.5)
     assert normalized.attributes["atlas_field_assignments"] == [
-        {"field_id": "hep-lat", "weight": 1.0}
+        {"field_id": "hep-lat", "weight": 0.5}
     ]
+    assert normalized.attributes["field_mapping_provenance"][
+        "unmapped_field_mass"
+    ] == pytest.approx(0.5)

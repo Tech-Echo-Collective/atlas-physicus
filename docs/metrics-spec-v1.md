@@ -35,6 +35,13 @@ For paper `p`, entity `e`, and field `f`, let:
 - `s(p,f)` be the versioned provider-to-Atlas field share;
 - `a(p,e,f) = w(p,e) × s(p,f)`.
 
+For every paper, the selected cross-provider field ledger conserves
+`Σf s(p,f) + u(p) = 1`, where `u(p)` is explicit unmapped field mass. Unique
+mapped fields receive equal shares of the mapped mass unless a separately
+justified weighting-policy version applies. Provider roles remain provenance;
+neither duplicate provider support nor unmapped mass creates additional mapped
+paper mass.
+
 Unresolved affiliation or field mass is not redistributed. A measured zero can
 be a valid input, but absent, immature, unresolved, or insufficient evidence
 produces no observation. Every eligible result preserves its raw value,

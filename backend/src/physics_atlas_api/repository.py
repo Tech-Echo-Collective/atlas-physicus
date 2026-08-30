@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from . import models
 from .attribution import FRACTIONAL_ATTRIBUTION_V1
 from .fields import PHYSICS_FIELD_ONTOLOGY_VERSION, PROVIDER_FIELD_MAPPING_VERSION
+from .metrics.activation import field_validation_manifest_is_current
 from .metrics.contracts import METRIC_CONTRACTS
 from .metrics.thresholds import METRIC_VALIDATION_THRESHOLDS_V1
 from .search_index import normalize_search_term
@@ -202,6 +203,7 @@ def _current_dataset_metric_criteria(session: Session) -> tuple[Any, ...]:
             and release.mapping_policy_version == PROVIDER_FIELD_MAPPING_VERSION
             and release.threshold_version == METRIC_VALIDATION_THRESHOLDS_V1.version
             and release.validation_evidence.get("jointGatePassed") is True
+            and field_validation_manifest_is_current(release.validation_evidence)
             and definitions_are_complete
         )
         if not release_is_complete:

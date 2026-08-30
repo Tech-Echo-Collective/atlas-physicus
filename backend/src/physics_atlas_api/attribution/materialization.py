@@ -1,7 +1,7 @@
 """Paper-time affiliation extraction, conservative resolution, and persistence."""
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal, localcontext
 from fractions import Fraction
 from typing import Any
@@ -21,7 +21,13 @@ from .contracts import (
 )
 from .fractional import FractionalAttributionResult, calculate_fractional_attribution
 
-MATERIALIZATION_VERSION = "paper-time-affiliation-materialization-v1"
+MATERIALIZATION_VERSION = "paper-time-affiliation-materialization-v2"
+AFFILIATION_EVIDENCE_PRECEDENCE_VERSION = "cross-provider-affiliation-precedence-v1"
+_AFFILIATION_EVIDENCE_PRECEDENCE = {
+    "arxiv": 2,
+    "crossref": 3,
+    "inspire": 3,
+}
 
 
 @dataclass(frozen=True)
@@ -50,6 +56,146 @@ def _decimal(value: Fraction) -> Decimal:
     with localcontext() as context:
         context.prec = 40
         return Decimal(value.numerator) / Decimal(value.denominator)
+
+
+def _affiliation_evidence_priority(provider: str) -> int:
+    """Return the frozen historical-evidence priority for a supported provider."""
+
+    priority = _AFFILIATION_EVIDENCE_PRECEDENCE.get(provider.casefold())
+    if priority is None:
+        raise ValueError(
+            f"{provider!r} is not an approved paper-time affiliation provider; "
+            "current profile/homepage evidence must not enter historical projection"
+        )
+    return priority
+
+
+def _current_evidence_positions(
+    rows: list[models.PaperAffiliation],
+) -> set[int]:
+    return {
+        row.author_position
+        for row in rows
+        if row.affiliation_resolution_status != "missing"
+    }
+
+
+def _incoming_evidence_positions(
+    result: FractionalAttributionResult,
+) -> set[int]:
+    return {
+        share.author_position
+        for share in result.shares
+        if share.status != "withheld-no-affiliation"
+    }
+
+
+def _current_rows_by_position(
+    rows: list[models.PaperAffiliation],
+) -> dict[int, list[models.PaperAffiliation]]:
+    grouped: dict[int, list[models.PaperAffiliation]] = {}
+    for row in rows:
+        grouped.setdefault(row.author_position, []).append(row)
+    return grouped
+
+
+def _author_weights_by_position(
+    current_rows: dict[int, list[models.PaperAffiliation]],
+    result: FractionalAttributionResult,
+) -> tuple[dict[int, Fraction], dict[int, Fraction]]:
+    current_weights: dict[int, Fraction] = {}
+    for position, rows in current_rows.items():
+        weights = {
+            Fraction(row.author_weight_numerator, row.author_weight_denominator)
+            for row in rows
+        }
+        if len(weights) != 1:
+            raise ValueError(
+                "current paper-time rows disagree about one author's exact weight"
+            )
+        current_weights[position] = next(iter(weights))
+
+    incoming_weights: dict[int, Fraction] = {}
+    for share in result.shares:
+        previous = incoming_weights.setdefault(
+            share.author_position, share.author_weight
+        )
+        if previous != share.author_weight:
+            raise ValueError(
+                "incoming paper-time rows disagree about one author's exact weight"
+            )
+    return current_weights, incoming_weights
+
+
+def _validate_mixed_projection_conservation(
+    *,
+    current_rows: dict[int, list[models.PaperAffiliation]],
+    result: FractionalAttributionResult,
+    selected_incoming_positions: set[int],
+) -> None:
+    """Refuse a cross-provider slot merge that would change one-paper mass."""
+
+    current_weights, incoming_weights = _author_weights_by_position(
+        current_rows, result
+    )
+    retained_current_positions = set(current_weights) - selected_incoming_positions
+    selected_weight = sum(
+        (incoming_weights[position] for position in selected_incoming_positions),
+        start=Fraction(0),
+    )
+    retained_weight = sum(
+        (current_weights[position] for position in retained_current_positions),
+        start=Fraction(0),
+    )
+    if selected_weight + retained_weight != 1:
+        raise ValueError(
+            "cross-provider paper-time author slots cannot be merged while "
+            "conserving one paper; retain the evidence as unresolved lineage"
+        )
+
+
+def _conflicting_resolved_positions(
+    current_rows: list[models.PaperAffiliation],
+    result: FractionalAttributionResult,
+) -> set[int]:
+    current_targets: dict[int, set[str]] = {}
+    incoming_targets: dict[int, set[str]] = {}
+    for row in current_rows:
+        if row.institution_id is not None:
+            current_targets.setdefault(row.author_position, set()).add(
+                row.institution_id
+            )
+    for share in result.shares:
+        if share.institution_id is not None:
+            incoming_targets.setdefault(share.author_position, set()).add(
+                share.institution_id
+            )
+    return {
+        position
+        for position in current_targets.keys() & incoming_targets.keys()
+        if current_targets[position] != incoming_targets[position]
+    }
+
+
+def _withhold_conflicting_positions(
+    result: FractionalAttributionResult, conflicting_positions: set[int]
+) -> FractionalAttributionResult:
+    if not conflicting_positions:
+        return result
+    return replace(
+        result,
+        shares=tuple(
+            replace(
+                share,
+                institution_id=None,
+                country_id=None,
+                status="withheld-unresolved-affiliation",
+            )
+            if share.author_position in conflicting_positions
+            else share
+            for share in result.shares
+        ),
+    )
 
 
 def _author_name(raw_author: dict[str, Any], position: int) -> str:
@@ -286,6 +432,8 @@ def materialize_paper_time_affiliations(
 ) -> FractionalAttributionResult:
     """Materialize exact paper-time evidence without guessing or renormalizing."""
 
+    incoming_priority = _affiliation_evidence_priority(record.provider)
+
     raw_authors = record.attributes.get("authors", [])
     if not isinstance(raw_authors, list) or not raw_authors:
         raise ValueError(
@@ -325,22 +473,107 @@ def materialize_paper_time_affiliations(
         )
 
     result = calculate_fractional_attribution(paper_id, inputs)
-    session.execute(
-        update(models.PaperAffiliation)
-        .where(
-            models.PaperAffiliation.paper_id == paper_id,
-            models.PaperAffiliation.is_current,
+    current_rows = list(
+        session.scalars(
+            select(models.PaperAffiliation).where(
+                models.PaperAffiliation.paper_id == paper_id,
+                models.PaperAffiliation.is_current,
+            )
         )
-        .values(is_current=False)
     )
+    current_providers = {row.provider.casefold() for row in current_rows}
+    current_by_position = _current_rows_by_position(current_rows)
+    incoming_positions = {share.author_position for share in result.shares}
+    incoming_evidence_positions = _incoming_evidence_positions(result)
+    current_evidence_positions = _current_evidence_positions(current_rows)
+    cross_provider_replay = bool(
+        current_rows and current_providers != {record.provider.casefold()}
+    )
+    cross_provider_evidence_loss = (
+        cross_provider_replay
+        and not current_evidence_positions.issubset(incoming_evidence_positions)
+    )
+    conflicting_positions = (
+        _conflicting_resolved_positions(current_rows, result)
+        if cross_provider_replay
+        else set()
+    )
+    replace_complete_projection = bool(
+        not current_rows or current_providers == {record.provider.casefold()}
+    )
+    selected_incoming_positions: set[int]
+    if replace_complete_projection:
+        selected_incoming_positions = incoming_positions
+    else:
+        result = _withhold_conflicting_positions(result, conflicting_positions)
+        selected_incoming_positions = set()
+        for position in incoming_positions:
+            position_rows = current_by_position.get(position, [])
+            if not position_rows or position in conflicting_positions:
+                selected_incoming_positions.add(position)
+                continue
+            incoming_has_evidence = position in incoming_evidence_positions
+            current_has_evidence = position in current_evidence_positions
+            if incoming_has_evidence != current_has_evidence:
+                if incoming_has_evidence:
+                    selected_incoming_positions.add(position)
+                continue
+            current_priority = max(
+                _affiliation_evidence_priority(row.provider) for row in position_rows
+            )
+            if incoming_priority >= current_priority:
+                selected_incoming_positions.add(position)
+        if selected_incoming_positions:
+            _validate_mixed_projection_conservation(
+                current_rows=current_by_position,
+                result=result,
+                selected_incoming_positions=selected_incoming_positions,
+            )
+
+    if replace_complete_projection:
+        session.execute(
+            update(models.PaperAffiliation)
+            .where(
+                models.PaperAffiliation.paper_id == paper_id,
+                models.PaperAffiliation.is_current,
+            )
+            .values(is_current=False)
+        )
+    elif selected_incoming_positions:
+        session.execute(
+            update(models.PaperAffiliation)
+            .where(
+                models.PaperAffiliation.paper_id == paper_id,
+                models.PaperAffiliation.is_current,
+                models.PaperAffiliation.author_position.in_(
+                    selected_incoming_positions
+                ),
+            )
+            .values(is_current=False)
+        )
 
     for share_index, share in enumerate(result.shares):
+        selected_as_current = share.author_position in selected_incoming_positions
         identity = author_identities.get(share.author_position)
         evidence_items = [
             assertion_evidence[assertion_id]
             for assertion_id in share.affiliation_assertion_ids
             if assertion_id in assertion_evidence
         ]
+        conflict_evidence = (
+            [
+                {
+                    "method": "cross-provider-affiliation-precedence",
+                    "status": "unresolved-conflict",
+                    "providers": sorted(
+                        current_providers | {record.provider.casefold()}
+                    ),
+                    "version": AFFILIATION_EVIDENCE_PRECEDENCE_VERSION,
+                }
+            ]
+            if share.author_position in conflicting_positions
+            else []
+        )
         if share.status == "allocated":
             affiliation_status = "resolved"
         elif share.status == "withheld-ambiguous-affiliation":
@@ -422,14 +655,24 @@ def materialize_paper_time_affiliations(
                 evidence
                 for item in evidence_items
                 for evidence in item.resolution_evidence
-            ],
-            "is_current": True,
+            ]
+            + conflict_evidence,
+            "is_current": selected_as_current,
             "provenance_json": {
                 **record.provenance,
                 "sourceSnapshotId": source_snapshot_id,
                 "datasetVersion": dataset_version,
                 "attributionPolicyVersion": FRACTIONAL_ATTRIBUTION_V1.version,
                 "materializationVersion": MATERIALIZATION_VERSION,
+                "affiliationEvidencePrecedenceVersion": (
+                    AFFILIATION_EVIDENCE_PRECEDENCE_VERSION
+                ),
+                "affiliationEvidencePriority": incoming_priority,
+                "selectedAsCurrentProjection": selected_as_current,
+                "crossProviderConflictUnresolved": (
+                    share.author_position in conflicting_positions
+                ),
+                "crossProviderEvidenceLossPrevented": (cross_provider_evidence_loss),
                 "allocationStatus": share.status,
                 "exactAttributionFraction": (
                     f"{share.weight.numerator}/{share.weight.denominator}"

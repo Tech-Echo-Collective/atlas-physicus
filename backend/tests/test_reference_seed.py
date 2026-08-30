@@ -8,7 +8,11 @@ from sqlalchemy.orm import Session
 
 from physics_atlas_api import models
 from physics_atlas_api.attribution import FRACTIONAL_ATTRIBUTION_V1
-from physics_atlas_api.fields import PHYSICS_FIELD_ONTOLOGY_VERSION
+from physics_atlas_api.fields import (
+    CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+    FIELD_WEIGHTING_POLICY_VERSION,
+    PHYSICS_FIELD_ONTOLOGY_VERSION,
+)
 from physics_atlas_api.fields.mapping import PROVIDER_FIELD_MAPPING_VERSION
 from physics_atlas_api.metrics.contracts import METRIC_CONTRACTS
 from physics_atlas_api.metrics.thresholds import METRIC_VALIDATION_THRESHOLDS_V1
@@ -80,6 +84,15 @@ def test_reference_seed_materializes_versioned_scientific_foundation(
     assert release.mapping_policy_version == PROVIDER_FIELD_MAPPING_VERSION
     assert release.threshold_version == METRIC_VALIDATION_THRESHOLDS_V1.version
     assert release.validation_evidence["jointGatePassed"] is False
+    assert (
+        release.validation_evidence["fieldWeightingPolicyVersion"]
+        == FIELD_WEIGHTING_POLICY_VERSION
+    )
+    assert (
+        release.validation_evidence["fieldReconciliationVersion"]
+        == CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION
+    )
+    assert release.validation_evidence["fieldWeightConservationPassed"] is False
     assert release.activated_at is None
 
 
@@ -158,6 +171,9 @@ def test_reference_seed_preserves_reviewed_metric_system_metadata(
     release.threshold_version = METRIC_VALIDATION_THRESHOLDS_V1.version
     release.validation_evidence = {
         "jointGatePassed": True,
+        "fieldWeightingPolicyVersion": FIELD_WEIGHTING_POLICY_VERSION,
+        "fieldReconciliationVersion": CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+        "fieldWeightConservationPassed": True,
         "reviewId": "reviewed-joint-gate-v1",
     }
     release.activated_at = (
@@ -176,6 +192,9 @@ def test_reference_seed_preserves_reviewed_metric_system_metadata(
     assert preserved_release.status == release_status
     assert preserved_release.validation_evidence == {
         "jointGatePassed": True,
+        "fieldWeightingPolicyVersion": FIELD_WEIGHTING_POLICY_VERSION,
+        "fieldReconciliationVersion": CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+        "fieldWeightConservationPassed": True,
         "reviewId": "reviewed-joint-gate-v1",
     }
     assert preserved_release.provenance_json == {

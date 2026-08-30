@@ -57,13 +57,15 @@ The foundation supports at least:
 - Mathematical Physics (`math-ph`).
 
 One provider category can map to multiple Atlas fields, and some categories
-remain unmapped. Multiple unique supported Atlas fields receive equal shares
-under `equal-supported-fields-v1` unless a future reviewed policy supplies
-evidence for unequal weights. Primary/secondary status remains provenance and
-does not silently alter the share. For example, a broad Crossref subject or an
-arXiv cross-list is not evidence of one exclusive field. Mapping uncertainty
-must survive ingestion rather than being collapsed into a confident label.
-See [Physics Field Ontology v1](field-ontology.md).
+remain unmapped. Under `provider-evidence-conservation-v2`, unmapped evidence
+retains explicit mass and the remaining mapped mass is divided equally across
+the unique supported Atlas fields. `cross-provider-field-reconciliation-v1`
+creates one selected paper ledger, so a second provider cannot give the paper
+another unit of field contribution. Primary/secondary status remains
+provenance and does not silently alter the share. For example, a broad Crossref
+subject or an arXiv cross-list is not evidence of one exclusive field. Mapping
+uncertainty must survive ingestion rather than being collapsed into a confident
+label. See [Physics Field Ontology v1](field-ontology.md).
 
 ## Freshness and limitations
 

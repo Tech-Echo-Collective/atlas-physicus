@@ -5,6 +5,7 @@ from .activation import (
     MetricSystemActivationEvidence,
     MetricSystemCoverageEvidence,
     assess_joint_metric_activation,
+    field_validation_manifest_is_current,
 )
 from .aggregation import aggregate_physics_wide
 from .calculators import (
@@ -110,6 +111,7 @@ __all__ = [
     "calculate_diversity",
     "calculate_impact_raw",
     "calculate_momentum_raw",
+    "field_validation_manifest_is_current",
     "get_metric_contract",
     "log_midrank_percentiles",
     "normalize_activity_results",

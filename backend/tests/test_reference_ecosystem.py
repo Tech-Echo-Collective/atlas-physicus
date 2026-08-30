@@ -27,6 +27,10 @@ def healthy_evidence() -> ReferenceEcosystemEvidence:
         dataset_version=DATASET_VERSION,
         expected_ontology_version="physics-field-ontology-v1",
         expected_mapping_versions=(("arxiv", "arxiv-atlas-field-mapping-v1"),),
+        expected_field_weighting_policy_version="provider-evidence-conservation-v2",
+        expected_field_reconciliation_version=(
+            "cross-provider-field-reconciliation-v1"
+        ),
         expected_normalization_versions=(
             ("research_activity_score", "activity-robust-log-v1"),
         ),
@@ -64,10 +68,13 @@ def healthy_evidence() -> ReferenceEcosystemEvidence:
                 raw_categories=("hep-th",),
                 field_id="hep-th",
                 field_weight=1.0,
+                unmapped_field_mass=0.0,
                 mapping_status="mapped",
                 mapping_version="arxiv-atlas-field-mapping-v1",
                 ontology_version="physics-field-ontology-v1",
                 provenance=PROVENANCE,
+                weighting_policy_version="provider-evidence-conservation-v2",
+                reconciliation_version="cross-provider-field-reconciliation-v1",
             ),
         ),
         historical_coverage=HistoricalCoverageEvidence(
@@ -200,6 +207,7 @@ def test_field_versions_coverage_history_and_provenance_faults_are_reported() ->
         raw_categories=(),
         field_id=None,
         field_weight=None,
+        unmapped_field_mass=1.0,
         mapping_status="unmapped",
         mapping_version="stale-mapping",
         ontology_version="stale-ontology",
@@ -241,6 +249,82 @@ def test_field_versions_coverage_history_and_provenance_faults_are_reported() ->
     assert "provenance.missing-dataset-version" in codes
     assert report.summary.field_attribution_coverage == 0.0
     assert report.summary.historical_year_coverage == pytest.approx(1 / 3)
+
+
+def test_field_weight_conservation_includes_explicit_unmapped_mass() -> None:
+    evidence = healthy_evidence()
+    mapped = replace(
+        evidence.field_attributions[0],
+        raw_categories=("hep-th", "unknown-provider-label"),
+        field_weight=0.5,
+        unmapped_field_mass=0.5,
+    )
+    report = validate_reference_ecosystem(
+        replace(evidence, field_attributions=(mapped,))
+    )
+
+    assert "field.weight-conservation-failed" not in {
+        item.code for item in report.issues
+    }
+    assert "field.unmapped-mass" in {item.code for item in report.issues}
+    assert report.status == "review-required"
+
+
+def test_independent_provider_ledgers_cannot_each_contribute_a_full_paper() -> None:
+    evidence = healthy_evidence()
+    arxiv = evidence.field_attributions[0]
+    inspire = replace(
+        arxiv,
+        provider="inspire",
+        mapping_version="inspire-atlas-field-mapping-v1",
+    )
+    report = validate_reference_ecosystem(
+        replace(
+            evidence,
+            expected_mapping_versions=(
+                *evidence.expected_mapping_versions,
+                ("inspire", "inspire-atlas-field-mapping-v1"),
+            ),
+            field_attributions=(arxiv, inspire),
+        )
+    )
+
+    assert "field.weight-conservation-failed" in {item.code for item in report.issues}
+    assert report.status == "invalid"
+
+
+def test_field_weight_conservation_rejects_an_incomplete_mass_ledger() -> None:
+    evidence = healthy_evidence()
+    broken = replace(
+        evidence.field_attributions[0],
+        field_weight=0.5,
+        unmapped_field_mass=0.25,
+    )
+    report = validate_reference_ecosystem(
+        replace(evidence, field_attributions=(broken,))
+    )
+
+    assert "field.weight-conservation-failed" in {item.code for item in report.issues}
+    assert report.status == "invalid"
+
+
+def test_field_validation_rejects_stale_ledger_policy_versions() -> None:
+    evidence = healthy_evidence()
+    stale = replace(
+        evidence.field_attributions[0],
+        weighting_policy_version="legacy-full-membership-v1",
+        reconciliation_version="legacy-independent-provider-ledgers-v1",
+    )
+
+    report = validate_reference_ecosystem(
+        replace(evidence, field_attributions=(stale,))
+    )
+
+    assert {
+        "field.weighting-policy-version-mismatch",
+        "field.reconciliation-version-mismatch",
+    }.issubset({item.code for item in report.issues})
+    assert report.status == "invalid"
 
 
 def test_missing_is_not_coerced_to_zero() -> None:

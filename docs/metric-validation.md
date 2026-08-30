@@ -73,7 +73,10 @@ single versioned activation manifest demonstrates all of the following:
    whole;
 4. Fractional Attribution v1 materialization and conservation are validated;
 5. a canonical Physics ontology and versioned INSPIRE and arXiv mappings are
-   available;
+   available, and every paper conserves one field-evidence unit across mapped
+   canonical weights and explicit unmapped mass under
+   `provider-evidence-conservation-v2` and
+   `cross-provider-field-reconciliation-v1`;
 6. global affiliation, canonical-institution, citation, and field-mapping
    coverage pass the configured thresholds;
 7. six-year historical coverage and incomplete-year exclusion are validated;
@@ -96,9 +99,11 @@ layers automatically.
 
 The public repository read path independently verifies the exact five current
 definition versions and `live-calculated` statuses together with the exact
-active release manifest. Four live definitions plus one candidate or missing
-definition therefore returns no live observations. Reference-data seeding may
-preserve a reviewed exact activation, but it cannot create or promote one.
+active release manifest, including the current field-weighting and
+cross-provider reconciliation versions and an explicit conservation pass. Four
+live definitions plus one candidate or missing definition therefore returns no
+live observations. Reference-data seeding may preserve a reviewed exact
+activation, but it cannot create or promote one.
 
 ### System readiness versus entity availability
 
@@ -139,12 +144,15 @@ Standard tests use fixed local evidence and never depend on live provider
 availability. They cover:
 
 - paper-time affiliation materialization and version lineage;
+- cross-provider affiliation precedence, including lower-precedence replay and
+  unresolved cross-tier and equal-tier conflicts;
 - exact one-paper conservation for single author, multiple authors,
   multi-institution work, multi-affiliation authors, large collaborations,
   unresolved affiliations, and partial coverage;
 - ontology IDs, parents, cycles, aliases, provenance, and versioning;
 - INSPIRE/arXiv raw-category preservation, primary/secondary roles, multi-field
-  equal shares, unmapped categories, and mapping versions;
+  equal shares, cross-provider one-paper conservation, unmapped categories, and
+  mapping versions;
 - all five raw calculators and their companion evidence;
 - each metric-specific normalization, including tied and degenerate cohorts;
 - minimum count, maturity, complete-year, coverage, and cohort thresholds;
