@@ -7,7 +7,7 @@ authors:
 version: "v3.0.5-alpha"
 date-released: 2026-08-29
 repository-code: "https://github.com/Tech-Echo-Collective/Physics-Atlas"
-url: "https://techecho.org/Physics-Atlas-Web/"
+url: "https://atlas.techecho.org/"
 license: Apache-2.0
 abstract: >-
   Physics Atlas is an open scientific infrastructure prototype for exploring

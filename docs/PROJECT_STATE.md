@@ -1,6 +1,6 @@
 # Physics Atlas project state
 
-Last reviewed: 2026-08-30
+Last reviewed: 2026-08-31
 
 This file records the factual operating state of the project. Read it with [durable decisions](DECISIONS.md), the [roadmap](roadmap.md), and the [worklog](WORKLOG.md) before major work.
 
@@ -87,8 +87,16 @@ This file records the factual operating state of the project. Read it with [dura
 
 ## Public deployment state
 
-- The public entry point is the separate `Tech-Echo-Collective/Physics-Atlas-Web` GitHub Pages project.
-- The public Pages application at <https://techecho.org/Physics-Atlas-Web/> is built with `VITE_ATLAS_API_URL=https://physics-atlas-api-production.up.railway.app/api` and uses `APIRepository` on normal clean routes.
+- The public entry point is the separate
+  `Tech-Echo-Collective/Physics-Atlas-Web` GitHub Pages project. Its canonical
+  target URL is <https://atlas.techecho.org/>.
+- The deployed application is built with
+  `VITE_ATLAS_API_URL=https://physics-atlas-api-production.up.railway.app/api`
+  and uses `APIRepository` on normal clean routes. The previous inherited Pages
+  path, <https://techecho.org/Physics-Atlas-Web/>, remains a migration origin
+  until the separate DNS, Pages custom-domain, certificate, and redirect
+  cutover is completed and verified; this source change does not claim that
+  cutover has occurred.
 - The normal public source selector exposes only the live API. Synthetic framework and historical pilot repositories remain available only through explicit internal routes for tests, reproducibility, and first-load failure fallback.
 - Data-source resolution, repository boundaries, dataset-kind validation, and scoped live merges prevent live/static record mixing.
 - The production API currently publishes no reviewed metric observations. All
@@ -153,8 +161,10 @@ GitHub Actions validation passed in [run 33300307090](https://github.com/Tech-Ec
   0.19--0.27 seconds. The bounded responses ranged from 43 bytes for an empty
   metric page to 10,135 bytes for the seven-definition metric registry; these
   timings were not remeasured in the 2026-08-30 production snapshot.
-- CORS admits the exact GitHub Pages origin for GET and preflight requests and
-  denies an untrusted origin. The deployed Pages bundle contains the configured
+- The transition CORS contract admits the exact legacy GitHub Pages origin,
+  the inherited `techecho.org` origin, and `https://atlas.techecho.org` for GET
+  and preflight requests, while denying an untrusted origin. The deployed Pages
+  bundle contains the configured
   HTTPS API endpoint. The public Pages root returns HTTP 200; direct deep-link
   transport returns GitHub Pages HTTP 404 with the expected SPA fallback shell,
   which the client uses to restore the route.
@@ -165,9 +175,9 @@ GitHub Actions validation passed in [run 33300307090](https://github.com/Tech-Ec
   generic PostgreSQL URLs to the installed psycopg 3 driver, and refuses to
   start in production fixture mode. The runbook records the required Dockerfile
   path, API migration/health gate, and separately sequenced worker service.
-- The production definition fixes `hep-th-v1`, disables fixtures, admits only the
-  exact GitHub Pages origin, keeps PostgreSQL/FastAPI unpublished, and leaves
-  credentials in an ignored operator environment file.
+- The production definition fixes `hep-th-v1`, disables fixtures, admits only
+  the three exact transition origins, keeps PostgreSQL/FastAPI unpublished, and
+  leaves credentials in an ignored operator environment file.
 - Railway provisioning, managed PostgreSQL, API, and bounded worker activation are complete. Secret values remain outside the repository.
 - Off-host backup/restore evidence, rate protection, longer-running monitoring,
   alerting, and operational rehearsal remain operator responsibilities and have

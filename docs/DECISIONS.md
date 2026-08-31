@@ -1,6 +1,6 @@
 # Physics Atlas durable decisions
 
-Last reviewed: 2026-08-30
+Last reviewed: 2026-08-31
 
 These decisions constrain implementation and public communication. Add a dated superseding entry when a durable decision changes; do not silently rewrite project history.
 
@@ -39,6 +39,7 @@ These decisions constrain implementation and public communication. Add a dated s
 | PA-031 | Reference research ecosystems are linked validation fixtures, not ranking ground truth. | Validate Paper ↔ Researcher ↔ paper-time Affiliation ↔ Institution relationships and reconstruction. Never tune metrics to force IAS, Princeton, Harvard, Caltech, UCSB/KITP, Stony Brook, Perimeter, or another anchor into a preferred order. |
 | PA-032 | Paper-time affiliation evidence uses explicit cross-provider precedence: paper-native/INSPIRE evidence, then arXiv paper metadata, then dated ORCID affiliation as cross-checking evidence; current homepages are profile evidence only. | A lower-precedence or current-profile source cannot overwrite stronger historical paper-time evidence. Dated evidence may resolve a supported conflict; otherwise the affiliation remains unresolved. Physics Atlas never guesses. |
 | PA-033 | Every materialized paper-field evidence ledger conserves exactly one unit: mapped canonical-field weights plus explicit unmapped mass. | Preserve provider primary/secondary evidence, apply a versioned configurable weighting policy only when justified, and otherwise divide mapped mass equally across unique mapped fields. A multi-field paper cannot contribute full weight to each field; unmapped mass is never silently reassigned. |
+| PA-034 | The canonical public Physics Atlas frontend uses the dedicated `https://atlas.techecho.org/` hostname. | During migration, backend CORS may admit the legacy GitHub Pages origin and inherited `techecho.org` origin alongside the new hostname. Remove legacy origins only after DNS, Pages, HTTPS, redirects, and client-cache behavior are verified; changing this source repository alone is not evidence of a completed cutover. |
 
 ## Current activation decision
 

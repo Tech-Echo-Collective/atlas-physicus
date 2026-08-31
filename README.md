@@ -7,7 +7,7 @@ map-first interface.
 It is not a ranking, recommendation, or prediction system, and it is not a
 replacement for scholarly databases such as arXiv or INSPIRE.
 
-[Open the public Atlas](https://techecho.org/Physics-Atlas-Web/)
+[Open the public Atlas](https://atlas.techecho.org/)
 · [View the source repository](https://github.com/Tech-Echo-Collective/Physics-Atlas)
 
 ## What it does
@@ -115,9 +115,17 @@ licensing.
 
 ## Public access
 
-- Atlas: <https://techecho.org/Physics-Atlas-Web/>
+- Atlas: <https://atlas.techecho.org/>
 - Production API: <https://physics-atlas-api-production.up.railway.app/api>
 - Source: <https://github.com/Tech-Echo-Collective/Physics-Atlas>
+
+The dedicated Atlas hostname replaces the inherited
+`https://techecho.org/Physics-Atlas-Web/` Pages path. During DNS and Pages
+propagation, that legacy path and the underlying
+`https://tech-echo-collective.github.io/Physics-Atlas-Web/` origin may remain
+reachable. The backend accepts all three browser origins for this bounded
+transition; remove the legacy origins only after the new hostname and redirects
+have been verified in production.
 
 ## Documentation
 

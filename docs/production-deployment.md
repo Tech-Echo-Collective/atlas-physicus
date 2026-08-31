@@ -24,12 +24,13 @@ The production stack fixes `PHYSICS_ATLAS_ACQUISITION_SCOPE` to `hep-th-v1`, the
   and an operator-managed encrypted off-host backup destination.
 - Enough persistent storage for PostgreSQL and Caddy certificate state.
 
-Caddy obtains and renews the TLS certificate automatically. During the Pages
-custom-domain transition, FastAPI accepts both
-`https://tech-echo-collective.github.io` and `https://techecho.org`. An origin
-contains scheme and host only, so the `/Physics-Atlas-Web/` path must not be
-added to either CORS value. The legacy origin may be removed after redirects
-and client caches have settled.
+Caddy obtains and renews the TLS certificate automatically. During the
+dedicated Atlas hostname transition, FastAPI accepts
+`https://tech-echo-collective.github.io`, `https://techecho.org`, and
+`https://atlas.techecho.org`. An origin contains scheme and host only, so the
+`/Physics-Atlas-Web/` path must not be added to a CORS value. Remove the two
+legacy origins only after the dedicated hostname, redirects, and client caches
+have settled.
 
 ## Configure and start the API
 
@@ -106,7 +107,7 @@ PHYSICS_ATLAS_ENVIRONMENT=production
 PHYSICS_ATLAS_FIXTURE_MODE=false
 PHYSICS_ATLAS_ACQUISITION_SCOPE=hep-th-v1
 PHYSICS_ATLAS_REFERENCE_DATA_PATH=/app/reference/atlas.json
-PHYSICS_ATLAS_CORS_ORIGINS=https://tech-echo-collective.github.io,https://techecho.org
+PHYSICS_ATLAS_CORS_ORIGINS=https://tech-echo-collective.github.io,https://techecho.org,https://atlas.techecho.org
 PHYSICS_ATLAS_ROR_RECORD_IDS=
 ```
 
@@ -143,6 +144,11 @@ VITE_ATLAS_API_URL=https://API_HOSTNAME/api
 ```
 
 This value is a public build-time URL, not a secret. Configure it in the deployment repository workflow/environment; never copy database or provider credentials into `VITE_*` variables. Validate a Pages deep link, browser CORS, loading/error recovery, and an actual API request before making live data the normal public source.
+
+The canonical public frontend URL is <https://atlas.techecho.org/>. DNS and the
+Pages custom-domain binding are managed in the separate `Physics-Atlas-Web`
+deployment repository. This backend change only prepares the transition CORS
+contract; it does not prove that the hostname, certificate, or redirect is live.
 
 ## Operations
 

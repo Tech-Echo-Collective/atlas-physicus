@@ -4,9 +4,9 @@ x-backend-environment: &backend-environment
   PHYSICS_ATLAS_DATABASE_URL: ${PHYSICS_ATLAS_DATABASE_URL:?set PHYSICS_ATLAS_DATABASE_URL in .env.production}
   PHYSICS_ATLAS_ENVIRONMENT: production
   # Browser origins never include a path. This is the exact origin of the
-  # public GitHub Pages application. Keep both origins during the custom-domain
-  # transition so the legacy Pages URL remains usable until redirects settle.
-  PHYSICS_ATLAS_CORS_ORIGINS: https://tech-echo-collective.github.io,https://techecho.org
+  # public GitHub Pages application. Keep both legacy origins during the
+  # atlas.techecho.org transition until DNS, redirects, and client caches settle.
+  PHYSICS_ATLAS_CORS_ORIGINS: https://tech-echo-collective.github.io,https://techecho.org,https://atlas.techecho.org
   PHYSICS_ATLAS_LOG_LEVEL: ${PHYSICS_ATLAS_LOG_LEVEL:-INFO}
   PHYSICS_ATLAS_FIXTURE_MODE: "false"
   PHYSICS_ATLAS_REFERENCE_DATA_PATH: /app/reference/atlas.json
