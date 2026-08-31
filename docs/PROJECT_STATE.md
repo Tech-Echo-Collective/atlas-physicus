@@ -155,8 +155,10 @@ on 2026-08-31: frontend type checking, lint, 130 Vitest tests, seven pipeline
 tests, and the production build passed; backend Ruff across 81 files, strict
 mypy across 52 source files, and all 258 pytest tests passed. A fresh migration,
 drift check, deterministic fixture seed/update, replay/ROR artifact verification,
-idempotency, and exact conservation checks passed. GitHub Actions is the
-post-push PostgreSQL and container gate for this replay change.
+idempotency, and exact conservation checks passed. Implementation commit
+`b20e3d9` passed GitHub Actions
+[run 33368874387](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33368874387),
+including the PostgreSQL migration/fixture/API and container jobs.
 
 ## Backend deployment state
 
