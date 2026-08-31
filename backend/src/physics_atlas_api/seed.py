@@ -20,7 +20,10 @@ from .fields import (
     PHYSICS_FIELD_ONTOLOGY_VERSION,
 )
 from .fields.mapping import PROVIDER_FIELD_MAPPING_VERSION
-from .metrics.activation import field_validation_manifest_is_current
+from .metrics.activation import (
+    field_validation_manifest_is_current,
+    reviewed_activation_manifest_is_current,
+)
 from .metrics.contracts import METRIC_CONTRACTS, get_metric_contract
 from .metrics.thresholds import METRIC_VALIDATION_THRESHOLDS_V1
 from .search_index import refresh_search_terms
@@ -116,9 +119,9 @@ def _reviewed_metric_system_is_current(
         return False
     if release.status == "active" and release.activated_at is None:
         return False
-    return (
-        _metric_system_versions_are_current(release)
-        and release.validation_evidence.get("jointGatePassed") is True
+    versions_are_current = _metric_system_versions_are_current(release)
+    return versions_are_current and reviewed_activation_manifest_is_current(
+        release.validation_evidence
     )
 
 

@@ -88,6 +88,28 @@ cross-checking evidence and is not a substitute for missing paper-native
 history. Until a dated cross-check adapter is reviewed, an ORCID record cannot
 itself become the current paper-time projection.
 
+### Institution authority and subunits
+
+ROR is the canonical organization authority. An INSPIRE institution identifier
+is retained as a provider cross-reference and may support a reviewed ROR match,
+but it does not independently create a canonical institution. Direct ROR
+identifiers in paper-time affiliation evidence are retained as authority
+anchors; canonical name, parent, location, and country metadata still require
+the corresponding versioned ROR evidence.
+
+Affiliation strings may name departments, laboratories, campuses, or historical
+subunits. Those labels remain attached to the paper-time assertion. When a
+reliable authority relationship identifies a canonical parent, eligible
+statistics roll up to that parent without deleting the subunit evidence. When
+no single ROR match is supported, institution and geographic attribution remain
+`unresolved`.
+
+The statistical rollup also respects authority lifecycle and relationship
+semantics. One exact active parent may receive an eligible rollup. Multiple
+parents, unavailable parent metadata, inactive or withdrawn organizations, and
+predecessor/successor relationships are not resolved by ordering or name
+similarity; their mass remains withheld for review.
+
 ## Fractional Attribution v1
 
 Let a paper have `N` provider author slots. In the absence of reliable numeric

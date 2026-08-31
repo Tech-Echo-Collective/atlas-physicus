@@ -91,13 +91,15 @@ historical materialization, citation reconstruction, wider ingestion, and
 public recalculation are not implied. All five live layers remain jointly
 withheld.
 
-The bounded 2020–2025 raw acquisition trial is now complete: 88,212 official
-provider occurrences across 12 exact provider/year partitions were preserved
-outside the database. The trial validates acquisition integrity and resume
-behavior only. It leaves zero metric-certified years and exposes unresolved
-bibliographic-cohort, institution-authority, citation-cutoff, reviewed-field,
-and canonical replay requirements. It does not authorize a production
-historical write or wider acquisition.
+The bounded 2020–2025 acquisition and staging replay are now complete: 88,212
+official provider occurrences across 12 exact provider/year partitions were
+preserved as 47,726 paper components with content-addressed relationship,
+field, citation, attribution, and ROR-authority evidence outside the database.
+The replay validates deterministic lineage and conservation, not production
+readiness. It leaves zero metric-certified years, zero comparable citation
+cohorts, zero reviewed field ledgers, and only 34.969191% activation-eligible
+institution rollup mass. It does not authorize a production historical write,
+metric activation, or wider acquisition.
 
 Remaining scientific and operational gates are:
 
@@ -128,10 +130,9 @@ Before broad live ingestion, the project should validate:
 
 The roadmap does not currently commit to a graph database, Kubernetes, authentication, full-text paper archive, recommendation engine, prediction model, automatic researcher ranking, or universal live-data coverage. Those additions require a demonstrated scientific or operational need.
 
-The next minimum action is to review the canonical bibliographic merge/cohort
-policy and the INSPIRE-institution/ROR authority policy, then independently
-label a bounded identity, paper-time affiliation, institution, and field sample
-from the immutable trial evidence. Only after those decisions should a
-staging-only import/replay adapter be implemented and evaluated. Production
-history, broader Physics coverage, v3.1, and live metric activation remain
-gated.
+The next minimum action is independent review of the staged paper identities,
+canonical cohort dates, institution-parent rollups, and field mappings, plus
+common-cutoff citation evidence. Only after all six canonical years and the
+Impact/Momentum/normalization evidence are certified should the exact Joint
+Gate be rerun. Production history, broader Physics coverage, v3.1, and live
+metric activation remain gated.

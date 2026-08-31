@@ -17,6 +17,8 @@ from .thresholds import (
 
 JointActivationStatus = Literal["withheld", "eligible-for-reviewed-activation"]
 METRIC_SYSTEM_V1_VERSION = "physics-atlas-metric-system-v1"
+DIVERSITY_BREADTH_REVIEW_VERSION = "diversity-breadth-review-v1"
+HEP_TH_CONDITIONED_SCOPE = "hep-th-v1"
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,10 @@ class MetricSystemActivationEvidence:
     field_weighting_policy_version: str | None = None
     field_reconciliation_version: str | None = None
     field_weight_conservation_passed: bool = False
+    acquisition_scope: str | None = None
+    data_source_version: str | None = None
+    diversity_breadth_review_version: str | None = None
+    diversity_breadth_review_passed: bool = False
 
     def __post_init__(self) -> None:
         metric_ids = [item.metric_id for item in self.algorithms]
@@ -104,6 +110,44 @@ def field_validation_manifest_is_current(
         and validation_evidence.get("fieldReconciliationVersion")
         == CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION
         and validation_evidence.get("fieldWeightConservationPassed") is True
+    )
+
+
+def reviewed_activation_manifest_is_current(
+    validation_evidence: Mapping[str, object],
+    *,
+    expected_acquisition_scope: str | None = None,
+    expected_data_source_version: str | None = None,
+) -> bool:
+    """Bind a persisted joint review to its dataset and broad-field evidence.
+
+    The bounded ``hep-th-v1`` corpus is intentionally conditioned on one field
+    and cannot validate Research Diversity. Older manifests remain readable,
+    but a bare ``jointGatePassed`` flag cannot publish or preserve live metric
+    state without the current field and breadth-review proofs.
+    """
+
+    acquisition_scope = validation_evidence.get("acquisitionScope")
+    data_source_version = validation_evidence.get("dataSourceVersion")
+    return (
+        validation_evidence.get("jointGatePassed") is True
+        and field_validation_manifest_is_current(validation_evidence)
+        and isinstance(acquisition_scope, str)
+        and bool(acquisition_scope.strip())
+        and acquisition_scope != HEP_TH_CONDITIONED_SCOPE
+        and (
+            expected_acquisition_scope is None
+            or acquisition_scope == expected_acquisition_scope
+        )
+        and isinstance(data_source_version, str)
+        and bool(data_source_version.strip())
+        and (
+            expected_data_source_version is None
+            or data_source_version == expected_data_source_version
+        )
+        and validation_evidence.get("diversityBreadthReviewVersion")
+        == DIVERSITY_BREADTH_REVIEW_VERSION
+        and validation_evidence.get("diversityBreadthReviewPassed") is True
     )
 
 
@@ -164,6 +208,18 @@ def assess_joint_metric_activation(
         reasons.append("cross-provider field reconciliation version does not match")
     if not evidence.field_weight_conservation_passed:
         reasons.append("per-paper field-weight conservation has not passed")
+    if not evidence.acquisition_scope or not evidence.acquisition_scope.strip():
+        reasons.append("acquisition scope is missing")
+    elif evidence.acquisition_scope == HEP_TH_CONDITIONED_SCOPE:
+        reasons.append(
+            "hep-th-v1 cannot validate the broad-field Research Diversity boundary"
+        )
+    if not evidence.data_source_version or not evidence.data_source_version.strip():
+        reasons.append("data source version is missing")
+    if evidence.diversity_breadth_review_version != DIVERSITY_BREADTH_REVIEW_VERSION:
+        reasons.append("Diversity breadth-review version does not match the contract")
+    if not evidence.diversity_breadth_review_passed:
+        reasons.append("broad-field Research Diversity review has not passed")
     if evidence.threshold_version != thresholds.version:
         reasons.append("metric validation threshold version does not match v1")
 

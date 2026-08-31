@@ -5,6 +5,7 @@ import pytest
 from defusedxml.common import DefusedXmlException
 
 from physics_atlas_api.config import Settings
+from physics_atlas_api.connectors.arxiv import ArxivConnector
 from physics_atlas_api.connectors.base import (
     ConnectorConfigurationError,
     ConnectorError,
@@ -139,6 +140,88 @@ def test_inspire_uses_valid_earliest_date_when_journal_year_is_absent() -> None:
 
     assert normalized.attributes["publication_year"] == 2025
     assert normalized.attributes["publication_date"] == "2025-03-14"
+
+
+@pytest.mark.parametrize(
+    ("citation_count", "non_self_citation_count"),
+    [
+        (19, 7),
+        (3, 0),
+        (5, None),
+        (None, 2),
+    ],
+)
+def test_inspire_preserves_raw_and_provider_reported_non_self_citation_counts(
+    citation_count: int | None,
+    non_self_citation_count: int | None,
+) -> None:
+    connector = InspireConnector(JsonPayloadTransport({}), "https://provider.test/api")
+    raw: dict[str, object] = {
+        "titles": [{"title": "Citation evidence fixture"}],
+        "earliest_date": "2022-04-10",
+        "inspire_categories": [{"term": "Theory-HEP"}],
+        "citation_count": citation_count,
+    }
+    if non_self_citation_count is not None:
+        raw["citation_count_without_self_citations"] = non_self_citation_count
+
+    normalized = connector.normalize_record(
+        SourceRecord(
+            provider="inspire",
+            source_record_id="citation-evidence-fixture",
+            raw=raw,
+        )
+    )
+
+    assert normalized.attributes["citation_count"] == citation_count
+    assert (
+        normalized.attributes["citation_count_without_self_citations"]
+        == non_self_citation_count
+    )
+    assert (
+        normalized.attributes["citation_evidence_method"]
+        == "provider-reported-aggregate-counts"
+    )
+    assert (
+        normalized.attributes["citation_evidence_version"]
+        == "inspire-citation-evidence-v1"
+    )
+
+
+def test_arxiv_preserves_paper_time_affiliations_and_journal_evidence() -> None:
+    connector = ArxivConnector(
+        JsonPayloadTransport({}), "https://export.arxiv.org/api/query"
+    )
+    records = connector._records(  # type: ignore[attr-defined]
+        """<feed xmlns="http://www.w3.org/2005/Atom"
+          xmlns:arxiv="http://arxiv.org/schemas/atom">
+          <entry>
+            <id>https://arxiv.org/abs/2401.01234v2</id>
+            <updated>2024-02-01T00:00:00Z</updated>
+            <published>2024-01-02T00:00:00Z</published>
+            <title>Affiliation evidence</title>
+            <summary>Fixture.</summary>
+            <author>
+              <name>Ada Example</name>
+              <arxiv:affiliation>Institute of Exact Evidence</arxiv:affiliation>
+            </author>
+            <category term="hep-th" />
+            <arxiv:journal_ref>Journal of Evidence 42 (2024)</arxiv:journal_ref>
+          </entry>
+        </feed>"""
+    )
+
+    normalized = connector.normalize_record(records[0])
+
+    assert normalized.attributes["authors"] == [
+        {
+            "name": "Ada Example",
+            "full_name": "Ada Example",
+            "affiliations": [{"value": "Institute of Exact Evidence"}],
+            "raw_affiliations": [{"value": "Institute of Exact Evidence"}],
+        }
+    ]
+    assert normalized.attributes["journal_reference"] == "Journal of Evidence 42 (2024)"
 
 
 def test_factory_rejects_an_unsupported_acquisition_scope(

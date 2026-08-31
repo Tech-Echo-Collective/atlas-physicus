@@ -225,7 +225,6 @@ def _provider_institution_identifier(value: Any) -> tuple[str, str] | None:
 def _identifier_candidates(
     raw_affiliation: dict[str, Any],
     author: dict[str, Any],
-    affiliation_index: int,
     affiliation_count: int,
 ) -> tuple[tuple[str, str], ...]:
     raw_identifiers: list[Any] = []
@@ -235,11 +234,28 @@ def _identifier_candidates(
             raw_identifiers.extend(value)
 
     author_identifiers = author.get("affiliations_identifiers")
-    if not raw_identifiers and isinstance(author_identifiers, list):
-        if affiliation_count == 1:
-            raw_identifiers.extend(author_identifiers)
-        elif len(author_identifiers) == affiliation_count:
-            raw_identifiers.append(author_identifiers[affiliation_index])
+    if (
+        not raw_identifiers
+        and affiliation_count == 1
+        and isinstance(author_identifiers, list)
+    ):
+        # INSPIRE exposes this as an author-level array, separately from the
+        # affiliation assertions.  There is no reviewed contract that permits
+        # positionally zipping two multi-valued arrays.  A single unique ROR
+        # can be aligned only when there is exactly one effective affiliation.
+        normalized_author_rors = {
+            identifier
+            for item in author_identifiers
+            if isinstance(item, dict)
+            and str(item.get("schema", "")).strip().casefold() == "ror"
+            and (identifier := normalize_external_id("ror", item.get("value")))
+            is not None
+        }
+        if len(normalized_author_rors) == 1:
+            result_author_ror = next(iter(normalized_author_rors))
+            raw_identifiers.append(
+                {"schema": result_author_ror[0], "value": result_author_ror[1]}
+            )
 
     result: list[tuple[str, str]] = []
     record = raw_affiliation.get("record")
@@ -297,9 +313,19 @@ def _resolve_institution(
         if authority is not None:
             authority_entity_ids.add(authority.entity_id)
 
-    if len(authority_entity_ids) == 1:
-        return "resolved", next(iter(authority_entity_ids)), evidence
-    if len(authority_entity_ids) > 1:
+    ror_backed_entity_ids = set(
+        session.scalars(
+            select(models.AuthorityIdentifier.entity_id).where(
+                models.AuthorityIdentifier.entity_type == "institution",
+                models.AuthorityIdentifier.scheme == "ror",
+                models.AuthorityIdentifier.is_authoritative,
+                models.AuthorityIdentifier.entity_id.in_(authority_entity_ids),
+            )
+        )
+    )
+    if len(ror_backed_entity_ids) == 1:
+        return "resolved", next(iter(ror_backed_entity_ids)), evidence
+    if len(ror_backed_entity_ids) > 1:
         return "ambiguous", None, evidence
 
     if raw_name and raw_name.strip():
@@ -322,18 +348,36 @@ def _resolve_institution(
                 "candidateEntityIds": sorted(exact_ids),
             }
         )
-        if len(exact_ids) == 1:
-            return "resolved", next(iter(exact_ids)), evidence
-        if len(exact_ids) > 1:
+        ror_backed_exact_ids = set(
+            session.scalars(
+                select(models.AuthorityIdentifier.entity_id).where(
+                    models.AuthorityIdentifier.entity_type == "institution",
+                    models.AuthorityIdentifier.scheme == "ror",
+                    models.AuthorityIdentifier.is_authoritative,
+                    models.AuthorityIdentifier.entity_id.in_(exact_ids),
+                )
+            )
+        )
+        evidence[-1]["rorBackedCandidateEntityIds"] = sorted(ror_backed_exact_ids)
+        if len(ror_backed_exact_ids) == 1:
+            return "resolved", next(iter(ror_backed_exact_ids)), evidence
+        if len(ror_backed_exact_ids) > 1:
             return "ambiguous", None, evidence
     return "unresolved", None, evidence
 
 
 def _raw_affiliations(author: dict[str, Any]) -> list[dict[str, Any]]:
     value = author.get("affiliations")
-    if not isinstance(value, list):
+    if isinstance(value, list) and value:
+        return [
+            item if isinstance(item, dict) else {"value": str(item)} for item in value
+        ]
+    raw_value = author.get("raw_affiliations")
+    if not isinstance(raw_value, list):
         return []
-    return [item if isinstance(item, dict) else {"value": str(item)} for item in value]
+    return [
+        item if isinstance(item, dict) else {"value": str(item)} for item in raw_value
+    ]
 
 
 def _contribution_evidence(
@@ -374,7 +418,7 @@ def _assertions_for_author(
         raw_name_value = raw_affiliation.get("value") or raw_affiliation.get("name")
         raw_name = str(raw_name_value).strip() if raw_name_value else None
         identifiers = _identifier_candidates(
-            raw_affiliation, author, index, len(raw_affiliations)
+            raw_affiliation, author, len(raw_affiliations)
         )
         status, institution_id, evidence = _resolve_institution(
             session, raw_name=raw_name, identifiers=identifiers

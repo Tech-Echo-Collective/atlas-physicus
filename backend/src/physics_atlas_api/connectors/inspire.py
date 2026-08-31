@@ -309,6 +309,11 @@ class InspireConnector(SourceConnector):
                 "field_mapping_uncertainty": mapping.uncertainty_note,
                 "authors": raw.get("authors", []),
                 "citation_count": raw.get("citation_count"),
+                "citation_count_without_self_citations": raw.get(
+                    "citation_count_without_self_citations"
+                ),
+                "citation_evidence_method": "provider-reported-aggregate-counts",
+                "citation_evidence_version": "inspire-citation-evidence-v1",
             },
             raw=raw,
             updated_at=record.updated_at,

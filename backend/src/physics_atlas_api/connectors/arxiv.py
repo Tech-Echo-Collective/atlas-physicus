@@ -69,9 +69,24 @@ class ArxivConnector(SourceConnector):
             if identifier_pair is None:
                 raise ConnectorError("arXiv API returned an entry without a valid ID")
             identifier = identifier_pair[1]
-            authors = [
-                self._text(author, "name") for author in entry.findall(f"{ATOM}author")
-            ]
+            authors: list[dict[str, Any]] = []
+            for author in entry.findall(f"{ATOM}author"):
+                name = self._text(author, "name")
+                affiliations = [
+                    " ".join((item.text or "").split())
+                    for item in author.findall(f"{ARXIV}affiliation")
+                    if (item.text or "").strip()
+                ]
+                authors.append(
+                    {
+                        "name": name,
+                        "full_name": name,
+                        "affiliations": [{"value": value} for value in affiliations],
+                        "raw_affiliations": [
+                            {"value": value} for value in affiliations
+                        ],
+                    }
+                )
             category_elements = entry.findall(f"{ATOM}category")
             categories = [
                 category.attrib.get("term", "")
@@ -132,6 +147,7 @@ class ArxivConnector(SourceConnector):
                     },
                 )
             doi_element = entry.find(f"{ARXIV}doi")
+            journal_reference_element = entry.find(f"{ARXIV}journal_ref")
             raw: dict[str, Any] = {
                 "id": identifier,
                 "title": title,
@@ -144,6 +160,10 @@ class ArxivConnector(SourceConnector):
                 "category_evidence": category_evidence,
                 "doi": doi_element.text.strip()
                 if doi_element is not None and doi_element.text
+                else None,
+                "journal_reference": journal_reference_element.text.strip()
+                if journal_reference_element is not None
+                and journal_reference_element.text
                 else None,
             }
             records.append(
@@ -257,6 +277,7 @@ class ArxivConnector(SourceConnector):
                 else None,
                 "publication_date": raw.get("published"),
                 "document_type": "preprint",
+                "journal_reference": raw.get("journal_reference"),
                 "authors": raw.get("authors", []),
                 "raw_categories": raw.get("categories", []),
                 "raw_category_evidence": raw.get("category_evidence", []),

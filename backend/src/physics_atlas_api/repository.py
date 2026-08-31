@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from . import models
 from .attribution import FRACTIONAL_ATTRIBUTION_V1
 from .fields import PHYSICS_FIELD_ONTOLOGY_VERSION, PROVIDER_FIELD_MAPPING_VERSION
-from .metrics.activation import field_validation_manifest_is_current
+from .metrics.activation import reviewed_activation_manifest_is_current
 from .metrics.contracts import METRIC_CONTRACTS
 from .metrics.thresholds import METRIC_VALIDATION_THRESHOLDS_V1
 from .search_index import normalize_search_term
@@ -172,6 +172,7 @@ def _current_dataset_metric_criteria(session: Session) -> tuple[Any, ...]:
     dataset_version = provenance.get("version")
     if not isinstance(dataset_version, str) or not dataset_version.strip():
         return (false(),)
+    acquisition_scope = provenance.get("acquisitionScope")
 
     if state is not None and state.dataset_kind == "live-api":
         release = session.scalar(
@@ -202,8 +203,12 @@ def _current_dataset_metric_criteria(session: Session) -> tuple[Any, ...]:
             and release.ontology_version == PHYSICS_FIELD_ONTOLOGY_VERSION
             and release.mapping_policy_version == PROVIDER_FIELD_MAPPING_VERSION
             and release.threshold_version == METRIC_VALIDATION_THRESHOLDS_V1.version
-            and release.validation_evidence.get("jointGatePassed") is True
-            and field_validation_manifest_is_current(release.validation_evidence)
+            and isinstance(acquisition_scope, str)
+            and reviewed_activation_manifest_is_current(
+                release.validation_evidence,
+                expected_acquisition_scope=acquisition_scope,
+                expected_data_source_version=dataset_version,
+            )
             and definitions_are_complete
         )
         if not release_is_complete:
@@ -216,7 +221,6 @@ def _current_dataset_metric_criteria(session: Session) -> tuple[Any, ...]:
         criteria.append(
             models.MetricDefinition.implementation_status == "live-calculated"
         )
-    acquisition_scope = provenance.get("acquisitionScope")
     if isinstance(acquisition_scope, str) and acquisition_scope.strip():
         criteria.append(models.MetricObservation.acquisition_scope == acquisition_scope)
     return tuple(criteria)

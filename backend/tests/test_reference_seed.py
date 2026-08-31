@@ -14,6 +14,7 @@ from physics_atlas_api.fields import (
     PHYSICS_FIELD_ONTOLOGY_VERSION,
 )
 from physics_atlas_api.fields.mapping import PROVIDER_FIELD_MAPPING_VERSION
+from physics_atlas_api.metrics.activation import DIVERSITY_BREADTH_REVIEW_VERSION
 from physics_atlas_api.metrics.contracts import METRIC_CONTRACTS
 from physics_atlas_api.metrics.thresholds import METRIC_VALIDATION_THRESHOLDS_V1
 from physics_atlas_api.seed import (
@@ -24,6 +25,7 @@ from physics_atlas_api.seed import (
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 REFERENCE_DATA = REPOSITORY_ROOT / "src" / "data" / "demo" / "atlas.json"
+REVIEWED_BROAD_SCOPE = "reviewed-broad-physics-v1"
 
 
 def test_ensure_reference_data_repairs_a_partial_seed(session: Session) -> None:
@@ -174,6 +176,10 @@ def test_reference_seed_preserves_reviewed_metric_system_metadata(
         "fieldWeightingPolicyVersion": FIELD_WEIGHTING_POLICY_VERSION,
         "fieldReconciliationVersion": CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
         "fieldWeightConservationPassed": True,
+        "acquisitionScope": REVIEWED_BROAD_SCOPE,
+        "dataSourceVersion": "reviewed-dataset-v1",
+        "diversityBreadthReviewVersion": DIVERSITY_BREADTH_REVIEW_VERSION,
+        "diversityBreadthReviewPassed": True,
         "reviewId": "reviewed-joint-gate-v1",
     }
     release.activated_at = (
@@ -195,6 +201,10 @@ def test_reference_seed_preserves_reviewed_metric_system_metadata(
         "fieldWeightingPolicyVersion": FIELD_WEIGHTING_POLICY_VERSION,
         "fieldReconciliationVersion": CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
         "fieldWeightConservationPassed": True,
+        "acquisitionScope": REVIEWED_BROAD_SCOPE,
+        "dataSourceVersion": "reviewed-dataset-v1",
+        "diversityBreadthReviewVersion": DIVERSITY_BREADTH_REVIEW_VERSION,
+        "diversityBreadthReviewPassed": True,
         "reviewId": "reviewed-joint-gate-v1",
     }
     assert preserved_release.provenance_json == {
@@ -211,6 +221,35 @@ def test_reference_seed_preserves_reviewed_metric_system_metadata(
             definition.required_data,
             definition.provenance_json,
         ) == expected_metadata
+
+
+def test_reference_seed_does_not_preserve_joint_flag_without_breadth_review(
+    session: Session,
+) -> None:
+    payload = json.loads(REFERENCE_DATA.read_text(encoding="utf-8"))
+    ensure_reference_data(session)
+    for metric_id in METRIC_CONTRACTS:
+        definition = session.get_one(models.MetricDefinition, metric_id)
+        definition.implementation_status = "live-calculated"
+        definition.description = "Must not survive an incomplete joint review"
+
+    release = session.get_one(models.MetricSystemRelease, "metric-system-v1")
+    release.status = "eligible"
+    release.validation_evidence = {
+        "jointGatePassed": True,
+        "fieldWeightingPolicyVersion": FIELD_WEIGHTING_POLICY_VERSION,
+        "fieldReconciliationVersion": CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
+        "fieldWeightConservationPassed": True,
+        "acquisitionScope": REVIEWED_BROAD_SCOPE,
+    }
+    session.commit()
+
+    seed_reference_data(session, payload)
+
+    for metric_id in METRIC_CONTRACTS:
+        definition = session.get_one(models.MetricDefinition, metric_id)
+        assert definition.implementation_status == "experimental-candidate"
+        assert definition.description != "Must not survive an incomplete joint review"
 
 
 def test_reference_seed_repairs_stray_live_candidate_without_activation(

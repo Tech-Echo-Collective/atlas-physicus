@@ -198,8 +198,11 @@ def _strip_identifier_url(value: str, expected_host: str, path_marker: str = "")
         and (parsed.hostname or "").casefold().rstrip(".") == expected_host
     ):
         path = unquote(parsed.path).strip("/")
-        if path_marker and path.casefold().startswith(f"{path_marker.casefold()}/"):
-            path = path[len(path_marker) + 1 :]
+        if path_marker:
+            segments = [segment for segment in path.split("/") if segment]
+            if len(segments) < 2 or segments[-2].casefold() != path_marker.casefold():
+                return ""
+            path = segments[-1]
         return path
     return value
 
@@ -271,6 +274,12 @@ def normalize_external_id(scheme: str, value: Any) -> tuple[str, str] | None:
             r"^inspire(?:-author)?:\s*", "", identifier, flags=re.IGNORECASE
         ).strip("/")
         if not identifier:
+            return None
+    elif normalized_scheme == "inspire-bai":
+        identifier = re.sub(
+            r"^inspire(?:\s+|-)?bai:\s*", "", identifier, flags=re.IGNORECASE
+        ).strip()
+        if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._'-]*", identifier) is None:
             return None
     elif normalized_scheme == "inspire-institution":
         identifier = _strip_identifier_url(identifier, "inspirehep.net", "institutions")

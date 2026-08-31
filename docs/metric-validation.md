@@ -40,6 +40,21 @@ The implementation also uses versioned normalization-cohort safeguards:
 - Momentum: at least 30 eligible same-field peer entities;
 - non-degenerate fitted cohort bounds or scale.
 
+Impact citation evidence is bound to an explicit UTC observation cutoff and to
+the exact provider record, source snapshot, dataset or artifact checksum, and
+replay version. Raw and provider-reported non-self counts are preserved
+separately. Primary Impact evidence excludes self citations; a missing non-self
+count is withheld rather than replaced with the raw count. Only papers whose
+evidence was observable by the common cutoff and whose field,
+publication-year, age, and document-type cohort is comparable may enter a
+reference cohort.
+
+An acquisition-manifest completion timestamp is only an upper bound when
+individual source-page capture times are unavailable. It must not be represented
+as a simultaneous observation or used to reconstruct historical
+observable-at-cutoff cohorts. Such evidence remains raw and incomparable until
+the missing observation-time lineage is supplied.
+
 `Sufficient resolvable collaboration edges` is not converted into an arbitrary
 prestige or centrality threshold. In v1 it is operationalized through a known
 entity-specific collaboration indicator, the publication and researcher
@@ -84,6 +99,15 @@ single versioned activation manifest demonstrates all of the following:
 9. metric-specific normalization has passed numerical and cohort validation;
 10. raw inputs, fitted parameters, versions, and calculation provenance are
     sufficient to reproduce every observation.
+11. Diversity has been reviewed on a sufficiently broad Physics evidence
+    boundary; a field-conditioned scope such as `hep-th-v1` cannot supply this
+    proof.
+
+Persisted activation evidence records the exact `acquisitionScope`, immutable
+`dataSourceVersion`, and current `diversity-breadth-review-v1` proof. Public
+reads require the scope and dataset version to match the current live dataset.
+A legacy, stale-dataset, or manually asserted `jointGatePassed` flag without
+those current proofs cannot expose or preserve live observations.
 
 The gate fails closed:
 

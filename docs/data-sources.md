@@ -30,6 +30,42 @@ Authority identifiers dominate only when valid:
 
 Similar names alone do not justify a researcher merge. Conflicts and close candidates become `needs_review` or `unresolved` evidence.
 
+### Canonical paper merge and bibliographic evidence
+
+Paper occurrences join first on exact normalized strong identifiers, with the
+canonical key selected in this order: DOI, arXiv ID, INSPIRE ID. Every provider
+occurrence, raw value, snapshot, and source lineage remains attached after a
+merge. A component containing incompatible values for one strong-identifier
+scheme is not silently collapsed.
+
+When no strong identifier links two occurrences, automatic replay is limited
+by `canonical-paper-merge-policy-v1`: exact normalized title, an identical nonempty
+normalized author set, the same nonempty year, and identical nonempty journal
+evidence. Title alone, fuzzy similarity, or a partially matching author list
+never triggers an automatic merge. Insufficient or conflicting candidates are
+retained for review.
+
+Provider dates describe different events. arXiv submission, INSPIRE earliest
+record or preprint date, and formal journal publication evidence are therefore
+normalized with explicit event kind and precision. They remain separate until
+a reviewed cohort-date selection policy applies; processing order never chooses
+the metric year.
+
+### Institution authority
+
+ROR supplies canonical institution identity and metadata. INSPIRE institution
+IDs and raw affiliation names remain cross-reference evidence. A direct ROR
+identifier can anchor an identity, but country, location, parent, and canonical
+name are not claimed complete until the corresponding ROR record is preserved.
+Subunits remain paper-time labels and can roll up only through a versioned,
+supported parent relationship.
+
+Historical exact-ID ROR evidence preserves the organization lifecycle state and
+parent, predecessor, and successor relationships from the source snapshot.
+Only one exact active parent can support an automatic statistical rollup.
+Missing or multiple parents, inactive/withdrawn children, and predecessor or
+successor links remain explicit and withheld rather than being guessed.
+
 ## Physics field mapping
 
 Provider categories are retained verbatim and pass through the versioned

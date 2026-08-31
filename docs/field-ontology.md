@@ -135,6 +135,14 @@ set, but it cannot give the same paper another independent unit of mass.
 Duplicate field support is collapsed without discarding its provider
 provenance.
 
+Cross-provider agreement is recorded as corroborating evidence, not silently
+promoted to reviewed classification. Overlapping provider field sets can remain
+multi-field; genuine unresolved conflicts enter `needs_review` rather than
+being forced into one category. Crossref, OpenAlex, publisher or journal
+metadata, abstracts, and keywords may contribute only when that source is
+already integrated through a versioned evidence path. Their presence never
+authorizes an unversioned inference.
+
 If some provider evidence is unmapped, its share remains explicit ledger mass.
 It is not reassigned to the mapped fields to make the source look complete. A
 paper with no mapped field evidence has unmapped mass `1` and receives no
@@ -184,7 +192,9 @@ paper-time entity attribution
 
 The ontology supports that calculation but does not activate it. The present
 live `hep-th-v1` acquisition scope is not representative Full Physics coverage,
-and the broad ontology must not be used to imply that it is.
+and the broad ontology must not be used to imply that it is. In particular,
+`hep-th-v1` cannot validate or activate production Diversity even when its
+provider classifications are complete within the conditioned slice.
 
 ## Limitations
 

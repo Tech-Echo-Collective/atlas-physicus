@@ -13,6 +13,7 @@ from physics_atlas_api.metrics import (
     MetricSystemCoverageEvidence,
     assess_joint_metric_activation,
 )
+from physics_atlas_api.metrics.activation import DIVERSITY_BREADTH_REVIEW_VERSION
 
 
 def algorithm_evidence(metric_id: str) -> MetricAlgorithmActivationEvidence:
@@ -53,6 +54,10 @@ def complete_evidence() -> MetricSystemActivationEvidence:
         field_weighting_policy_version=FIELD_WEIGHTING_POLICY_VERSION,
         field_reconciliation_version=CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
         field_weight_conservation_passed=True,
+        acquisition_scope="reviewed-broad-physics-v1",
+        data_source_version="reviewed-dataset-v1",
+        diversity_breadth_review_version=DIVERSITY_BREADTH_REVIEW_VERSION,
+        diversity_breadth_review_passed=True,
     )
 
 
@@ -126,6 +131,45 @@ def test_joint_gate_fails_closed_for_a_legacy_manifest_without_field_proof() -> 
 
     assert decision.status == "withheld"
     assert decision.may_activate is False
+
+
+def test_joint_gate_requires_a_current_broad_field_diversity_review() -> None:
+    evidence = complete_evidence()
+
+    missing_scope = assess_joint_metric_activation(
+        replace(evidence, acquisition_scope=None)
+    )
+    assert missing_scope.status == "withheld"
+    assert "acquisition scope is missing" in missing_scope.reasons
+
+    conditioned = assess_joint_metric_activation(
+        replace(evidence, acquisition_scope="hep-th-v1")
+    )
+    assert conditioned.status == "withheld"
+    assert "hep-th-v1 cannot validate" in " ".join(conditioned.reasons)
+
+    missing = assess_joint_metric_activation(
+        replace(
+            evidence,
+            diversity_breadth_review_version=None,
+            diversity_breadth_review_passed=False,
+        )
+    )
+    assert missing.status == "withheld"
+    assert "breadth-review version" in " ".join(missing.reasons)
+    assert "Diversity review has not passed" in " ".join(missing.reasons)
+
+    stale = assess_joint_metric_activation(
+        replace(evidence, diversity_breadth_review_version="stale-review")
+    )
+    assert stale.status == "withheld"
+    assert "breadth-review version" in " ".join(stale.reasons)
+
+    missing_dataset = assess_joint_metric_activation(
+        replace(evidence, data_source_version=None)
+    )
+    assert missing_dataset.status == "withheld"
+    assert "data source version is missing" in missing_dataset.reasons
 
 
 def test_entity_level_missing_observation_does_not_disable_eligible_system() -> None:

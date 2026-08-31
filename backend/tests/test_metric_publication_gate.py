@@ -8,7 +8,10 @@ from physics_atlas_api.fields import (
     FIELD_WEIGHTING_POLICY_VERSION,
 )
 from physics_atlas_api.metrics import METRIC_CONTRACTS
+from physics_atlas_api.metrics.activation import DIVERSITY_BREADTH_REVIEW_VERSION
 from physics_atlas_api.repository import AtlasDatabaseRepository
+
+REVIEWED_BROAD_SCOPE = "reviewed-broad-physics-v1"
 
 
 def test_live_public_reads_require_the_complete_joint_release_manifest(
@@ -29,7 +32,7 @@ def test_live_public_reads_require_the_complete_joint_release_manifest(
             provenance_json={
                 "source": "fixture",
                 "version": "dataset-v1",
-                "acquisitionScope": "hep-th-v1",
+                "acquisitionScope": REVIEWED_BROAD_SCOPE,
             },
         )
     )
@@ -64,7 +67,7 @@ def test_live_public_reads_require_the_complete_joint_release_manifest(
             algorithm_version=contract.algorithm_version,
             calculation_version="calculation-v1",
             data_source_version="dataset-v1",
-            acquisition_scope="hep-th-v1",
+            acquisition_scope=REVIEWED_BROAD_SCOPE,
             raw_value=10,
             raw_unit=contract.raw_unit,
             normalization_method=contract.normalization_version,
@@ -141,6 +144,10 @@ def test_live_public_reads_require_the_complete_joint_release_manifest(
         "fieldWeightingPolicyVersion": FIELD_WEIGHTING_POLICY_VERSION,
         "fieldReconciliationVersion": CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
         "fieldWeightConservationPassed": True,
+        "acquisitionScope": REVIEWED_BROAD_SCOPE,
+        "dataSourceVersion": "dataset-v1",
+        "diversityBreadthReviewVersion": DIVERSITY_BREADTH_REVIEW_VERSION,
+        "diversityBreadthReviewPassed": True,
     }
     session.flush()
     visible, visible_total = repository.metric_observations(limit=10, offset=0)
@@ -149,6 +156,42 @@ def test_live_public_reads_require_the_complete_joint_release_manifest(
 
     release.validation_evidence = {
         **release.validation_evidence,
+        "dataSourceVersion": "stale-dataset",
+    }
+    session.flush()
+    stale_dataset, stale_dataset_total = repository.metric_observations(
+        limit=10, offset=0
+    )
+    assert stale_dataset == []
+    assert stale_dataset_total == 0
+
+    release.validation_evidence = {
+        **release.validation_evidence,
+        "dataSourceVersion": "dataset-v1",
+        "acquisitionScope": "hep-th-v1",
+    }
+    session.flush()
+    conditioned_scope, conditioned_scope_total = repository.metric_observations(
+        limit=10, offset=0
+    )
+    assert conditioned_scope == []
+    assert conditioned_scope_total == 0
+
+    release.validation_evidence = {
+        **release.validation_evidence,
+        "acquisitionScope": REVIEWED_BROAD_SCOPE,
+        "diversityBreadthReviewVersion": "stale-breadth-review",
+    }
+    session.flush()
+    stale_breadth_review, stale_breadth_review_total = repository.metric_observations(
+        limit=10, offset=0
+    )
+    assert stale_breadth_review == []
+    assert stale_breadth_review_total == 0
+
+    release.validation_evidence = {
+        **release.validation_evidence,
+        "diversityBreadthReviewVersion": DIVERSITY_BREADTH_REVIEW_VERSION,
         "fieldWeightingPolicyVersion": "stale-field-weighting",
     }
     session.flush()

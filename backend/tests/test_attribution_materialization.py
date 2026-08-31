@@ -218,6 +218,232 @@ def test_materializes_conserved_paper_time_shares_and_withheld_mass(
     assert contribution_row.materialization_version == MATERIALIZATION_VERSION
 
 
+def test_raw_affiliation_is_preserved_as_unresolved_historical_evidence(
+    session: Session,
+) -> None:
+    session.add(
+        models.Paper(
+            id="paper-1",
+            title="Paper-time attribution fixture",
+            summary="",
+            publication_year=2025,
+            publication_date=None,
+            publication_date_precision=None,
+            document_type="article",
+            doi=None,
+            arxiv_id=None,
+            external_ids=[],
+            provenance_json={"source": "fixture"},
+        )
+    )
+    _seed_linked_entities(session)
+    _snapshot(session, "snapshot-raw")
+    session.flush()
+    record = _record()
+    first_author = record.attributes["authors"][0]
+    first_author["affiliations"] = []
+    first_author["raw_affiliations"] = [
+        {"value": "Historical laboratory without an authority identifier"}
+    ]
+
+    materialize_paper_time_affiliations(
+        session,
+        record=record,
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-raw",
+        dataset_version="dataset-raw",
+        author_identities={},
+    )
+    session.flush()
+
+    row = session.scalar(
+        select(models.PaperAffiliation).where(
+            models.PaperAffiliation.author_position == 1
+        )
+    )
+    assert row is not None
+    assert row.raw_affiliation == (
+        "Historical laboratory without an authority identifier"
+    )
+    assert row.affiliation_resolution_status == "unresolved"
+    assert row.institution_id is None
+
+
+def test_single_author_level_ror_aligns_only_to_one_effective_affiliation(
+    session: Session,
+) -> None:
+    session.add(
+        models.Paper(
+            id="paper-1",
+            title="Paper-time attribution fixture",
+            summary="",
+            publication_year=2025,
+            publication_date=None,
+            publication_date_precision=None,
+            document_type="article",
+            doi=None,
+            arxiv_id=None,
+            external_ids=[],
+            provenance_json={"source": "fixture"},
+        )
+    )
+    _seed_linked_entities(session)
+    _snapshot(session, "snapshot-author-ror")
+    session.flush()
+    record = _record()
+    first_author = record.attributes["authors"][0]
+    first_author["affiliations"] = [{"value": "A historical subunit"}]
+    first_author["affiliations_identifiers"] = [
+        {"schema": "GRID", "value": "grid.fixture"},
+        {"schema": "ROR", "value": "https://ror.org/03vek6s52"},
+    ]
+
+    materialize_paper_time_affiliations(
+        session,
+        record=record,
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-author-ror",
+        dataset_version="dataset-author-ror",
+        author_identities={},
+    )
+    session.flush()
+
+    row = session.scalar(
+        select(models.PaperAffiliation).where(
+            models.PaperAffiliation.author_position == 1
+        )
+    )
+    assert row is not None
+    assert row.affiliation_resolution_status == "resolved"
+    assert row.institution_id == "institution-a"
+
+
+def test_multi_affiliation_author_level_identifiers_are_not_positionally_zipped(
+    session: Session,
+) -> None:
+    session.add(
+        models.Paper(
+            id="paper-1",
+            title="Paper-time attribution fixture",
+            summary="",
+            publication_year=2025,
+            publication_date=None,
+            publication_date_precision=None,
+            document_type="article",
+            doi=None,
+            arxiv_id=None,
+            external_ids=[],
+            provenance_json={"source": "fixture"},
+        )
+    )
+    _seed_linked_entities(session)
+    _snapshot(session, "snapshot-multi-ror")
+    session.flush()
+    record = _record()
+    first_author = record.attributes["authors"][0]
+    first_author["affiliations"] = [
+        {"value": "Historical subunit one"},
+        {"value": "Historical subunit two"},
+    ]
+    first_author["affiliations_identifiers"] = [
+        {"schema": "ROR", "value": "03vek6s52"},
+        {"schema": "ROR", "value": "00hx57361"},
+    ]
+
+    materialize_paper_time_affiliations(
+        session,
+        record=record,
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-multi-ror",
+        dataset_version="dataset-multi-ror",
+        author_identities={},
+    )
+    session.flush()
+
+    rows = list(
+        session.scalars(
+            select(models.PaperAffiliation).where(
+                models.PaperAffiliation.author_position == 1
+            )
+        )
+    )
+    assert len(rows) == 2
+    assert {row.affiliation_resolution_status for row in rows} == {"unresolved"}
+    assert {row.institution_id for row in rows} == {None}
+
+
+def test_exact_name_fallback_rejects_non_ror_canonical_institution(
+    session: Session,
+) -> None:
+    session.add(
+        models.Paper(
+            id="paper-1",
+            title="Paper-time attribution fixture",
+            summary="",
+            publication_year=2025,
+            publication_date=None,
+            publication_date_precision=None,
+            document_type="article",
+            doi=None,
+            arxiv_id=None,
+            external_ids=[],
+            provenance_json={"source": "fixture"},
+        )
+    )
+    _seed_linked_entities(session)
+    session.add(
+        models.Institution(
+            id="institution-unbacked",
+            canonical_name="Unbacked Historical Institute",
+            aliases=[],
+            historical_names=[],
+            external_ids=[],
+            identity_confidence=None,
+            country_id="country-us",
+            city="Test City",
+            longitude=None,
+            latitude=None,
+            field_ids=[],
+            provenance_json={"source": "fixture"},
+        )
+    )
+    session.add(
+        models.EntitySearchTerm(
+            id="search-institution-unbacked",
+            entity_type="institution",
+            entity_id="institution-unbacked",
+            term="Unbacked Historical Institute",
+            normalized_term="unbacked historical institute",
+            match_method="canonical-name",
+        )
+    )
+    _snapshot(session, "snapshot-unbacked")
+    session.flush()
+    record = _record()
+    record.attributes["authors"][0]["affiliations"] = [
+        {"value": "Unbacked Historical Institute"}
+    ]
+
+    materialize_paper_time_affiliations(
+        session,
+        record=record,
+        paper_id="paper-1",
+        source_snapshot_id="snapshot-unbacked",
+        dataset_version="dataset-unbacked",
+        author_identities={},
+    )
+    session.flush()
+
+    row = session.scalar(
+        select(models.PaperAffiliation).where(
+            models.PaperAffiliation.author_position == 1
+        )
+    )
+    assert row is not None
+    assert row.affiliation_resolution_status == "unresolved"
+    assert row.institution_id is None
+
+
 def test_new_snapshot_supersedes_projection_without_erasing_history(
     session: Session,
 ) -> None:
