@@ -21,6 +21,15 @@ HEP_TH_V1 = AcquisitionScope(
     arxiv_query="cat:hep-th",
 )
 
+# This scope is intentionally not registered in ``SUPPORTED_ACQUISITION_SCOPES``.
+# It is available only to the staging-safe historical validation tooling; the
+# production connector factory and scheduler remain fixed to ``hep-th-v1``.
+COND_MAT_HISTORICAL_VALIDATION_V1 = AcquisitionScope(
+    id="cond-mat-validation-v1",
+    inspire_query='subject:"Condensed Matter"',
+    arxiv_query="cat:cond-mat.*",
+)
+
 SUPPORTED_ACQUISITION_SCOPES = {HEP_TH_V1.id: HEP_TH_V1}
 
 

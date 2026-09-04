@@ -18,6 +18,30 @@ Production operators must review current provider documentation before enabling 
 
 Deterministic response fixtures for all five connectors are included in `backend/fixtures`. The standard automated test suite uses them without depending on provider uptime. End-to-end scheduled fixture ingestion covers INSPIRE and arXiv, plus ROR when the fixture's known ID is configured; ORCID and Crossref fixtures exercise record-scoped normalization and enrichment. Fixture snapshots, raw records, canonical provenance, and dataset metadata are labeled synthetic/demo and must never be presented as official provider-backed live data.
 
+### Staging-only historical validation scopes
+
+The production acquisition policy remains `hep-th-v1`. A separately versioned
+`cond-mat-validation-v1` scope exists only for the explicitly approved
+2020–2025 external-staging trial. It uses the exact INSPIRE query
+`subject:"Condensed Matter"` and arXiv query `cat:cond-mat.*`; it is not
+registered with the scheduled production acquisition policies and cannot
+advance production cursors or write the database.
+
+INSPIRE is partitioned by closed calendar year. The arXiv API failed the broad
+annual Condensed Matter query at offset 10,000, so the v2 staging manifest uses
+four exact, non-overlapping submission-date quarters per year. Every quarterly
+partition retains the existing 100-record page cap and three-second minimum
+request interval and fails closed when the provider reports 10,000 or more
+results. Segment identity is part of the query, state path, checksum lineage,
+resume validation, and replay lineage.
+
+The exact INSPIRE label `Condensed Matter` is preserved as provider evidence.
+It is not silently added to the immutable `provider-field-mapping-v1` catalog,
+which has no INSPIRE condensed-matter rule. The only similarly named v1 rule is
+Crossref's distinct `Condensed Matter Physics` subject. arXiv category evidence
+continues through the existing catalog; reviewing a new INSPIRE rule requires
+a new mapping version rather than editing v1 in place.
+
 ## Normalization boundary
 
 All connectors emit a common `SourceRecord` and `NormalizedRecord` contract. Normalization can standardize IDs, dates, names, and provider syntax, but it does not choose a canonical identity. Each fetched JSON or Atom page is retained as an exact provider envelope in `SourceSnapshot`; normalized record evidence remains separately available in `RawEntityRecord`.

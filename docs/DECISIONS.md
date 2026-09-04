@@ -1,6 +1,6 @@
 # Physics Atlas durable decisions
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-04
 
 These decisions constrain implementation and public communication. Add a dated superseding entry when a durable decision changes; do not silently rewrite project history.
 
@@ -45,6 +45,7 @@ These decisions constrain implementation and public communication. Add a dated s
 | PA-037 | Field attribution review combines versioned multi-source evidence without forcing a single field. | Preserve arXiv, INSPIRE, and any already-integrated bibliographic or publisher evidence independently. Agreement can corroborate but does not itself constitute human review; conflicts may support conserved multi-field attribution or remain `needs_review`. Unmapped mass and source provenance stay explicit. |
 | PA-038 | The bounded `hep-th-v1` corpus cannot validate production Diversity. | Diversity remains implemented but withheld until a reviewed broad-Physics evidence boundary exists. Because Metric System v1 activates jointly, this condition keeps Activity, Impact, Connectivity, Diversity, and Momentum jointly withheld for this trial even if another metric's evidence minimum passes. |
 | PA-039 | Canonical paper identity uses strong identifiers in the order DOI, arXiv ID, then INSPIRE ID. | Exact normalized strong identifiers may join source occurrences while retaining every source lineage record. Without a shared strong identifier, an automatic merge requires the versioned conservative combination of normalized title, author overlap, year, and journal evidence; title alone never merges papers. Conflicting or insufficient evidence remains `needs_review`. |
+| PA-040 | Joint Activation evidence explicitly classifies its acquisition boundary as `field-conditioned` or `broad-physics`. | Public Metric System v1 activation requires a reviewed `broad-physics` boundary and fails closed when the classification is absent or narrower. A named specialty field, or an unreviewed union of specialty trials, remains field-conditioned regardless of favorable coverage or metric results; such trials may validate methods but cannot by themselves activate public metrics. |
 
 ## Current activation decision
 

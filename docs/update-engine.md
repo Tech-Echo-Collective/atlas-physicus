@@ -89,25 +89,31 @@ physics-atlas-worker --check-resources
 
 ## Bounded historical raw acquisition
 
-`physics-atlas-backfill` is a staging-only acquisition boundary for the fixed
-`hep-th-v1`, 2020--2025 trial. It has no database, canonical-entity, source-
-cursor, or metric imports. Preview is network-free; provider access and output
-require the explicit `--execute` flag:
+`physics-atlas-backfill` is a staging-only acquisition boundary for explicitly
+versioned 2020–2025 trials. The original `hep-th-v1` manifest remains byte-
+compatible; the separate `cond-mat-validation-v1` manifest is not a production
+scope and uses quarterly arXiv partitions to stay below the provider's observed
+10,000-result paging ceiling. Neither scope has database, canonical-entity,
+source-cursor, or metric imports. Preview is network-free; provider access and
+output require the explicit `--execute` flag:
 
 ```bash
-physics-atlas-backfill plan --output /external/staging/path --execute
-physics-atlas-backfill acquire --output /external/staging/path --execute
+physics-atlas-backfill plan --scope hep-th-v1 --output /external/staging/path --execute
+physics-atlas-backfill acquire --scope hep-th-v1 --output /external/staging/path --execute
+physics-atlas-backfill plan --scope cond-mat-validation-v1 --output /external/staging/path --execute
 ```
 
-The output path must be outside the repository. Each provider/year partition
-records the exact query and version, expected provider total, unique record
-count, page checksums, terminal status, and resumable checkpoint. A partition
-is raw-acquisition-complete only when it reaches its terminal page with no
-duplicates and its unique count equals the provider total. This is not a
-complete-year metric certificate and it performs no canonical materialization.
-INSPIRE partitions use its earliest-record date (`de`); arXiv partitions use
-submission date. Neither is silently relabeled as a normalized publication-year
-cohort.
+The output path must be durable and outside the repository; `/private/tmp` is
+not suitable for evidence that later tasks must replay. Each provider/year or
+provider/year/segment partition records the exact query and version, expected
+provider total, unique record count, page checksums, terminal status, and
+resumable checkpoint. Conflicting states at equal progress fail closed. A
+partition is raw-acquisition-complete only when it reaches its terminal page
+with no duplicates and its unique count equals the provider total. This is not
+a complete-year metric certificate and it performs no canonical
+materialization. INSPIRE partitions use its earliest-record date (`de`); arXiv
+partitions use submission date. Neither is silently relabeled as a normalized
+publication-year cohort.
 
 Fixture mode is the default. Provider-backed operation requires an explicitly prepared `live-api` dataset state, provider-policy review, credentials where required, and an operated database.
 

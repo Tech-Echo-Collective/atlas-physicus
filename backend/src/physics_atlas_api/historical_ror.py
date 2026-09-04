@@ -34,13 +34,52 @@ HISTORICAL_INSTITUTION_RESOLUTION_VERSION = (
 )
 EXPECTED_REPLAY_BUNDLE_VERSION = "hep-th-v1-historical-replay-bundle-v1"
 PARENT_ROLLUP_POLICY_VERSION = "pa-035-statistical-unit-rollup-v1"
+SUPPORTED_INSPIRE_ROR_CROSSWALK_VERSION = "hep-th-v1-inspire-ror-crosswalk-v1"
 OFFICIAL_ROR_BASE_URL = "https://api.ror.org/v2"
 EXPECTED_SCOPE = "hep-th-v1"
 EXPECTED_YEARS = tuple(range(2020, 2026))
+STATE_CHECKPOINT_INTERVAL = 25
 
 
 class HistoricalRorSafetyError(ValueError):
     """Raised before unsafe or unverifiable staged evidence can be used."""
+
+
+def _explicit_inspire_institution_ror_evidence(
+    payload: Mapping[str, Any],
+) -> tuple[tuple[str, ...], str]:
+    """Re-derive exact ROR IDs and their status from one INSPIRE snapshot."""
+
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, Mapping):
+        raise HistoricalRorSafetyError("INSPIRE institution metadata is malformed")
+    identifiers = metadata.get("external_system_identifiers", [])
+    if not isinstance(identifiers, list):
+        raise HistoricalRorSafetyError(
+            "INSPIRE institution external identifiers are malformed"
+        )
+    result: set[str] = set()
+    for item in identifiers:
+        if not isinstance(item, Mapping):
+            raise HistoricalRorSafetyError(
+                "INSPIRE institution external identifier is malformed"
+            )
+        if str(item.get("schema", "")).strip().casefold() != "ror":
+            continue
+        normalized = normalize_external_id("ror", item.get("value"))
+        if normalized is None:
+            raise HistoricalRorSafetyError(
+                "INSPIRE institution contains an invalid explicit ROR identifier"
+            )
+        result.add(normalized[1])
+    ror_ids = tuple(sorted(result))
+    if len(ror_ids) == 1:
+        status = "resolved-exact-explicit-ror-cross-reference"
+    elif ror_ids:
+        status = "ambiguous-multiple-explicit-ror-cross-references"
+    else:
+        status = "unresolved-no-explicit-ror-cross-reference"
+    return ror_ids, status
 
 
 def _canonical_json(value: object) -> bytes:
@@ -452,6 +491,7 @@ def acquire_target_records(
     transport: SourceTransport,
     *,
     ror_base_url: str = OFFICIAL_ROR_BASE_URL,
+    max_new_records: int | None = None,
 ) -> tuple[Path, dict[str, Any]]:
     """Fetch exact staged ROR IDs and preserve resumable immutable evidence."""
 
@@ -478,6 +518,8 @@ def acquire_target_records(
     parsed_base = urlparse(ror_base_url)
     if parsed_base.scheme not in {"http", "https"} or not parsed_base.hostname:
         raise HistoricalRorSafetyError("ROR endpoint is malformed")
+    if max_new_records is not None and max_new_records < 1:
+        raise ValueError("max_new_records must be positive")
 
     previous = _load_resume_state(
         output_root,
@@ -491,7 +533,10 @@ def acquire_target_records(
     connector = RorConnector(transport, ror_base_url)
     terminal_status = "complete"
     error_message: str | None = None
-    for ror_id in target_ids[len(records) :]:
+    stop_index = len(target_ids)
+    if max_new_records is not None:
+        stop_index = min(stop_index, len(records) + max_new_records)
+    for ror_id in target_ids[len(records) : stop_index]:
         try:
             source_record = connector.fetch_record(ror_id)
             if source_record is None or source_record.source_record_id != ror_id:
@@ -506,14 +551,15 @@ def acquire_target_records(
                     target_manifest=target_manifest,
                 )
             )
-            _write_state(
-                output_root,
-                target_manifest=target_manifest,
-                ror_base_url=ror_base_url,
-                records=records,
-                status="in-progress",
-                error=None,
-            )
+            if len(records) % STATE_CHECKPOINT_INTERVAL == 0:
+                _write_state(
+                    output_root,
+                    target_manifest=target_manifest,
+                    ror_base_url=ror_base_url,
+                    records=records,
+                    status="in-progress",
+                    error=None,
+                )
         except Exception as error:  # noqa: BLE001 - persisted for safe resume
             terminal_status = "failed"
             error_message = f"{type(error).__name__}: {error}"[:1000]
@@ -527,15 +573,16 @@ def acquire_target_records(
             )
             break
     complete = len(records) == len(target_ids) and terminal_status != "failed"
-    if complete:
-        _write_state(
-            output_root,
-            target_manifest=target_manifest,
-            ror_base_url=ror_base_url,
-            records=records,
-            status="complete",
-            error=None,
-        )
+    if not complete and terminal_status != "failed":
+        terminal_status = "paused-limit"
+    _write_state(
+        output_root,
+        target_manifest=target_manifest,
+        ror_base_url=ror_base_url,
+        records=records,
+        status="complete" if complete else terminal_status,
+        error=error_message,
+    )
     return _write_content_addressed(
         output_root / "acquisition-manifests",
         {
@@ -891,12 +938,248 @@ def _complete_canonical_authority(
     )
 
 
+def _verified_supplemental_inspire_ror_crosswalk(
+    manifest_path: Path,
+    replay: Mapping[str, Any],
+) -> tuple[dict[str, str], str]:
+    """Load a complete exact recid-to-ROR crosswalk with immutable lineage."""
+
+    path = _validate_external_path(manifest_path)
+    manifest = _content_addressed_document(
+        path, checksum_field="crosswalk_manifest_checksum"
+    )
+    target_count = manifest.get("target_count")
+    records_examined = manifest.get("records_examined")
+    status_counts = [
+        manifest.get(field)
+        for field in (
+            "exact_ror_crosswalk_count",
+            "unresolved_crosswalk_count",
+            "ambiguous_crosswalk_count",
+        )
+    ]
+    status_count_total = 0
+    for count in status_counts:
+        if not isinstance(count, int) or isinstance(count, bool):
+            raise HistoricalRorSafetyError(
+                "supplemental crosswalk status counts are malformed"
+            )
+        status_count_total += count
+    if (
+        manifest.get("manifest_version") != SUPPORTED_INSPIRE_ROR_CROSSWALK_VERSION
+        or manifest.get("acquisition_complete") is not True
+        or manifest.get("replay_bundle_manifest_checksum")
+        != replay.get("bundle_manifest_checksum")
+        or manifest.get("source_manifest_checksum")
+        != replay.get("source_manifest_checksum")
+        or manifest.get("registry_search") is not False
+        or manifest.get("name_matching") is not False
+        or manifest.get("database_access") is not False
+        or manifest.get("metric_observations_created") != 0
+        or manifest.get("eligible_for_public_metrics") is not False
+        or not isinstance(target_count, int)
+        or isinstance(target_count, bool)
+        or not isinstance(records_examined, int)
+        or isinstance(records_examined, bool)
+        or target_count != records_examined
+        or status_count_total != target_count
+        or not isinstance(manifest.get("target_manifest_checksum"), str)
+        or not isinstance(manifest.get("acquisition_manifest_checksum"), str)
+    ):
+        raise HistoricalRorSafetyError(
+            "supplemental INSPIRE-to-ROR crosswalk is not a complete approved input"
+        )
+    artifact = manifest.get("artifact")
+    if not isinstance(artifact, Mapping):
+        raise HistoricalRorSafetyError("supplemental crosswalk artifact is malformed")
+    relative_value = artifact.get("path")
+    checksum = artifact.get("checksum")
+    row_count = artifact.get("row_count")
+    if (
+        not isinstance(relative_value, str)
+        or not isinstance(checksum, str)
+        or not isinstance(row_count, int)
+        or isinstance(row_count, bool)
+        or row_count != target_count
+    ):
+        raise HistoricalRorSafetyError("supplemental crosswalk artifact is malformed")
+    root = path.parent.parent.resolve()
+    relative = Path(relative_value)
+    artifact_path = (root / relative).resolve()
+    if relative.is_absolute() or not _is_within(artifact_path, root):
+        raise HistoricalRorSafetyError("supplemental crosswalk artifact leaves root")
+    try:
+        payload = artifact_path.read_bytes()
+    except OSError as error:
+        raise HistoricalRorSafetyError(
+            "supplemental crosswalk artifact is missing"
+        ) from error
+    if hashlib.sha256(payload).hexdigest() != checksum:
+        raise HistoricalRorSafetyError("supplemental crosswalk checksum failed")
+
+    mapping: dict[str, str] = {}
+    seen_recids: set[str] = set()
+    rows = payload.splitlines()
+    if len(rows) != row_count:
+        raise HistoricalRorSafetyError("supplemental crosswalk row count failed")
+    for line_number, line in enumerate(rows, start=1):
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise HistoricalRorSafetyError(
+                f"supplemental crosswalk has malformed JSON on line {line_number}"
+            ) from error
+        if not isinstance(row, Mapping):
+            raise HistoricalRorSafetyError(
+                "supplemental crosswalk row is not an object"
+            )
+        recid = row.get("inspireInstitutionId")
+        ror_ids = row.get("rorIds")
+        status = row.get("resolutionStatus")
+        source_checksum = row.get("sourceRecordChecksum")
+        source_path_value = row.get("sourceRecordPath")
+        if (
+            not isinstance(recid, str)
+            or not recid.isdigit()
+            or recid in seen_recids
+            or not isinstance(ror_ids, list)
+            or any(not isinstance(item, str) for item in ror_ids)
+            or not isinstance(source_checksum, str)
+            or len(source_checksum) != 64
+            or any(character not in "0123456789abcdef" for character in source_checksum)
+            or not isinstance(source_path_value, str)
+            or Path(source_path_value)
+            != Path("records") / recid / f"{source_checksum}.json"
+            or row.get("targetManifestChecksum")
+            != manifest.get("target_manifest_checksum")
+            or row.get("acquisitionManifestChecksum")
+            != manifest.get("acquisition_manifest_checksum")
+            or row.get("crosswalkVersion") != SUPPORTED_INSPIRE_ROR_CROSSWALK_VERSION
+            or row.get("nameMatching") is not False
+            or row.get("eligibleForPublicMetrics") is not False
+        ):
+            raise HistoricalRorSafetyError("supplemental crosswalk row is malformed")
+        source_path = (root / source_path_value).resolve()
+        if not _is_within(source_path, root):
+            raise HistoricalRorSafetyError(
+                "supplemental crosswalk source record leaves root"
+            )
+        try:
+            source_payload = source_path.read_bytes()
+        except OSError as error:
+            raise HistoricalRorSafetyError(
+                "supplemental crosswalk source record is missing"
+            ) from error
+        if hashlib.sha256(source_payload).hexdigest() != source_checksum:
+            raise HistoricalRorSafetyError(
+                "supplemental crosswalk source record checksum failed"
+            )
+        try:
+            source_document = json.loads(source_payload)
+        except json.JSONDecodeError as error:
+            raise HistoricalRorSafetyError(
+                "supplemental crosswalk source record is malformed"
+            ) from error
+        if (
+            not isinstance(source_document, Mapping)
+            or source_document.get("provider") != "inspire"
+            or source_document.get("source_record_kind") != "institution"
+            or source_document.get("source_record_id") != recid
+            or source_document.get("target_manifest_checksum")
+            != manifest.get("target_manifest_checksum")
+            or source_document.get("source_manifest_checksum")
+            != manifest.get("source_manifest_checksum")
+            or source_document.get("captured_at") != row.get("capturedAt")
+        ):
+            raise HistoricalRorSafetyError(
+                "supplemental crosswalk source record lineage is inconsistent"
+            )
+        raw = source_document.get("raw")
+        if not isinstance(raw, Mapping):
+            raise HistoricalRorSafetyError(
+                "supplemental crosswalk source raw snapshot is malformed"
+            )
+        source_ror_ids, source_status = _explicit_inspire_institution_ror_evidence(raw)
+        if tuple(ror_ids) != source_ror_ids or status != source_status:
+            raise HistoricalRorSafetyError(
+                "supplemental crosswalk ROR evidence differs from its source snapshot"
+            )
+        seen_recids.add(recid)
+        if status == "resolved-exact-explicit-ror-cross-reference":
+            if len(ror_ids) != 1 or normalize_external_id("ror", ror_ids[0]) != (
+                "ror",
+                ror_ids[0],
+            ):
+                raise HistoricalRorSafetyError(
+                    "resolved supplemental crosswalk row is malformed"
+                )
+            mapping[recid] = ror_ids[0]
+        elif status == "unresolved-no-explicit-ror-cross-reference":
+            if ror_ids:
+                raise HistoricalRorSafetyError(
+                    "unresolved supplemental crosswalk row carries a ROR"
+                )
+        elif status == "ambiguous-multiple-explicit-ror-cross-references":
+            if len(set(ror_ids)) < 2 or any(
+                normalize_external_id("ror", item) != ("ror", item) for item in ror_ids
+            ):
+                raise HistoricalRorSafetyError(
+                    "ambiguous supplemental crosswalk row is malformed"
+                )
+        else:
+            raise HistoricalRorSafetyError(
+                "supplemental crosswalk resolution status is unsupported"
+            )
+    return mapping, str(manifest["crosswalk_manifest_checksum"])
+
+
+def _share_inspire_institution_ids(share: Mapping[str, Any]) -> tuple[str, ...]:
+    identifiers: set[str] = set()
+    evidence = share.get("resolution_evidence", [])
+    if not isinstance(evidence, list):
+        raise HistoricalRorSafetyError(
+            "replay affiliation resolution evidence is malformed"
+        )
+    for evidence_row in evidence:
+        if not isinstance(evidence_row, Mapping):
+            raise HistoricalRorSafetyError(
+                "replay affiliation resolution evidence row is malformed"
+            )
+        provider_ids = evidence_row.get("provider_institution_identifiers", [])
+        if not isinstance(provider_ids, list):
+            raise HistoricalRorSafetyError(
+                "replay provider institution identifiers are malformed"
+            )
+        for identifier in provider_ids:
+            if not isinstance(identifier, Mapping):
+                raise HistoricalRorSafetyError(
+                    "replay provider institution identifier is malformed"
+                )
+            if identifier.get("scheme") != "inspire-institution":
+                continue
+            normalized = normalize_external_id(
+                "inspire-institution", identifier.get("value")
+            )
+            if (
+                normalized is None
+                or normalized[1] != str(identifier.get("value"))
+                or not normalized[1].isdigit()
+            ):
+                raise HistoricalRorSafetyError(
+                    "replay INSPIRE institution identifier is not canonical"
+                )
+            identifiers.add(normalized[1])
+    return tuple(sorted(identifiers))
+
+
 def resolve_replay_institution_anchors(
     replay_manifest_path: Path,
-    canonical_manifest_path: Path,
+    canonical_manifest_path: Path | Sequence[Path],
     output: Path,
+    *,
+    supplemental_crosswalk_manifest_path: Path | None = None,
 ) -> tuple[Path, dict[str, Any]]:
-    """Resolve only exact replay ROR anchors against a verified canonical bundle.
+    """Resolve exact replay/crosswalk anchors against verified canonical bundles.
 
     The original replay remains immutable.  The returned projection retains every
     attribution share and its exact weight, including unresolved and ambiguous
@@ -916,88 +1199,128 @@ def resolve_replay_institution_anchors(
     ):
         raise HistoricalRorSafetyError("replay bundle is not an approved offline input")
 
-    canonical_path = _validate_external_path(canonical_manifest_path)
-    canonical = _content_addressed_document(
-        canonical_path, checksum_field="canonical_manifest_checksum"
+    canonical_paths = (
+        (canonical_manifest_path,)
+        if isinstance(canonical_manifest_path, Path)
+        else tuple(canonical_manifest_path)
     )
-    if (
-        canonical.get("manifest_version") != HISTORICAL_CANONICAL_INSTITUTION_VERSION
-        or canonical.get("canonical_materialization_complete") is not True
-        or canonical.get("offline_normalization") is not True
-        or canonical.get("database_access") is not False
-        or canonical.get("affiliation_join") is not False
-    ):
+    if not canonical_paths:
         raise HistoricalRorSafetyError(
-            "canonical institution bundle is not an approved offline input"
+            "at least one canonical institution bundle is required"
         )
-    if canonical.get("source_manifest_checksum") != replay.get(
-        "source_manifest_checksum"
-    ):
-        raise HistoricalRorSafetyError(
-            "replay and canonical institution source lineage differs"
-        )
-
-    canonical_root = canonical_path.parent.parent.resolve()
-    canonical_relative_value = canonical.get("artifact_path")
-    canonical_checksum = canonical.get("artifact_checksum")
-    canonical_count = canonical.get("record_count")
-    if (
-        not isinstance(canonical_relative_value, str)
-        or not isinstance(canonical_checksum, str)
-        or not isinstance(canonical_count, int)
-        or isinstance(canonical_count, bool)
-    ):
-        raise HistoricalRorSafetyError("canonical institution artifact is malformed")
-    canonical_relative = Path(canonical_relative_value)
-    canonical_artifact = (canonical_root / canonical_relative).resolve()
-    if canonical_relative.is_absolute() or not _is_within(
-        canonical_artifact, canonical_root
-    ):
-        raise HistoricalRorSafetyError(
-            "canonical institution artifact leaves its bundle root"
-        )
-    try:
-        canonical_payload = canonical_artifact.read_bytes()
-    except OSError as error:
-        raise HistoricalRorSafetyError(
-            "canonical institution artifact is missing"
-        ) from error
-    if hashlib.sha256(canonical_payload).hexdigest() != canonical_checksum:
-        raise HistoricalRorSafetyError("canonical institution artifact checksum failed")
-
+    canonical_manifests: dict[str, dict[str, Any]] = {}
     canonical_by_ror: dict[str, dict[str, Any]] = {}
-    for line_number, line in enumerate(canonical_payload.splitlines(), start=1):
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError as error:
-            raise HistoricalRorSafetyError(
-                "canonical institution artifact has malformed JSON on line "
-                f"{line_number}"
-            ) from error
-        if not isinstance(row, dict):
-            raise HistoricalRorSafetyError(
-                "canonical institution artifact row is not an object"
-            )
-        ror_id = row.get("rorId")
+    canonical_manifest_checksum_by_ror: dict[str, str] = {}
+    for manifest_path in canonical_paths:
+        canonical_path = _validate_external_path(manifest_path)
+        canonical = _content_addressed_document(
+            canonical_path, checksum_field="canonical_manifest_checksum"
+        )
+        manifest_checksum = canonical.get("canonical_manifest_checksum")
         if (
-            not isinstance(ror_id, str)
-            or normalize_external_id("ror", ror_id) != ("ror", ror_id)
-            or ror_id in canonical_by_ror
-            or row.get("sourceManifestChecksum")
-            != canonical.get("source_manifest_checksum")
-            or row.get("targetManifestChecksum")
-            != canonical.get("target_manifest_checksum")
-            or row.get("acquisitionManifestChecksum")
-            != canonical.get("acquisition_manifest_checksum")
+            not isinstance(manifest_checksum, str)
+            or manifest_checksum in canonical_manifests
+            or canonical.get("manifest_version")
+            != HISTORICAL_CANONICAL_INSTITUTION_VERSION
+            or canonical.get("canonical_materialization_complete") is not True
+            or canonical.get("offline_normalization") is not True
+            or canonical.get("database_access") is not False
+            or canonical.get("affiliation_join") is not False
+            or canonical.get("source_manifest_checksum")
+            != replay.get("source_manifest_checksum")
+            or not isinstance(canonical.get("target_manifest_checksum"), str)
+            or not isinstance(canonical.get("acquisition_manifest_checksum"), str)
         ):
             raise HistoricalRorSafetyError(
-                "canonical institution row identity or lineage is inconsistent"
+                "canonical institution bundle is not an approved distinct lineage input"
             )
-        canonical_by_ror[ror_id] = row
-    if len(canonical_by_ror) != canonical_count:
-        raise HistoricalRorSafetyError(
-            "canonical institution artifact record count failed"
-        )
+        canonical_manifests[manifest_checksum] = canonical
+        canonical_root = canonical_path.parent.parent.resolve()
+        canonical_relative_value = canonical.get("artifact_path")
+        canonical_checksum = canonical.get("artifact_checksum")
+        canonical_count = canonical.get("record_count")
+        if (
+            not isinstance(canonical_relative_value, str)
+            or not isinstance(canonical_checksum, str)
+            or not isinstance(canonical_count, int)
+            or isinstance(canonical_count, bool)
+        ):
+            raise HistoricalRorSafetyError(
+                "canonical institution artifact is malformed"
+            )
+        canonical_relative = Path(canonical_relative_value)
+        canonical_artifact = (canonical_root / canonical_relative).resolve()
+        if canonical_relative.is_absolute() or not _is_within(
+            canonical_artifact, canonical_root
+        ):
+            raise HistoricalRorSafetyError(
+                "canonical institution artifact leaves its bundle root"
+            )
+        try:
+            canonical_payload = canonical_artifact.read_bytes()
+        except OSError as error:
+            raise HistoricalRorSafetyError(
+                "canonical institution artifact is missing"
+            ) from error
+        if hashlib.sha256(canonical_payload).hexdigest() != canonical_checksum:
+            raise HistoricalRorSafetyError(
+                "canonical institution artifact checksum failed"
+            )
+        manifest_ror_ids: set[str] = set()
+        for line_number, line in enumerate(canonical_payload.splitlines(), start=1):
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise HistoricalRorSafetyError(
+                    "canonical institution artifact has malformed JSON on line "
+                    f"{line_number}"
+                ) from error
+            if not isinstance(row, dict):
+                raise HistoricalRorSafetyError(
+                    "canonical institution artifact row is not an object"
+                )
+            ror_id = row.get("rorId")
+            if (
+                not isinstance(ror_id, str)
+                or normalize_external_id("ror", ror_id) != ("ror", ror_id)
+                or ror_id in canonical_by_ror
+                or row.get("canonicalInstitutionId") != f"institution-ror-{ror_id}"
+                or row.get("sourceManifestChecksum")
+                != canonical.get("source_manifest_checksum")
+                or row.get("targetManifestChecksum")
+                != canonical.get("target_manifest_checksum")
+                or row.get("acquisitionManifestChecksum")
+                != canonical.get("acquisition_manifest_checksum")
+            ):
+                raise HistoricalRorSafetyError(
+                    "canonical institution row identity, uniqueness, or lineage "
+                    "is inconsistent"
+                )
+            canonical_by_ror[ror_id] = row
+            canonical_manifest_checksum_by_ror[ror_id] = manifest_checksum
+            manifest_ror_ids.add(ror_id)
+        if len(manifest_ror_ids) != canonical_count:
+            raise HistoricalRorSafetyError(
+                "canonical institution artifact record count failed"
+            )
+
+    canonical_manifest_checksums = sorted(canonical_manifests)
+    target_manifest_checksums = sorted(
+        {
+            str(manifest["target_manifest_checksum"])
+            for manifest in canonical_manifests.values()
+        }
+    )
+    acquisition_manifest_checksums = sorted(
+        {
+            str(manifest["acquisition_manifest_checksum"])
+            for manifest in canonical_manifests.values()
+        }
+    )
+    extended_resolution_schema = (
+        len(canonical_manifest_checksums) != 1
+        or supplemental_crosswalk_manifest_path is not None
+    )
 
     anchors = _verified_jsonl_artifact(
         replay_path, replay, role="institution-authority-anchors"
@@ -1008,26 +1331,77 @@ def resolve_replay_institution_anchors(
     ledgers = _verified_jsonl_artifact(
         replay_path, replay, role="fractional-attribution-ledgers"
     )
+    supplemental_ror_by_recid: dict[str, str] = {}
+    supplemental_crosswalk_checksum: str | None = None
+    if supplemental_crosswalk_manifest_path is not None:
+        (
+            supplemental_ror_by_recid,
+            supplemental_crosswalk_checksum,
+        ) = _verified_supplemental_inspire_ror_crosswalk(
+            supplemental_crosswalk_manifest_path,
+            replay,
+        )
+    all_anchors = list(anchors)
+    supplemental_anchor_by_recid: dict[str, str] = {}
+    for recid, ror_id in sorted(supplemental_ror_by_recid.items()):
+        anchor_id = f"institution-authority-supplemental-inspire-{recid}-ror-{ror_id}"
+        supplemental_anchor_by_recid[recid] = anchor_id
+        all_anchors.append(
+            {
+                "institution_authority_anchor_id": anchor_id,
+                "authority_identifier": {"scheme": "ror", "value": ror_id},
+                "required_authority_bundle_version": (
+                    HISTORICAL_CANONICAL_INSTITUTION_VERSION
+                ),
+                "source_assertion_ids": [],
+                "source_occurrence_ids": [],
+                "supplemental_inspire_institution_id": recid,
+                "supplemental_crosswalk_manifest_checksum": (
+                    supplemental_crosswalk_checksum
+                ),
+            }
+        )
     resolution_by_anchor: dict[str, dict[str, Any]] = {}
     resolution_rows: list[dict[str, Any]] = []
     for anchor in sorted(
-        anchors, key=lambda item: str(item.get("institution_authority_anchor_id", ""))
+        all_anchors,
+        key=lambda item: str(item.get("institution_authority_anchor_id", "")),
     ):
-        anchor_id = anchor.get("institution_authority_anchor_id")
+        anchor_id_value = anchor.get("institution_authority_anchor_id")
         identifier = anchor.get("authority_identifier")
+        supplemental_recid = anchor.get("supplemental_inspire_institution_id")
         if (
-            not isinstance(anchor_id, str)
+            not isinstance(anchor_id_value, str)
             or not isinstance(identifier, Mapping)
             or str(identifier.get("scheme", "")).strip().casefold() != "ror"
             or anchor.get("required_authority_bundle_version")
             != HISTORICAL_CANONICAL_INSTITUTION_VERSION
+            or (
+                supplemental_recid is not None
+                and (
+                    not isinstance(supplemental_recid, str)
+                    or not supplemental_recid.isdigit()
+                    or anchor.get("supplemental_crosswalk_manifest_checksum")
+                    != supplemental_crosswalk_checksum
+                )
+            )
         ):
             raise HistoricalRorSafetyError("replay institution anchor is malformed")
         normalized = normalize_external_id("ror", identifier.get("value"))
+        expected_anchor_id = (
+            f"institution-authority-supplemental-inspire-{supplemental_recid}"
+            f"-ror-{normalized[1]}"
+            if normalized is not None and supplemental_recid is not None
+            else (
+                f"institution-authority-ror-{normalized[1]}"
+                if normalized is not None
+                else None
+            )
+        )
         if (
             normalized is None
-            or anchor_id != f"institution-authority-ror-{normalized[1]}"
-            or anchor_id in resolution_by_anchor
+            or anchor_id_value != expected_anchor_id
+            or anchor_id_value in resolution_by_anchor
         ):
             raise HistoricalRorSafetyError(
                 "replay institution anchor identity is inconsistent"
@@ -1128,8 +1502,13 @@ def resolve_replay_institution_anchors(
                         rollup_status = "eligible-exact-ror-parent-rollup"
                         rollup_authority = parent_authority
 
+        canonical_manifest_checksum = canonical_manifest_checksum_by_ror.get(
+            normalized[1]
+        )
+        if not extended_resolution_schema:
+            canonical_manifest_checksum = canonical_manifest_checksums[0]
         resolution = {
-            "institutionAuthorityAnchorId": anchor_id,
+            "institutionAuthorityAnchorId": anchor_id_value,
             "authorityIdentifier": {"scheme": "ror", "value": normalized[1]},
             "resolutionStatus": resolution_status,
             "canonicalInstitutionId": (
@@ -1163,12 +1542,29 @@ def resolve_replay_institution_anchors(
             "sourceAssertionIds": anchor.get("source_assertion_ids", []),
             "sourceOccurrenceIds": anchor.get("source_occurrence_ids", []),
             "replayBundleManifestChecksum": replay["bundle_manifest_checksum"],
-            "canonicalManifestChecksum": canonical["canonical_manifest_checksum"],
+            "canonicalManifestChecksum": canonical_manifest_checksum,
             "sourceManifestChecksum": replay["source_manifest_checksum"],
             "resolutionVersion": HISTORICAL_INSTITUTION_RESOLUTION_VERSION,
             "eligibleForPublicMetrics": False,
         }
-        resolution_by_anchor[anchor_id] = resolution
+        if extended_resolution_schema:
+            resolution.update(
+                {
+                    "resolutionEvidenceType": (
+                        "exact-inspire-institution-recid-to-explicit-ror-cross-reference"
+                        if supplemental_recid is not None
+                        else "direct-paper-time-ror-anchor"
+                    ),
+                    "supplementalInspireInstitutionId": supplemental_recid,
+                    "supplementalCrosswalkManifestChecksum": (
+                        supplemental_crosswalk_checksum
+                        if supplemental_recid is not None
+                        else None
+                    ),
+                    "canonicalManifestChecksums": canonical_manifest_checksums,
+                }
+            )
+        resolution_by_anchor[anchor_id_value] = resolution
         resolution_rows.append(resolution)
 
     evaluated_mass = Fraction(0)
@@ -1196,8 +1592,25 @@ def resolve_replay_institution_anchors(
             )
         seen_share_ids.add(share_id)
         anchor_ids = list(dict.fromkeys(anchor_ids_value))
+        inspire_institution_ids = (
+            _share_inspire_institution_ids(share)
+            if supplemental_crosswalk_manifest_path is not None
+            else ()
+        )
+        supplemental_anchor_ids = (
+            [supplemental_anchor_by_recid[inspire_institution_ids[0]]]
+            if (
+                not anchor_ids
+                and len(inspire_institution_ids) == 1
+                and inspire_institution_ids[0] in supplemental_anchor_by_recid
+            )
+            else []
+        )
+        effective_anchor_ids = anchor_ids or supplemental_anchor_ids
         matching_resolution = (
-            resolution_by_anchor.get(anchor_ids[0]) if len(anchor_ids) == 1 else None
+            resolution_by_anchor.get(effective_anchor_ids[0])
+            if len(effective_anchor_ids) == 1
+            else None
         )
         authority_linked = (
             matching_resolution is not None
@@ -1263,6 +1676,16 @@ def resolve_replay_institution_anchors(
             child_resolution_status = "withheld-paper-identity-needs-review"
         elif len(anchor_ids) > 1:
             child_resolution_status = "unresolved-multiple-direct-ror-anchors"
+        elif not anchor_ids and len(inspire_institution_ids) > 1:
+            child_resolution_status = (
+                "unresolved-multiple-inspire-institution-identifiers"
+            )
+        elif (
+            not anchor_ids
+            and len(inspire_institution_ids) == 1
+            and not supplemental_anchor_ids
+        ):
+            child_resolution_status = "unresolved-no-explicit-ror-crosswalk"
         elif matching_resolution is not None:
             child_resolution_status = str(matching_resolution["resolutionStatus"])
         else:
@@ -1282,32 +1705,52 @@ def resolve_replay_institution_anchors(
         rollup_mass_by_status[rollup_projection_status] = (
             rollup_mass_by_status.get(rollup_projection_status, Fraction(0)) + weight
         )
-        projection_rows.append(
-            {
-                "paperTimeAffiliationShareId": share_id,
-                "candidateId": share.get("candidate_id"),
-                "canonicalPaperId": share.get("canonical_paper_id"),
-                "authorshipAppearanceId": share.get("authorship_appearance_id"),
-                "paperIdentityStatus": paper_identity_status,
-                "institutionAuthorityAnchorIds": anchor_ids,
-                "originalResolutionStatus": share.get("resolution_status"),
-                "resolutionStatus": child_resolution_status,
-                "authorityLinkedCanonicalInstitutionId": (
-                    authority_linked_institution_id
-                ),
-                "canonicalInstitutionId": projected_institution_id,
-                "countryId": projected_country_id,
-                "statisticalRollupStatus": rollup_projection_status,
-                "statisticalRollupInstitutionId": (statistical_rollup_institution_id),
-                "statisticalRollupCountryId": statistical_rollup_country_id,
-                "attributionWeight": share["attribution_weight"],
-                "replayBundleManifestChecksum": replay["bundle_manifest_checksum"],
-                "canonicalManifestChecksum": canonical["canonical_manifest_checksum"],
-                "sourceManifestChecksum": replay["source_manifest_checksum"],
-                "resolutionVersion": HISTORICAL_INSTITUTION_RESOLUTION_VERSION,
-                "eligibleForPublicMetrics": False,
-            }
+        projection_canonical_manifest_checksum = (
+            matching_resolution.get("canonicalManifestChecksum")
+            if matching_resolution is not None
+            else None
         )
+        if not extended_resolution_schema:
+            projection_canonical_manifest_checksum = canonical_manifest_checksums[0]
+        projection = {
+            "paperTimeAffiliationShareId": share_id,
+            "candidateId": share.get("candidate_id"),
+            "canonicalPaperId": share.get("canonical_paper_id"),
+            "authorshipAppearanceId": share.get("authorship_appearance_id"),
+            "paperIdentityStatus": paper_identity_status,
+            "institutionAuthorityAnchorIds": anchor_ids,
+            "originalResolutionStatus": share.get("resolution_status"),
+            "resolutionStatus": child_resolution_status,
+            "authorityLinkedCanonicalInstitutionId": authority_linked_institution_id,
+            "canonicalInstitutionId": projected_institution_id,
+            "countryId": projected_country_id,
+            "statisticalRollupStatus": rollup_projection_status,
+            "statisticalRollupInstitutionId": statistical_rollup_institution_id,
+            "statisticalRollupCountryId": statistical_rollup_country_id,
+            "attributionWeight": share["attribution_weight"],
+            "replayBundleManifestChecksum": replay["bundle_manifest_checksum"],
+            "canonicalManifestChecksum": projection_canonical_manifest_checksum,
+            "sourceManifestChecksum": replay["source_manifest_checksum"],
+            "resolutionVersion": HISTORICAL_INSTITUTION_RESOLUTION_VERSION,
+            "eligibleForPublicMetrics": False,
+        }
+        if extended_resolution_schema:
+            projection.update(
+                {
+                    "supplementalInstitutionAuthorityAnchorIds": (
+                        supplemental_anchor_ids
+                    ),
+                    "effectiveInstitutionAuthorityAnchorIds": effective_anchor_ids,
+                    "supplementalInspireInstitutionIds": list(inspire_institution_ids),
+                    "supplementalCrosswalkManifestChecksum": (
+                        supplemental_crosswalk_checksum
+                        if supplemental_crosswalk_manifest_path is not None
+                        else None
+                    ),
+                    "canonicalManifestChecksums": canonical_manifest_checksums,
+                }
+            )
+        projection_rows.append(projection)
 
     expected_mass = Fraction(0)
     ledger_evaluated_mass = Fraction(0)
@@ -1374,10 +1817,34 @@ def resolve_replay_institution_anchors(
         {
             "manifest_version": HISTORICAL_INSTITUTION_RESOLUTION_VERSION,
             "replay_bundle_manifest_checksum": replay["bundle_manifest_checksum"],
-            "canonical_manifest_checksum": canonical["canonical_manifest_checksum"],
-            "acquisition_manifest_checksum": canonical["acquisition_manifest_checksum"],
-            "target_manifest_checksum": canonical["target_manifest_checksum"],
+            "canonical_manifest_checksum": (
+                canonical_manifest_checksums[0]
+                if len(canonical_manifest_checksums) == 1
+                else None
+            ),
+            "acquisition_manifest_checksum": (
+                acquisition_manifest_checksums[0]
+                if len(acquisition_manifest_checksums) == 1
+                else None
+            ),
+            "target_manifest_checksum": (
+                target_manifest_checksums[0]
+                if len(target_manifest_checksums) == 1
+                else None
+            ),
             "source_manifest_checksum": replay["source_manifest_checksum"],
+            **(
+                {
+                    "canonical_manifest_checksums": canonical_manifest_checksums,
+                    "supplemental_crosswalk_manifest_checksum": (
+                        supplemental_crosswalk_checksum
+                    ),
+                    "acquisition_manifest_checksums": acquisition_manifest_checksums,
+                    "target_manifest_checksums": target_manifest_checksums,
+                }
+                if extended_resolution_schema
+                else {}
+            ),
             "artifacts": [
                 {
                     "role": "institution-authority-resolutions",
@@ -1389,6 +1856,14 @@ def resolve_replay_institution_anchors(
                 },
             ],
             "anchor_count": len(resolution_rows),
+            **(
+                {
+                    "direct_anchor_count": len(anchors),
+                    "supplemental_anchor_count": len(supplemental_anchor_by_recid),
+                }
+                if extended_resolution_schema
+                else {}
+            ),
             "resolved_anchor_count": sum(
                 row["resolutionStatus"] == "resolved-exact-ror"
                 for row in resolution_rows
@@ -1460,7 +1935,11 @@ def resolve_replay_institution_anchors(
             ),
             "statistical_rollup_policy_version": PARENT_ROLLUP_POLICY_VERSION,
             "mass_conservation_passed": True,
-            "resolution_method": "exact-direct-ror-anchor-only",
+            "resolution_method": (
+                "exact-direct-ror-anchor-plus-exact-inspire-recid-ror-crosswalk"
+                if supplemental_crosswalk_manifest_path is not None
+                else "exact-direct-ror-anchor-only"
+            ),
             "name_matching": False,
             "positional_identifier_join": False,
             "offline_resolution": True,

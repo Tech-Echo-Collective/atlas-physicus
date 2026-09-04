@@ -278,8 +278,9 @@ def _affiliation_share(
     numerator: int,
     denominator: int,
     paper_identity_status: str = "matched",
+    inspire_recid: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    share = {
         "paper_time_affiliation_share_id": share_id,
         "candidate_id": "paper-candidate-test",
         "canonical_paper_id": None,
@@ -293,6 +294,15 @@ def _affiliation_share(
             "exact": f"{numerator}/{denominator}",
         },
     }
+    if inspire_recid is not None:
+        share["resolution_evidence"] = [
+            {
+                "provider_institution_identifiers": [
+                    {"scheme": "inspire-institution", "value": inspire_recid}
+                ]
+            }
+        ]
+    return share
 
 
 def _resolution_rows(
@@ -302,6 +312,146 @@ def _resolution_rows(
     return [
         json.loads(line) for line in (root / entry["path"]).read_text().splitlines()
     ]
+
+
+def _write_manual_canonical_bundle(
+    root: Path,
+    *,
+    source_manifest_checksum: str,
+    ror_id: str,
+) -> Path:
+    target_checksum = f"target-{ror_id}"
+    acquisition_checksum = f"acquisition-{ror_id}"
+    row = {
+        "canonicalInstitutionId": f"institution-ror-{ror_id}",
+        "rorId": ror_id,
+        "canonicalName": f"Institution {ror_id}",
+        "organizationStatus": "active",
+        "countryCode": "US",
+        "authorityRelationshipEvidence": [],
+        "sourceManifestChecksum": source_manifest_checksum,
+        "targetManifestChecksum": target_checksum,
+        "acquisitionManifestChecksum": acquisition_checksum,
+    }
+    payload = json.dumps(row, separators=(",", ":"), sort_keys=True).encode() + b"\n"
+    artifact_checksum = hashlib.sha256(payload).hexdigest()
+    relative = Path("canonical-institutions") / f"{artifact_checksum}.jsonl"
+    destination = root / relative
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(payload)
+    manifest: dict[str, Any] = {
+        "manifest_version": "hep-th-v1-historical-canonical-institutions-v2",
+        "source_manifest_checksum": source_manifest_checksum,
+        "target_manifest_checksum": target_checksum,
+        "acquisition_manifest_checksum": acquisition_checksum,
+        "canonical_materialization_complete": True,
+        "offline_normalization": True,
+        "database_access": False,
+        "affiliation_join": False,
+        "record_count": 1,
+        "artifact_path": relative.as_posix(),
+        "artifact_checksum": artifact_checksum,
+    }
+    manifest["canonical_manifest_checksum"] = _checksum(manifest)
+    path = (
+        root / "canonical-manifests" / f"{manifest['canonical_manifest_checksum']}.json"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+    return path
+
+
+def _write_supplemental_crosswalk(
+    root: Path,
+    *,
+    replay_path: Path,
+    inspire_recid: str,
+    ror_id: str,
+) -> Path:
+    replay = json.loads(replay_path.read_text(encoding="utf-8"))
+    target_checksum = "inspire-institution-target-checksum"
+    acquisition_checksum = "inspire-institution-acquisition-checksum"
+    source_document = {
+        "provider": "inspire",
+        "source_record_kind": "institution",
+        "source_record_id": inspire_recid,
+        "target_manifest_checksum": target_checksum,
+        "source_manifest_checksum": replay["source_manifest_checksum"],
+        "captured_at": "2026-09-04T00:00:00+00:00",
+        "raw": {
+            "id": inspire_recid,
+            "metadata": {
+                "control_number": int(inspire_recid),
+                "external_system_identifiers": [
+                    {"schema": "ROR", "value": f"https://ror.org/{ror_id}"}
+                ],
+            },
+        },
+    }
+    source_payload = (
+        json.dumps(source_document, separators=(",", ":"), sort_keys=True).encode()
+        + b"\n"
+    )
+    source_checksum = hashlib.sha256(source_payload).hexdigest()
+    source_relative = Path("records") / inspire_recid / f"{source_checksum}.json"
+    source_path = root / source_relative
+    source_path.parent.mkdir(parents=True, exist_ok=True)
+    source_path.write_bytes(source_payload)
+    row = {
+        "inspireInstitutionId": inspire_recid,
+        "rorIds": [ror_id],
+        "resolutionStatus": "resolved-exact-explicit-ror-cross-reference",
+        "candidateAttributionMass": {
+            "numerator": 1,
+            "denominator": 1,
+            "exact": "1/1",
+        },
+        "sourceRecordChecksum": source_checksum,
+        "sourceRecordPath": source_relative.as_posix(),
+        "capturedAt": source_document["captured_at"],
+        "targetManifestChecksum": target_checksum,
+        "acquisitionManifestChecksum": acquisition_checksum,
+        "crosswalkVersion": "hep-th-v1-inspire-ror-crosswalk-v1",
+        "nameMatching": False,
+        "eligibleForPublicMetrics": False,
+    }
+    payload = json.dumps(row, separators=(",", ":"), sort_keys=True).encode() + b"\n"
+    artifact_checksum = hashlib.sha256(payload).hexdigest()
+    relative = Path("crosswalks") / f"{artifact_checksum}.jsonl"
+    destination = root / relative
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(payload)
+    manifest: dict[str, Any] = {
+        "manifest_version": "hep-th-v1-inspire-ror-crosswalk-v1",
+        "source_manifest_checksum": replay["source_manifest_checksum"],
+        "replay_bundle_manifest_checksum": replay["bundle_manifest_checksum"],
+        "target_manifest_checksum": target_checksum,
+        "acquisition_manifest_checksum": acquisition_checksum,
+        "acquisition_complete": True,
+        "target_count": 1,
+        "records_examined": 1,
+        "exact_ror_crosswalk_count": 1,
+        "unresolved_crosswalk_count": 0,
+        "ambiguous_crosswalk_count": 0,
+        "artifact": {
+            "path": relative.as_posix(),
+            "checksum": artifact_checksum,
+            "row_count": 1,
+            "byte_count": len(payload),
+        },
+        "registry_search": False,
+        "name_matching": False,
+        "database_access": False,
+        "metric_observations_created": 0,
+        "eligible_for_public_metrics": False,
+    }
+    manifest["crosswalk_manifest_checksum"] = _checksum(manifest)
+    path = (
+        root / "crosswalk-manifests" / f"{manifest['crosswalk_manifest_checksum']}.json"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+    return path
 
 
 def test_target_manifest_is_deterministic_and_uses_only_staged_exact_ids(
@@ -376,6 +526,34 @@ def test_exact_ror_acquisition_resumes_and_is_idempotent_without_search(
     assert replay["acquisition_complete"] is True
     assert replay["records"] == complete["records"]
     assert replay_transport.calls == []
+
+
+def test_exact_ror_acquisition_resumes_from_bounded_prefix(tmp_path: Path) -> None:
+    source = _write_source_manifest(tmp_path / "staging")
+    output = tmp_path / "ror-output"
+    target_path, _target = write_target_manifest(source, output)
+    transport = ExactRorTransport()
+
+    _first_path, first = acquire_target_records(
+        target_path,
+        output,
+        transport,
+        ror_base_url="https://ror.test/v2",
+        max_new_records=1,
+    )
+    assert first["terminal_status"] == "paused-limit"
+    assert first["records_completed"] == 1
+
+    _second_path, second = acquire_target_records(
+        target_path,
+        output,
+        transport,
+        ror_base_url="https://ror.test/v2",
+        max_new_records=1,
+    )
+    assert second["terminal_status"] == "complete"
+    assert second["acquisition_complete"] is True
+    assert len(transport.calls) == 2
 
 
 def test_resume_fails_before_network_when_immutable_record_is_corrupted(
@@ -553,6 +731,24 @@ def test_exact_ror_cross_bundle_resolution_is_idempotent_and_conserves_mass(
 
     assert first_path == second_path
     assert first == second
+    assert first["institution_resolution_manifest_checksum"] == (
+        "6c8a1592276b5c17de8f9f3372b47df3a006ea0dc361c8933c77c96f3ae82cc9"
+    )
+    artifact_checksums = {
+        artifact["role"]: artifact["checksum"] for artifact in first["artifacts"]
+    }
+    assert artifact_checksums == {
+        "institution-authority-resolutions": (
+            "9472f1b9b816b00ac5b46e32a4c02123fc1e83ef49968c7d7ae630bbbd4fa6f9"
+        ),
+        "paper-time-affiliation-resolution-projections": (
+            "75ceec10163e1fde60a377d3e4a64d92764815c463721203e1e9016f1cddd63e"
+        ),
+    }
+    assert "canonical_manifest_checksums" not in first
+    assert "supplemental_crosswalk_manifest_checksum" not in first
+    assert "direct_anchor_count" not in first
+    assert "supplemental_anchor_count" not in first
     assert first["resolved_anchor_count"] == 2
     assert first["unresolved_anchor_count"] == 0
     assert first["resolved_affiliation_share_count"] == 2
@@ -571,6 +767,8 @@ def test_exact_ror_cross_bundle_resolution_is_idempotent_and_conserves_mass(
     projections = _resolution_rows(
         output, first, "paper-time-affiliation-resolution-projections"
     )
+    assert "canonicalManifestChecksums" not in projections[0]
+    assert "supplementalInstitutionAuthorityAnchorIds" not in projections[0]
     assert projections[0]["canonicalInstitutionId"] == ("institution-ror-00hx57361")
     assert projections[0]["countryId"] == "country-us"
     assert projections[0]["statisticalRollupInstitutionId"] == (
@@ -581,6 +779,162 @@ def test_exact_ror_cross_bundle_resolution_is_idempotent_and_conserves_mass(
     assert projections[2]["statisticalRollupInstitutionId"] == (
         "institution-ror-03vek6s52"
     )
+
+
+def test_crosswalk_and_direct_anchors_merge_distinct_canonical_bundles(
+    tmp_path: Path,
+) -> None:
+    source_checksum = "shared-source-manifest-checksum"
+    direct_ror = "03vek6s52"
+    supplemental_ror = "013m0ej23"
+    replay_path = _write_replay_manifest(
+        tmp_path / "replay-output",
+        source_manifest_checksum=source_checksum,
+        anchors=[_direct_anchor(direct_ror)],
+        shares=[
+            _affiliation_share(
+                "share-direct",
+                anchor_ids=[f"institution-authority-ror-{direct_ror}"],
+                numerator=1,
+                denominator=2,
+                inspire_recid="500",
+            ),
+            _affiliation_share(
+                "share-supplemental",
+                anchor_ids=[],
+                numerator=1,
+                denominator=2,
+                inspire_recid="500",
+            ),
+        ],
+    )
+    direct_bundle = _write_manual_canonical_bundle(
+        tmp_path / "canonical-direct",
+        source_manifest_checksum=source_checksum,
+        ror_id=direct_ror,
+    )
+    supplemental_bundle = _write_manual_canonical_bundle(
+        tmp_path / "canonical-supplemental",
+        source_manifest_checksum=source_checksum,
+        ror_id=supplemental_ror,
+    )
+    crosswalk = _write_supplemental_crosswalk(
+        tmp_path / "crosswalk",
+        replay_path=replay_path,
+        inspire_recid="500",
+        ror_id=supplemental_ror,
+    )
+    output = tmp_path / "resolution-output"
+
+    first_path, first = resolve_replay_institution_anchors(
+        replay_path,
+        [supplemental_bundle, direct_bundle],
+        output,
+        supplemental_crosswalk_manifest_path=crosswalk,
+    )
+    second_path, second = resolve_replay_institution_anchors(
+        replay_path,
+        [direct_bundle, supplemental_bundle],
+        output,
+        supplemental_crosswalk_manifest_path=crosswalk,
+    )
+
+    assert first_path == second_path
+    assert first == second
+    assert first["canonical_institution_coverage"]["exact"] == "1/1"
+    assert first["activation_eligible_rollup_attribution_mass"]["exact"] == "1/1"
+    assert first["direct_anchor_count"] == 1
+    assert first["supplemental_anchor_count"] == 1
+    assert first["canonical_manifest_checksums"] == sorted(
+        [direct_bundle.stem, supplemental_bundle.stem]
+    )
+    projections = {
+        row["paperTimeAffiliationShareId"]: row
+        for row in _resolution_rows(
+            output, first, "paper-time-affiliation-resolution-projections"
+        )
+    }
+    assert projections["share-direct"]["canonicalInstitutionId"] == (
+        f"institution-ror-{direct_ror}"
+    )
+    assert (
+        projections["share-direct"]["supplementalInstitutionAuthorityAnchorIds"] == []
+    )
+    assert projections["share-supplemental"]["canonicalInstitutionId"] == (
+        f"institution-ror-{supplemental_ror}"
+    )
+    assert projections["share-supplemental"][
+        "supplementalInstitutionAuthorityAnchorIds"
+    ]
+
+
+def test_resolver_rejects_rehashed_ror_not_present_in_source_snapshot(
+    tmp_path: Path,
+) -> None:
+    source_checksum = "shared-source-manifest-checksum"
+    source_ror = "013m0ej23"
+    replay_path = _write_replay_manifest(
+        tmp_path / "replay-output",
+        source_manifest_checksum=source_checksum,
+        anchors=[],
+        shares=[
+            _affiliation_share(
+                "share-supplemental",
+                anchor_ids=[],
+                numerator=1,
+                denominator=1,
+                inspire_recid="500",
+            )
+        ],
+    )
+    canonical_bundle = _write_manual_canonical_bundle(
+        tmp_path / "canonical",
+        source_manifest_checksum=source_checksum,
+        ror_id=source_ror,
+    )
+    crosswalk_path = _write_supplemental_crosswalk(
+        tmp_path / "crosswalk",
+        replay_path=replay_path,
+        inspire_recid="500",
+        ror_id=source_ror,
+    )
+    crosswalk_root = crosswalk_path.parent.parent
+    crosswalk = json.loads(crosswalk_path.read_text(encoding="utf-8"))
+    artifact_path = crosswalk_root / crosswalk["artifact"]["path"]
+    rows = [json.loads(line) for line in artifact_path.read_text().splitlines()]
+    rows[0]["rorIds"] = ["03vek6s52"]
+    payload = b"".join(
+        json.dumps(row, separators=(",", ":"), sort_keys=True).encode() + b"\n"
+        for row in rows
+    )
+    checksum = hashlib.sha256(payload).hexdigest()
+    relative = Path("crosswalks") / f"{checksum}.jsonl"
+    (crosswalk_root / relative).write_bytes(payload)
+    crosswalk.pop("crosswalk_manifest_checksum")
+    crosswalk["artifact"] = {
+        "path": relative.as_posix(),
+        "checksum": checksum,
+        "row_count": len(rows),
+        "byte_count": len(payload),
+    }
+    crosswalk["crosswalk_manifest_checksum"] = _checksum(crosswalk)
+    tampered_path = (
+        crosswalk_root
+        / "crosswalk-manifests"
+        / f"{crosswalk['crosswalk_manifest_checksum']}.json"
+    )
+    tampered_path.write_text(json.dumps(crosswalk, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        HistoricalRorSafetyError,
+        match="supplemental crosswalk ROR evidence differs from its source snapshot",
+    ):
+        resolve_replay_institution_anchors(
+            replay_path,
+            canonical_bundle,
+            tmp_path / "resolution-output",
+            supplemental_crosswalk_manifest_path=tampered_path,
+        )
 
 
 def test_exact_ror_cross_bundle_resolution_does_not_name_match_missing_anchor(

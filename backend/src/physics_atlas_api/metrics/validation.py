@@ -485,12 +485,20 @@ def build_metric_validation_summary(
 
 
 def _data_gate_reasons(
-    contract: MetricScientificContract, summary: MetricValidationSummary
+    contract: MetricScientificContract,
+    summary: MetricValidationSummary,
+    *,
+    expected_acquisition_scope: str | None = None,
 ) -> list[str]:
     reasons: list[str] = []
+    expected_scope = (
+        contract.provenance.source_scope
+        if expected_acquisition_scope is None
+        else expected_acquisition_scope
+    )
     if summary.dataset_version is None:
         reasons.append("input dataset version is missing")
-    if summary.acquisition_scope != contract.provenance.source_scope:
+    if summary.acquisition_scope != expected_scope:
         reasons.append(
             "acquisition scope does not match the versioned candidate contract"
         )
@@ -634,6 +642,8 @@ def _partition_gate_reasons(
     contract: MetricScientificContract,
     summary: MetricValidationSummary,
     readiness: MetricPartitionReadiness | None,
+    *,
+    expected_acquisition_scope: str | None = None,
 ) -> list[str]:
     """Require reviewed evidence for the exact output partition and lineage."""
     if readiness is None:
@@ -650,7 +660,12 @@ def _partition_gate_reasons(
         reasons.append("partition input dataset version does not match the summary")
     if readiness.acquisition_scope != summary.acquisition_scope:
         reasons.append("partition acquisition scope does not match the summary")
-    if readiness.acquisition_scope != contract.provenance.source_scope:
+    expected_scope = (
+        contract.provenance.source_scope
+        if expected_acquisition_scope is None
+        else expected_acquisition_scope
+    )
+    if readiness.acquisition_scope != expected_scope:
         reasons.append("partition acquisition scope does not match the contract")
     if readiness.update_sequence != summary.update_sequence:
         reasons.append("partition input update sequence does not match the summary")
@@ -670,10 +685,28 @@ def assess_metric_activation(
     summary: MetricValidationSummary,
     sanity_checks: tuple[MetricSanityCheck, ...] = (),
     partition_readiness: MetricPartitionReadiness | None = None,
+    *,
+    expected_acquisition_scope: str | None = None,
 ) -> MetricActivationDecision:
-    """Apply the evidence and sanity gates; this never publishes a definition."""
-    reasons = _data_gate_reasons(contract, summary)
-    reasons.extend(_partition_gate_reasons(contract, summary, partition_readiness))
+    """Apply the evidence and sanity gates; this never publishes a definition.
+
+    The optional scope override is for a bounded, non-publishing validation
+    corpus using the exact contract versions. Public observation and release
+    checks remain bound to the registered contract and live dataset scopes.
+    """
+    reasons = _data_gate_reasons(
+        contract,
+        summary,
+        expected_acquisition_scope=expected_acquisition_scope,
+    )
+    reasons.extend(
+        _partition_gate_reasons(
+            contract,
+            summary,
+            partition_readiness,
+            expected_acquisition_scope=expected_acquisition_scope,
+        )
+    )
     if contract.implementation_status != "validated":
         reasons.append("scientific contract remains experimental-candidate")
 

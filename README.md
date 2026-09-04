@@ -130,7 +130,8 @@ have been verified in production.
 ## Documentation
 
 - [Project state](docs/PROJECT_STATE.md), [durable decisions](docs/DECISIONS.md),
-  [roadmap](docs/roadmap.md), and [worklog](docs/WORKLOG.md)
+  [roadmap](docs/roadmap.md), [history summary](docs/HISTORY_SUMMARY.md), and
+  [recent worklog](docs/WORKLOG.md)
 - [Architecture](docs/architecture.md) and
   [live-data architecture](docs/live-data-architecture.md)
 - [Scientific Attribution Policy](docs/scientific-attribution.md)

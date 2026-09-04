@@ -1,4 +1,4 @@
-"""Staging-safe raw acquisition for the bounded hep-th-v1 history trial.
+"""Staging-safe raw acquisition for approved bounded history trials.
 
 This module deliberately stops at immutable provider page envelopes.  It does
 not import the database package, read or write source cursors, resolve entities,
@@ -22,7 +22,11 @@ from urllib.parse import parse_qs, urljoin, urlparse
 from defusedxml import ElementTree as ET
 
 from .config import Settings, get_settings
-from .connectors.acquisition import HEP_TH_V1
+from .connectors.acquisition import (
+    COND_MAT_HISTORICAL_VALIDATION_V1,
+    HEP_TH_V1,
+    AcquisitionScope,
+)
 from .connectors.arxiv import ArxivConnector
 from .connectors.base import ConnectorError, SourceTransport
 from .connectors.http import ProviderHttpTransport
@@ -46,6 +50,80 @@ OFFICIAL_ARXIV_BASE_URL = "https://export.arxiv.org/api/query"
 OPEN_SEARCH = "{http://a9.com/-/spec/opensearch/1.1/}"
 
 
+@dataclass(frozen=True)
+class HistoricalQuerySegment:
+    id: str
+    start_mmdd: str
+    end_mmdd: str
+
+
+ANNUAL_QUERY_SEGMENT = HistoricalQuerySegment("annual", "0101", "1231")
+COND_MAT_QUARTERLY_QUERY_SEGMENTS = (
+    HistoricalQuerySegment("q1", "0101", "0331"),
+    HistoricalQuerySegment("q2", "0401", "0630"),
+    HistoricalQuerySegment("q3", "0701", "0930"),
+    HistoricalQuerySegment("q4", "1001", "1231"),
+)
+
+
+@dataclass(frozen=True)
+class HistoricalBackfillSpec:
+    """One immutable, staging-only historical acquisition boundary."""
+
+    acquisition_scope: AcquisitionScope
+    years: tuple[int, ...]
+    providers: tuple[BackfillProvider, ...]
+    manifest_version: str
+    partition_state_version: str
+    inspire_query_version: str
+    arxiv_query_version: str
+    arxiv_page_size: int = 100
+    arxiv_maximum_page_size: int = 100
+    arxiv_segments: tuple[HistoricalQuerySegment, ...] = (ANNUAL_QUERY_SEGMENT,)
+    arxiv_partition_total_exclusive_limit: int | None = None
+
+    @property
+    def id(self) -> str:
+        return self.acquisition_scope.id
+
+
+HEP_TH_HISTORICAL_BACKFILL = HistoricalBackfillSpec(
+    acquisition_scope=HEP_TH_V1,
+    years=BACKFILL_YEARS,
+    providers=BACKFILL_PROVIDERS,
+    manifest_version=BACKFILL_MANIFEST_VERSION,
+    partition_state_version=BACKFILL_PARTITION_STATE_VERSION,
+    inspire_query_version=INSPIRE_QUERY_VERSION,
+    arxiv_query_version=ARXIV_QUERY_VERSION,
+)
+COND_MAT_HISTORICAL_BACKFILL = HistoricalBackfillSpec(
+    acquisition_scope=COND_MAT_HISTORICAL_VALIDATION_V1,
+    years=BACKFILL_YEARS,
+    providers=BACKFILL_PROVIDERS,
+    manifest_version=("cond-mat-validation-v1-historical-raw-acquisition-manifest-v2"),
+    partition_state_version=(
+        "cond-mat-validation-v1-historical-raw-acquisition-partition-state-v2"
+    ),
+    inspire_query_version=("cond-mat-validation-v1:inspire:earliest-record-date-v1"),
+    arxiv_query_version=("cond-mat-validation-v1:arxiv:quarterly-submission-window-v2"),
+    arxiv_segments=COND_MAT_QUARTERLY_QUERY_SEGMENTS,
+    arxiv_partition_total_exclusive_limit=10_000,
+)
+HISTORICAL_BACKFILL_SPECS = {
+    item.id: item for item in (HEP_TH_HISTORICAL_BACKFILL, COND_MAT_HISTORICAL_BACKFILL)
+}
+
+
+def resolve_historical_backfill_spec(scope: str) -> HistoricalBackfillSpec:
+    try:
+        return HISTORICAL_BACKFILL_SPECS[scope]
+    except KeyError as error:
+        supported = ", ".join(sorted(HISTORICAL_BACKFILL_SPECS))
+        raise BackfillSafetyError(
+            f"unsupported historical scope {scope!r}; supported: {supported}"
+        ) from error
+
+
 class BackfillSafetyError(ValueError):
     """Raised before any network or filesystem mutation for an unsafe request."""
 
@@ -63,10 +141,17 @@ class HistoricalPartition:
     source_version: str
     endpoint: str
     page_size: int
+    acquisition_scope: str = BACKFILL_SCOPE
+    segment: str = ANNUAL_QUERY_SEGMENT.id
 
     @property
     def id(self) -> str:
-        return f"{BACKFILL_SCOPE}:{self.provider}:{self.year}"
+        annual = f"{self.acquisition_scope}:{self.provider}:{self.year}"
+        return (
+            annual
+            if self.segment == ANNUAL_QUERY_SEGMENT.id
+            else (f"{annual}:{self.segment}")
+        )
 
     @property
     def query_checksum(self) -> str:
@@ -127,6 +212,8 @@ class PartitionResult:
             "resume_checkpoint": self.resume_checkpoint,
             "error": self.error,
         }
+        if self.partition.segment != ANNUAL_QUERY_SEGMENT.id:
+            body["segment"] = self.partition.segment
         body["partition_checksum"] = _json_checksum(body)
         return body
 
@@ -137,6 +224,7 @@ class BackfillManifest:
     executed: bool
     created_at: datetime
     partitions: tuple[PartitionResult, ...]
+    spec: HistoricalBackfillSpec = HEP_TH_HISTORICAL_BACKFILL
     output_path: Path | None = None
 
     @property
@@ -149,13 +237,13 @@ class BackfillManifest:
 
     def as_dict(self) -> dict[str, object]:
         body: dict[str, object] = {
-            "manifest_version": BACKFILL_MANIFEST_VERSION,
+            "manifest_version": self.spec.manifest_version,
             "mode": self.mode,
             "executed": self.executed,
             "created_at": self.created_at.astimezone(UTC).isoformat(),
-            "acquisition_scope": BACKFILL_SCOPE,
-            "years": list(BACKFILL_YEARS),
-            "providers": list(BACKFILL_PROVIDERS),
+            "acquisition_scope": self.spec.id,
+            "years": list(self.spec.years),
+            "providers": list(self.spec.providers),
             "database_access": False,
             "canonical_materialization": False,
             "acquisition_complete": (
@@ -225,11 +313,8 @@ def validate_request(
 ) -> Path | None:
     """Fail closed before constructing a live provider transport."""
 
-    if scope != BACKFILL_SCOPE:
-        raise BackfillSafetyError(
-            f"unsupported scope {scope!r}; this tool is fixed to {BACKFILL_SCOPE}"
-        )
-    if (start_year, end_year) != (BACKFILL_YEARS[0], BACKFILL_YEARS[-1]):
+    spec = resolve_historical_backfill_spec(scope)
+    if (start_year, end_year) != (spec.years[0], spec.years[-1]):
         raise BackfillSafetyError(
             "this bounded trial is fixed to the closed years 2020-2025"
         )
@@ -250,17 +335,25 @@ def validate_request(
     return resolved_output
 
 
-def _inspire_query(year: int) -> str:
+def _inspire_query(
+    year: int,
+    spec: HistoricalBackfillSpec = HEP_TH_HISTORICAL_BACKFILL,
+) -> str:
     return (
-        f"document_type:article and {HEP_TH_V1.inspire_query} and "
+        f"document_type:article and {spec.acquisition_scope.inspire_query} and "
         f"de >= {year}-01-01 and de <= {year}-12-31"
     )
 
 
-def _arxiv_query(year: int) -> str:
+def _arxiv_query(
+    year: int,
+    spec: HistoricalBackfillSpec = HEP_TH_HISTORICAL_BACKFILL,
+    segment: HistoricalQuerySegment = ANNUAL_QUERY_SEGMENT,
+) -> str:
     return (
-        f"({HEP_TH_V1.arxiv_query}) AND "
-        f"submittedDate:[{year}01010000 TO {year}12312359]"
+        f"({spec.acquisition_scope.arxiv_query}) AND "
+        f"submittedDate:[{year}{segment.start_mmdd}0000 "
+        f"TO {year}{segment.end_mmdd}2359]"
     )
 
 
@@ -272,8 +365,9 @@ def build_partitions(
     inspire_base_url: str = OFFICIAL_INSPIRE_BASE_URL,
     arxiv_base_url: str = OFFICIAL_ARXIV_BASE_URL,
     inspire_page_size: int = 250,
-    arxiv_page_size: int = 100,
+    arxiv_page_size: int | None = None,
 ) -> tuple[HistoricalPartition, ...]:
+    spec = resolve_historical_backfill_spec(scope)
     validate_request(
         scope=scope,
         start_year=start_year,
@@ -283,56 +377,105 @@ def build_partitions(
     )
     if not 1 <= inspire_page_size <= 250:
         raise BackfillSafetyError("INSPIRE page size must be within 1-250")
-    if not 1 <= arxiv_page_size <= 100:
-        raise BackfillSafetyError("arXiv page size must be within 1-100")
+    active_arxiv_page_size = (
+        spec.arxiv_page_size if arxiv_page_size is None else arxiv_page_size
+    )
+    if not 1 <= active_arxiv_page_size <= spec.arxiv_maximum_page_size:
+        raise BackfillSafetyError(
+            "arXiv page size must be within "
+            f"1-{spec.arxiv_maximum_page_size} for {spec.id}"
+        )
 
     partitions: list[HistoricalPartition] = []
-    for year in BACKFILL_YEARS:
+    for year in spec.years:
+        partitions.append(
+            HistoricalPartition(
+                provider="inspire",
+                year=year,
+                query=_inspire_query(year, spec),
+                query_version=spec.inspire_query_version,
+                source_version=InspireConnector.source_version,
+                endpoint=f"{inspire_base_url.rstrip('/')}/literature",
+                page_size=inspire_page_size,
+                acquisition_scope=spec.id,
+            )
+        )
         partitions.extend(
-            (
-                HistoricalPartition(
-                    provider="inspire",
-                    year=year,
-                    query=_inspire_query(year),
-                    query_version=INSPIRE_QUERY_VERSION,
-                    source_version=InspireConnector.source_version,
-                    endpoint=f"{inspire_base_url.rstrip('/')}/literature",
-                    page_size=inspire_page_size,
+            HistoricalPartition(
+                provider="arxiv",
+                year=year,
+                query=_arxiv_query(year, spec, segment),
+                query_version=(
+                    spec.arxiv_query_version
+                    if segment.id == ANNUAL_QUERY_SEGMENT.id
+                    else f"{spec.arxiv_query_version}:{segment.id}"
                 ),
-                HistoricalPartition(
-                    provider="arxiv",
-                    year=year,
-                    query=_arxiv_query(year),
-                    query_version=ARXIV_QUERY_VERSION,
-                    source_version=ArxivConnector.source_version,
-                    endpoint=arxiv_base_url,
-                    page_size=arxiv_page_size,
-                ),
+                source_version=ArxivConnector.source_version,
+                endpoint=arxiv_base_url,
+                page_size=active_arxiv_page_size,
+                acquisition_scope=spec.id,
+                segment=segment.id,
+            )
+            for segment in spec.arxiv_segments
+        )
+    if spec.id == COND_MAT_HISTORICAL_BACKFILL.id:
+        partitions.sort(
+            key=lambda item: (
+                item.provider != "inspire",
+                item.year,
+                item.segment,
             )
         )
     return tuple(partitions)
 
 
+def _spec_for_partitions(
+    partitions: Sequence[HistoricalPartition],
+) -> HistoricalBackfillSpec:
+    scopes = {item.acquisition_scope for item in partitions}
+    if len(scopes) != 1:
+        raise BackfillSafetyError("historical partitions mix acquisition scopes")
+    return resolve_historical_backfill_spec(next(iter(scopes)))
+
+
 def _validate_partitions(partitions: Sequence[HistoricalPartition]) -> None:
-    expected = {
-        (provider, year) for year in BACKFILL_YEARS for provider in BACKFILL_PROVIDERS
+    spec = _spec_for_partitions(partitions)
+    expected = {("inspire", year, ANNUAL_QUERY_SEGMENT.id) for year in spec.years} | {
+        ("arxiv", year, segment.id)
+        for year in spec.years
+        for segment in spec.arxiv_segments
     }
-    observed = {(item.provider, item.year) for item in partitions}
+    observed = {(item.provider, item.year, item.segment) for item in partitions}
     if len(partitions) != len(expected) or observed != expected:
         raise BackfillSafetyError(
-            "the bounded run must contain exactly one INSPIRE and arXiv partition "
-            "for every year from 2020 through 2025"
+            "the bounded run does not contain its exact approved provider/year segments"
         )
     for item in partitions:
+        segment = next(
+            (
+                candidate
+                for candidate in spec.arxiv_segments
+                if candidate.id == item.segment
+            ),
+            ANNUAL_QUERY_SEGMENT,
+        )
         expected_query = (
-            _inspire_query(item.year)
+            _inspire_query(item.year, spec)
             if item.provider == "inspire"
-            else _arxiv_query(item.year)
+            else _arxiv_query(item.year, spec, segment)
         )
         expected_version = (
-            INSPIRE_QUERY_VERSION if item.provider == "inspire" else ARXIV_QUERY_VERSION
+            spec.inspire_query_version
+            if item.provider == "inspire"
+            else (
+                spec.arxiv_query_version
+                if segment.id == ANNUAL_QUERY_SEGMENT.id
+                else f"{spec.arxiv_query_version}:{segment.id}"
+            )
         )
-        maximum_page_size = 250 if item.provider == "inspire" else 100
+        maximum_page_size = (
+            250 if item.provider == "inspire" else spec.arxiv_maximum_page_size
+        )
         if item.query != expected_query or item.query_version != expected_version:
             raise BackfillSafetyError(
                 f"partition {item.id} does not use the approved historical query"
@@ -352,9 +495,13 @@ def _validate_live_provider_partitions(
 ) -> None:
     """Keep the executable CLI fixed to the two approved public APIs."""
 
+    spec = _spec_for_partitions(partitions)
     official = {
         item.id: item.endpoint
         for item in build_partitions(
+            scope=spec.id,
+            start_year=spec.years[0],
+            end_year=spec.years[-1],
             inspire_base_url=OFFICIAL_INSPIRE_BASE_URL,
             arxiv_base_url=OFFICIAL_ARXIV_BASE_URL,
         )
@@ -534,6 +681,7 @@ class HistoricalRawAcquirer:
         self.transports = transports
         self.partitions = tuple(partitions)
         _validate_partitions(self.partitions)
+        self.spec = _spec_for_partitions(self.partitions)
         self.output = output
         self.resume_partitions = dict(resume_partitions or {})
         unknown_resume = set(self.resume_partitions) - {
@@ -583,11 +731,29 @@ class HistoricalRawAcquirer:
             connector: InspireConnector | ArxivConnector
             if partition.provider == "inspire":
                 connector = InspireConnector(
-                    transport, partition.endpoint.removesuffix("/literature")
+                    transport,
+                    partition.endpoint.removesuffix("/literature"),
+                    acquisition_scope=self.spec.acquisition_scope,
                 )
             else:
-                connector = ArxivConnector(transport, partition.endpoint)
+                connector = ArxivConnector(
+                    transport,
+                    partition.endpoint,
+                    acquisition_scope=self.spec.acquisition_scope,
+                )
             self._restored_state(partition, connector)
+
+    def _validate_observed_total(
+        self,
+        partition: HistoricalPartition,
+        total: int,
+    ) -> None:
+        limit = self.spec.arxiv_partition_total_exclusive_limit
+        if partition.provider == "arxiv" and limit is not None and total >= limit:
+            raise BackfillAcquisitionError(
+                f"{partition.id} returned {total} records; the approved segmented "
+                f"partition must remain below the provider offset boundary {limit}"
+            )
 
     def _count_partition(self, partition: HistoricalPartition) -> PartitionResult:
         if partition.provider == "inspire":
@@ -598,6 +764,7 @@ class HistoricalRawAcquirer:
             inspire_connector = InspireConnector(
                 self.transports["inspire"],
                 partition.endpoint.removesuffix("/literature"),
+                acquisition_scope=self.spec.acquisition_scope,
             )
             _, total, identifiers = _inspire_envelope(text, inspire_connector)
         else:
@@ -612,9 +779,12 @@ class HistoricalRawAcquirer:
                 },
             )
             arxiv_connector = ArxivConnector(
-                self.transports["arxiv"], partition.endpoint
+                self.transports["arxiv"],
+                partition.endpoint,
+                acquisition_scope=self.spec.acquisition_scope,
             )
             total, identifiers = _arxiv_envelope(text, arxiv_connector)
+            self._validate_observed_total(partition, total)
         page = _store_page(
             self.output,
             partition,
@@ -691,6 +861,7 @@ class HistoricalRawAcquirer:
                 if not isinstance(connector, ArxivConnector):
                     raise AssertionError("arXiv partition has the wrong parser")
                 total, page_ids = _arxiv_envelope(text, connector)
+                self._validate_observed_total(partition, total)
             if expected_total is None:
                 expected_total = total
             elif expected_total != total:
@@ -758,7 +929,9 @@ class HistoricalRawAcquirer:
     def _acquire_inspire(self, partition: HistoricalPartition) -> PartitionResult:
         transport = self.transports["inspire"]
         connector = InspireConnector(
-            transport, partition.endpoint.removesuffix("/literature")
+            transport,
+            partition.endpoint.removesuffix("/literature"),
+            acquisition_scope=self.spec.acquisition_scope,
         )
         restored, pages, expected_total, records_seen, identifiers = (
             self._restored_state(partition, connector)
@@ -882,7 +1055,11 @@ class HistoricalRawAcquirer:
 
     def _acquire_arxiv(self, partition: HistoricalPartition) -> PartitionResult:
         transport = self.transports["arxiv"]
-        connector = ArxivConnector(transport, partition.endpoint)
+        connector = ArxivConnector(
+            transport,
+            partition.endpoint,
+            acquisition_scope=self.spec.acquisition_scope,
+        )
         restored, pages, expected_total, records_seen, identifiers = (
             self._restored_state(partition, connector)
         )
@@ -918,6 +1095,7 @@ class HistoricalRawAcquirer:
                     },
                 )
                 total, page_ids = _arxiv_envelope(text, connector)
+                self._validate_observed_total(partition, total)
                 if expected_total is None:
                     expected_total = total
                 elif expected_total != total:
@@ -1038,18 +1216,27 @@ def _partition_result_from_dict(
         "endpoint": partition.endpoint,
         "page_size": partition.page_size,
     }
+    if partition.segment != ANNUAL_QUERY_SEGMENT.id:
+        expected_identity["segment"] = partition.segment
+    unexpected_annual_segment = (
+        partition.segment == ANNUAL_QUERY_SEGMENT.id and "segment" in value
+    )
     identity_changed = any(
         value.get(key) != expected for key, expected in expected_identity.items()
     )
     query_version = value.get("query_version")
+    spec = resolve_historical_backfill_spec(partition.acquisition_scope)
     query_version_is_current = query_version == partition.query_version
     query_version_is_corrected_legacy_label = (
-        partition.provider == "inspire"
+        spec.id == HEP_TH_HISTORICAL_BACKFILL.id
+        and partition.provider == "inspire"
         and partition.query_version == INSPIRE_QUERY_VERSION
         and query_version == LEGACY_INSPIRE_QUERY_VERSION
     )
-    if identity_changed or not (
-        query_version_is_current or query_version_is_corrected_legacy_label
+    if (
+        unexpected_annual_segment
+        or identity_changed
+        or not (query_version_is_current or query_version_is_corrected_legacy_label)
     ):
         raise BackfillSafetyError(
             f"resume partition metadata changed for {partition.id}"
@@ -1114,9 +1301,20 @@ def _partition_result_from_dict(
     complete = value.get("complete")
     if not isinstance(complete, bool):
         raise BackfillSafetyError("resume completion field is malformed")
+    expected_total = optional_nonnegative_int("expected_total")
+    total_limit = spec.arxiv_partition_total_exclusive_limit
+    if (
+        partition.provider == "arxiv"
+        and total_limit is not None
+        and expected_total is not None
+        and expected_total >= total_limit
+    ):
+        raise BackfillSafetyError(
+            f"{partition.id} exceeds the approved provider offset boundary"
+        )
     return PartitionResult(
         partition=partition,
-        expected_total=optional_nonnegative_int("expected_total"),
+        expected_total=expected_total,
         records_seen=records_seen,
         seen_unique_ids=unique_count,
         unique_ids_checksum=unique_checksum,
@@ -1134,14 +1332,20 @@ def _partition_state_directory(
     output: Path,
     partition: HistoricalPartition,
 ) -> Path:
-    return output / "partition-state" / partition.provider / str(partition.year)
+    directory = output / "partition-state" / partition.provider / str(partition.year)
+    return (
+        directory
+        if partition.segment == ANNUAL_QUERY_SEGMENT.id
+        else directory / partition.segment
+    )
 
 
 def _write_partition_state(output: Path, result: PartitionResult) -> Path:
+    spec = resolve_historical_backfill_spec(result.partition.acquisition_scope)
     body: dict[str, object] = {
-        "state_version": BACKFILL_PARTITION_STATE_VERSION,
-        "manifest_version": BACKFILL_MANIFEST_VERSION,
-        "acquisition_scope": BACKFILL_SCOPE,
+        "state_version": spec.partition_state_version,
+        "manifest_version": spec.manifest_version,
+        "acquisition_scope": spec.id,
         "partition": result.as_dict(),
     }
     body["state_checksum"] = _json_checksum(body)
@@ -1168,6 +1372,7 @@ def load_partition_states(
     output: Path,
     partitions: Sequence[HistoricalPartition],
 ) -> dict[str, PartitionResult]:
+    spec = _spec_for_partitions(partitions)
     index = {item.id: item for item in partitions}
     restored: dict[str, PartitionResult] = {}
     for partition in partitions:
@@ -1193,9 +1398,9 @@ def load_partition_states(
             ):
                 raise BackfillSafetyError("partition state checksum is invalid")
             if (
-                value.get("state_version") != BACKFILL_PARTITION_STATE_VERSION
-                or value.get("manifest_version") != BACKFILL_MANIFEST_VERSION
-                or value.get("acquisition_scope") != BACKFILL_SCOPE
+                value.get("state_version") != spec.partition_state_version
+                or value.get("manifest_version") != spec.manifest_version
+                or value.get("acquisition_scope") != spec.id
             ):
                 raise BackfillSafetyError(
                     "partition state is outside the bounded trial"
@@ -1208,14 +1413,21 @@ def load_partition_states(
                 raise BackfillSafetyError("partition state is stored in the wrong path")
             candidates.append(result)
         if candidates:
-            restored[partition.id] = max(
-                candidates,
-                key=lambda item: (
-                    item.complete,
-                    item.page_count,
-                    item.records_seen,
-                ),
+            best_rank = max(
+                (item.complete, item.page_count, item.records_seen)
+                for item in candidates
             )
+            finalists = [
+                item
+                for item in candidates
+                if (item.complete, item.page_count, item.records_seen) == best_rank
+            ]
+            finalist_digests = {_json_checksum(item.as_dict()) for item in finalists}
+            if len(finalist_digests) != 1:
+                raise BackfillSafetyError(
+                    f"same-rank partition states conflict for {partition.id}"
+                )
+            restored[partition.id] = finalists[0]
     return restored
 
 
@@ -1225,6 +1437,7 @@ def load_resume_manifest(
     output: Path,
     partitions: Sequence[HistoricalPartition],
 ) -> dict[str, PartitionResult]:
+    spec = _spec_for_partitions(partitions)
     resolved_output = output.resolve()
     resolved_manifest = manifest_path.resolve()
     if not _is_within(resolved_manifest, resolved_output / "manifests"):
@@ -1248,12 +1461,12 @@ def load_resume_manifest(
     ):
         raise BackfillSafetyError("resume manifest checksum is invalid")
     if (
-        value.get("manifest_version") != BACKFILL_MANIFEST_VERSION
+        value.get("manifest_version") != spec.manifest_version
         or value.get("mode") != "acquire"
         or value.get("executed") is not True
-        or value.get("acquisition_scope") != BACKFILL_SCOPE
-        or value.get("years") != list(BACKFILL_YEARS)
-        or value.get("providers") != list(BACKFILL_PROVIDERS)
+        or value.get("acquisition_scope") != spec.id
+        or value.get("years") != list(spec.years)
+        or value.get("providers") != list(spec.providers)
         or value.get("database_access") is not False
         or value.get("canonical_materialization") is not False
     ):
@@ -1277,7 +1490,12 @@ def load_resume_manifest(
     return restored
 
 
-def latest_resume_manifest(output: Path) -> Path | None:
+def latest_resume_manifest(
+    output: Path,
+    *,
+    scope: str = BACKFILL_SCOPE,
+) -> Path | None:
+    spec = resolve_historical_backfill_spec(scope)
     manifest_directory = output / "manifests"
     if not manifest_directory.is_dir():
         return None
@@ -1301,7 +1519,7 @@ def latest_resume_manifest(output: Path) -> Path | None:
             or path.name != f"{raw_checksum}.json"
         ):
             raise BackfillSafetyError("the output manifest checksum is invalid")
-        if value.get("manifest_version") != BACKFILL_MANIFEST_VERSION:
+        if value.get("manifest_version") != spec.manifest_version:
             raise BackfillSafetyError("the output contains a foreign manifest")
         if value.get("mode") != "acquire":
             continue
@@ -1330,11 +1548,13 @@ def preview_manifest(
     *,
     now: datetime | None = None,
 ) -> BackfillManifest:
+    spec = _spec_for_partitions(partitions)
     return BackfillManifest(
         mode=mode,
         executed=False,
         created_at=now or datetime.now(UTC),
         partitions=tuple(PartitionResult(item) for item in partitions),
+        spec=spec,
     )
 
 
@@ -1357,10 +1577,11 @@ def execute_backfill(
             arxiv_base_url=active_settings.arxiv_base_url,
         )
     )
+    spec = _spec_for_partitions(active_partitions)
     resolved_output = validate_request(
-        scope=BACKFILL_SCOPE,
-        start_year=BACKFILL_YEARS[0],
-        end_year=BACKFILL_YEARS[-1],
+        scope=spec.id,
+        start_year=spec.years[0],
+        end_year=spec.years[-1],
         output=output,
         execute=True,
     )
@@ -1370,7 +1591,7 @@ def execute_backfill(
         _validate_live_provider_partitions(active_partitions)
     resolved_resume = resume_manifest
     if mode == "acquire" and resolved_resume is None:
-        resolved_resume = latest_resume_manifest(resolved_output)
+        resolved_resume = latest_resume_manifest(resolved_output, scope=spec.id)
     resume_partitions = (
         load_resume_manifest(
             resolved_resume,
@@ -1391,8 +1612,16 @@ def execute_backfill(
                 if previous is not None
                 else None
             )
-            if previous_rank is None or state_rank >= previous_rank:
+            if previous_rank is None or state_rank > previous_rank:
                 resume_partitions[partition_id] = state
+            elif state_rank == previous_rank:
+                assert previous is not None
+                state_digest = _json_checksum(state.as_dict())
+                previous_digest = _json_checksum(previous.as_dict())
+                if state_digest != previous_digest:
+                    raise BackfillSafetyError(
+                        f"same-rank resume evidence conflicts for {partition_id}"
+                    )
 
     def persist_result(result: PartitionResult) -> None:
         _write_partition_state(resolved_output, result)
@@ -1434,6 +1663,7 @@ def execute_backfill(
         executed=True,
         created_at=now or datetime.now(UTC),
         partitions=results,
+        spec=spec,
     )
     manifest_path = _write_manifest(resolved_output, manifest)
     return BackfillManifest(
@@ -1441,6 +1671,7 @@ def execute_backfill(
         executed=manifest.executed,
         created_at=manifest.created_at,
         partitions=manifest.partitions,
+        spec=manifest.spec,
         output_path=manifest_path,
     )
 
@@ -1448,7 +1679,7 @@ def execute_backfill(
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Plan or acquire the staging-only hep-th-v1 2020-2025 raw history; "
+            "Plan or acquire a supported staging-only 2020-2025 raw history; "
             "no database or metric writes are performed"
         )
     )

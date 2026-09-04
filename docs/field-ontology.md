@@ -83,6 +83,14 @@ INSPIRE and arXiv are required live-source mappings for v1. Supporting rules
 may exist for other providers, but they do not substitute for validation of
 INSPIRE and arXiv coverage.
 
+The bounded `cond-mat-validation-v1` trial preserves INSPIRE's exact
+`Condensed Matter` subject label as currently unmapped evidence. The immutable
+v1 catalog has no INSPIRE condensed-matter rule; the only similarly named rule
+is Crossref's distinct `Condensed Matter Physics` subject. Similar wording is
+not enough to reinterpret the trial label. Adding a reviewed INSPIRE rule
+requires a new mapping version. Existing arXiv `cond-mat.*` categories continue
+through their exact v1 rules.
+
 For every provider category, Physics Atlas retains:
 
 - provider and provider taxonomy;

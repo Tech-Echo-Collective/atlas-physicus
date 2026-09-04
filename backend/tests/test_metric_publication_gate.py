@@ -145,6 +145,7 @@ def test_live_public_reads_require_the_complete_joint_release_manifest(
         "fieldReconciliationVersion": CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
         "fieldWeightConservationPassed": True,
         "acquisitionScope": REVIEWED_BROAD_SCOPE,
+        "acquisitionBoundaryKind": "broad-physics",
         "dataSourceVersion": "dataset-v1",
         "diversityBreadthReviewVersion": DIVERSITY_BREADTH_REVIEW_VERSION,
         "diversityBreadthReviewPassed": True,
@@ -179,7 +180,30 @@ def test_live_public_reads_require_the_complete_joint_release_manifest(
 
     release.validation_evidence = {
         **release.validation_evidence,
+        "acquisitionScope": "cond-mat-validation-v1",
+    }
+    session.flush()
+    mislabeled_cond_mat, mislabeled_cond_mat_total = repository.metric_observations(
+        limit=10, offset=0
+    )
+    assert mislabeled_cond_mat == []
+    assert mislabeled_cond_mat_total == 0
+
+    release.validation_evidence = {
+        **release.validation_evidence,
         "acquisitionScope": REVIEWED_BROAD_SCOPE,
+        "acquisitionBoundaryKind": "field-conditioned",
+    }
+    session.flush()
+    conditioned_boundary, conditioned_boundary_total = repository.metric_observations(
+        limit=10, offset=0
+    )
+    assert conditioned_boundary == []
+    assert conditioned_boundary_total == 0
+
+    release.validation_evidence = {
+        **release.validation_evidence,
+        "acquisitionBoundaryKind": "broad-physics",
         "diversityBreadthReviewVersion": "stale-breadth-review",
     }
     session.flush()

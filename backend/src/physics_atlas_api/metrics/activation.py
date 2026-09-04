@@ -16,9 +16,14 @@ from .thresholds import (
 )
 
 JointActivationStatus = Literal["withheld", "eligible-for-reviewed-activation"]
+AcquisitionBoundaryKind = Literal["field-conditioned", "broad-physics"]
 METRIC_SYSTEM_V1_VERSION = "physics-atlas-metric-system-v1"
 DIVERSITY_BREADTH_REVIEW_VERSION = "diversity-breadth-review-v1"
 HEP_TH_CONDITIONED_SCOPE = "hep-th-v1"
+COND_MAT_CONDITIONED_SCOPE = "cond-mat-validation-v1"
+KNOWN_FIELD_CONDITIONED_SCOPES = frozenset(
+    (HEP_TH_CONDITIONED_SCOPE, COND_MAT_CONDITIONED_SCOPE)
+)
 
 
 @dataclass(frozen=True)
@@ -68,6 +73,7 @@ class MetricSystemActivationEvidence:
     field_reconciliation_version: str | None = None
     field_weight_conservation_passed: bool = False
     acquisition_scope: str | None = None
+    acquisition_boundary_kind: AcquisitionBoundaryKind | None = None
     data_source_version: str | None = None
     diversity_breadth_review_version: str | None = None
     diversity_breadth_review_passed: bool = False
@@ -134,7 +140,8 @@ def reviewed_activation_manifest_is_current(
         and field_validation_manifest_is_current(validation_evidence)
         and isinstance(acquisition_scope, str)
         and bool(acquisition_scope.strip())
-        and acquisition_scope != HEP_TH_CONDITIONED_SCOPE
+        and acquisition_scope not in KNOWN_FIELD_CONDITIONED_SCOPES
+        and validation_evidence.get("acquisitionBoundaryKind") == "broad-physics"
         and (
             expected_acquisition_scope is None
             or acquisition_scope == expected_acquisition_scope
@@ -210,9 +217,14 @@ def assess_joint_metric_activation(
         reasons.append("per-paper field-weight conservation has not passed")
     if not evidence.acquisition_scope or not evidence.acquisition_scope.strip():
         reasons.append("acquisition scope is missing")
-    elif evidence.acquisition_scope == HEP_TH_CONDITIONED_SCOPE:
+    elif evidence.acquisition_scope in KNOWN_FIELD_CONDITIONED_SCOPES:
         reasons.append(
-            "hep-th-v1 cannot validate the broad-field Research Diversity boundary"
+            f"{evidence.acquisition_scope} cannot validate the broad-field "
+            "Research Diversity boundary"
+        )
+    if evidence.acquisition_boundary_kind != "broad-physics":
+        reasons.append(
+            "the acquisition boundary is not certified as broad Physics evidence"
         )
     if not evidence.data_source_version or not evidence.data_source_version.strip():
         reasons.append("data source version is missing")

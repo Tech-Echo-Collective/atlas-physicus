@@ -1,10 +1,10 @@
 """Staging-safe, file-only materialization of a historical replay plan.
 
-This boundary verifies the immutable ``hep-th-v1`` raw acquisition, parses its
-stored provider pages without network access, and writes a content-addressed
-JSON evidence bundle outside the repository.  It never imports the database,
-touches provider cursors, calculates metrics, or selects canonical cohort
-metadata.
+This boundary verifies an immutable approved historical acquisition, parses
+its stored provider pages without network access, and writes a
+content-addressed JSON evidence bundle outside the repository. It never imports
+the database, touches provider cursors, calculates metrics, or selects
+canonical cohort metadata.
 """
 
 from __future__ import annotations
@@ -32,13 +32,13 @@ from .attribution import (
     calculate_fractional_attribution,
 )
 from .backfill import (
-    BACKFILL_MANIFEST_VERSION,
-    BACKFILL_SCOPE,
-    BACKFILL_YEARS,
+    HEP_TH_HISTORICAL_BACKFILL,
+    HistoricalBackfillSpec,
     PartitionResult,
     build_partitions,
     load_resume_manifest,
     repository_root,
+    resolve_historical_backfill_spec,
 )
 from .connectors.arxiv import ARXIV, ATOM, ArxivConnector
 from .connectors.base import (
@@ -81,6 +81,20 @@ CROSS_PROVIDER_AFFILIATION_PRECEDENCE_VERSION = (
     "cross-provider-affiliation-precedence-v1"
 )
 DIRECT_ROR_ALIGNMENT_VERSION = "direct-ror-affiliation-alignment-v1"
+
+
+def _replay_versions(spec: HistoricalBackfillSpec) -> tuple[str, str, str]:
+    if spec.id == HEP_TH_HISTORICAL_BACKFILL.id:
+        return (
+            HISTORICAL_REPLAY_VERSION,
+            HISTORICAL_REPLAY_BUNDLE_VERSION,
+            HISTORICAL_RELATIONSHIP_PROJECTION_VERSION,
+        )
+    return (
+        f"{spec.id}-historical-replay-materialization-v2",
+        f"{spec.id}-historical-replay-bundle-v2",
+        f"{spec.id}-historical-relationship-projection-v2",
+    )
 
 
 class HistoricalReplaySafetyError(ValueError):
@@ -126,7 +140,11 @@ class VerifiedPaperOccurrence:
     raw_citation_count: int | None
     non_self_citation_count: int | None
 
-    def source_row(self, manifest_checksum: str) -> dict[str, object]:
+    def source_row(
+        self,
+        manifest_checksum: str,
+        replay_version: str = HISTORICAL_REPLAY_VERSION,
+    ) -> dict[str, object]:
         return {
             **self.evidence.as_dict(),
             "source_record_checksum": self.source_record_checksum,
@@ -134,7 +152,7 @@ class VerifiedPaperOccurrence:
             "lineage": {
                 **self.lineage.as_dict(),
                 "source_manifest_checksum": manifest_checksum,
-                "replay_version": HISTORICAL_REPLAY_VERSION,
+                "replay_version": replay_version,
             },
             "author_count": len(self.authors),
             "author_evidence_embedded": False,
@@ -167,6 +185,10 @@ class VerifiedHistoricalStaging:
     occurrences: tuple[VerifiedPaperOccurrence, ...]
     verified_page_count: int
     provider_record_counts: tuple[tuple[str, int], ...]
+    spec: HistoricalBackfillSpec
+    replay_version: str
+    bundle_version: str
+    relationship_projection_version: str
 
 
 @dataclass(frozen=True)
@@ -730,22 +752,35 @@ def verify_historical_staging(
 ) -> VerifiedHistoricalStaging:
     """Verify and parse the complete immutable staging artifact once."""
 
-    partitions = build_partitions()
-    partition_results = load_resume_manifest(
-        source_manifest,
-        output=staging_root,
-        partitions=partitions,
-    )
     try:
         manifest_value = json.loads(source_manifest.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise HistoricalReplaySafetyError("source manifest cannot be read") from error
     if not isinstance(manifest_value, dict):
         raise HistoricalReplaySafetyError("source manifest is not an object")
+    acquisition_scope = manifest_value.get("acquisition_scope")
+    if not isinstance(acquisition_scope, str):
+        raise HistoricalReplaySafetyError("source manifest has no acquisition scope")
+    try:
+        spec = resolve_historical_backfill_spec(acquisition_scope)
+    except ValueError as error:
+        raise HistoricalReplaySafetyError(
+            "source manifest uses an unsupported historical scope"
+        ) from error
+    partitions = build_partitions(
+        scope=spec.id,
+        start_year=spec.years[0],
+        end_year=spec.years[-1],
+    )
+    partition_results = load_resume_manifest(
+        source_manifest,
+        output=staging_root,
+        partitions=partitions,
+    )
     if (
-        manifest_value.get("manifest_version") != BACKFILL_MANIFEST_VERSION
-        or manifest_value.get("acquisition_scope") != BACKFILL_SCOPE
-        or manifest_value.get("years") != list(BACKFILL_YEARS)
+        manifest_value.get("manifest_version") != spec.manifest_version
+        or manifest_value.get("acquisition_scope") != spec.id
+        or manifest_value.get("years") != list(spec.years)
         or manifest_value.get("acquisition_complete") is not True
     ):
         raise HistoricalReplaySafetyError(
@@ -760,8 +795,16 @@ def verify_historical_staging(
     cutoff = _normalized_cutoff(manifest_value.get("created_at"))
 
     transport = _NoNetworkTransport()
-    inspire = InspireConnector(transport, "https://inspirehep.net/api")
-    arxiv = ArxivConnector(transport, "https://export.arxiv.org/api/query")
+    inspire = InspireConnector(
+        transport,
+        "https://inspirehep.net/api",
+        acquisition_scope=spec.acquisition_scope,
+    )
+    arxiv = ArxivConnector(
+        transport,
+        "https://export.arxiv.org/api/query",
+        acquisition_scope=spec.acquisition_scope,
+    )
     occurrences: list[VerifiedPaperOccurrence] = []
     occurrence_ids: set[str] = set()
     provider_counts: dict[str, int] = {"inspire": 0, "arxiv": 0}
@@ -769,7 +812,11 @@ def verify_historical_staging(
 
     for partition in sorted(
         partition_results.values(),
-        key=lambda item: (item.partition.provider, item.partition.year),
+        key=lambda item: (
+            item.partition.provider,
+            item.partition.year,
+            item.partition.segment,
+        ),
     ):
         if not partition.complete or partition.terminal_status != "complete":
             raise HistoricalReplaySafetyError(
@@ -863,6 +910,7 @@ def verify_historical_staging(
                 f"partition evidence failed verification: {partition.partition.id}"
             )
 
+    replay_version, bundle_version, relationship_version = _replay_versions(spec)
     return VerifiedHistoricalStaging(
         staging_root=staging_root,
         source_manifest_path=source_manifest,
@@ -873,6 +921,10 @@ def verify_historical_staging(
         ),
         verified_page_count=verified_page_count,
         provider_record_counts=tuple(sorted(provider_counts.items())),
+        spec=spec,
+        replay_version=replay_version,
+        bundle_version=bundle_version,
+        relationship_projection_version=relationship_version,
     )
 
 
@@ -1155,6 +1207,7 @@ def _relationship_rows(
     by_occurrence: Mapping[str, VerifiedPaperOccurrence],
     staging: VerifiedHistoricalStaging,
 ) -> _RelationshipRows:
+    relationship_version = staging.relationship_projection_version
     appearances: list[dict[str, object]] = []
     shares: list[dict[str, object]] = []
     ledgers: list[dict[str, object]] = []
@@ -1197,9 +1250,7 @@ def _relationship_rows(
                     "conservation_status": "not-evaluable-missing-author-projection",
                     "conservation_passed": False,
                     "policy_version": FRACTIONAL_ATTRIBUTION_V1.version,
-                    "relationship_projection_version": (
-                        HISTORICAL_RELATIONSHIP_PROJECTION_VERSION
-                    ),
+                    "relationship_projection_version": relationship_version,
                     "eligible_for_public_metrics": False,
                 }
             )
@@ -1253,9 +1304,7 @@ def _relationship_rows(
                     "source_manifest_checksum": staging.source_manifest_checksum,
                     "page_path": selected.lineage.page_path,
                     "page_checksum": selected.lineage.page_checksum,
-                    "relationship_projection_version": (
-                        HISTORICAL_RELATIONSHIP_PROJECTION_VERSION
-                    ),
+                    "relationship_projection_version": relationship_version,
                     "eligible_for_public_metrics": False,
                 }
             )
@@ -1311,7 +1360,7 @@ def _relationship_rows(
                     resolution_status=resolution_status,
                     source=selected.evidence.provider,
                     source_record_id=selected.evidence.source_record_id,
-                    evidence_version=HISTORICAL_RELATIONSHIP_PROJECTION_VERSION,
+                    evidence_version=relationship_version,
                 )
                 assertions.append(assertion)
                 anchor_id = (
@@ -1336,9 +1385,7 @@ def _relationship_rows(
                             ),
                             "source_assertion_ids": set(),
                             "source_occurrence_ids": set(),
-                            "relationship_projection_version": (
-                                HISTORICAL_RELATIONSHIP_PROJECTION_VERSION
-                            ),
+                            "relationship_projection_version": relationship_version,
                             "eligible_for_public_metrics": False,
                         },
                     )
@@ -1451,9 +1498,7 @@ def _relationship_rows(
                     "page_path": selected.lineage.page_path,
                     "page_checksum": selected.lineage.page_checksum,
                     "source_manifest_checksum": staging.source_manifest_checksum,
-                    "relationship_projection_version": (
-                        HISTORICAL_RELATIONSHIP_PROJECTION_VERSION
-                    ),
+                    "relationship_projection_version": relationship_version,
                     "eligible_for_public_metrics": False,
                 }
             )
@@ -1480,9 +1525,7 @@ def _relationship_rows(
                 "conservation_status": "conserved",
                 "conservation_passed": result.total_weight == Fraction(1),
                 "policy_version": result.policy_version,
-                "relationship_projection_version": (
-                    HISTORICAL_RELATIONSHIP_PROJECTION_VERSION
-                ),
+                "relationship_projection_version": relationship_version,
                 "eligible_for_public_metrics": False,
             }
         )
@@ -1533,9 +1576,7 @@ def _relationship_rows(
             sorted(ledgers, key=lambda item: str(item["candidate_id"]))
         ),
         report={
-            "relationship_projection_version": (
-                HISTORICAL_RELATIONSHIP_PROJECTION_VERSION
-            ),
+            "relationship_projection_version": relationship_version,
             "affiliation_precedence_version": (
                 CROSS_PROVIDER_AFFILIATION_PRECEDENCE_VERSION
             ),
@@ -1610,7 +1651,10 @@ def build_historical_replay_bundle(
         for occurrence in component.occurrences
     }
     source_rows = [
-        item.source_row(staging.source_manifest_checksum)
+        item.source_row(
+            staging.source_manifest_checksum,
+            staging.replay_version,
+        )
         for item in ordered_occurrences
     ]
     component_rows: list[dict[str, object]] = []
@@ -1645,7 +1689,7 @@ def build_historical_replay_bundle(
                     for occurrence in component.occurrences
                 ],
                 "source_manifest_checksum": staging.source_manifest_checksum,
-                "replay_version": HISTORICAL_REPLAY_VERSION,
+                "replay_version": staging.replay_version,
                 "merge_policy_version": CANONICAL_PAPER_MERGE_POLICY_VERSION,
                 "review_status": (
                     "needs_review"
@@ -1684,7 +1728,7 @@ def build_historical_replay_bundle(
                     item.occurrence_id for item in component.occurrences
                 ],
                 "source_manifest_checksum": staging.source_manifest_checksum,
-                "replay_version": HISTORICAL_REPLAY_VERSION,
+                "replay_version": staging.replay_version,
                 "field_ontology_version": PHYSICS_FIELD_ONTOLOGY_VERSION,
                 "ledger": ledger.provenance_payload(),
             }
@@ -1715,7 +1759,7 @@ def build_historical_replay_bundle(
             "page_checksum": item.lineage.page_checksum,
             "source_record_checksum": item.source_record_checksum,
             "source_manifest_checksum": staging.source_manifest_checksum,
-            "replay_version": HISTORICAL_REPLAY_VERSION,
+            "replay_version": staging.replay_version,
             "evidence_status": "unreviewed-provider-count",
             "common_cutoff_comparable": False,
             "eligible_for_impact": False,
@@ -1809,8 +1853,8 @@ def build_historical_replay_bundle(
 
     artifact_entries = [item.manifest_entry() for item in artifacts]
     replay_identity: dict[str, object] = {
-        "bundle_version": HISTORICAL_REPLAY_BUNDLE_VERSION,
-        "replay_version": HISTORICAL_REPLAY_VERSION,
+        "bundle_version": staging.bundle_version,
+        "replay_version": staging.replay_version,
         "source_manifest_checksum": staging.source_manifest_checksum,
         "cutoff_timestamp": staging.cutoff_timestamp,
         "merge_plan_version": PAPER_MERGE_PLAN_VERSION,
@@ -1818,6 +1862,8 @@ def build_historical_replay_bundle(
         "canonical_paper_merge_policy_version": (CANONICAL_PAPER_MERGE_POLICY_VERSION),
         "artifacts": artifact_entries,
     }
+    if staging.spec.id != HEP_TH_HISTORICAL_BACKFILL.id:
+        replay_identity["acquisition_scope"] = staging.spec.id
     replay_digest = _checksum_json(replay_identity)
     status_counts = {
         "matched": sum(item.status == "matched" for item in merge_plan.components),
@@ -1983,7 +2029,7 @@ def build_historical_replay_bundle(
         "unreviewed_field_ledger_coverage": 1.0 if field_ledger_count else None,
         "reviewed_field_ledger_count": 0,
         "canonical_cohort_count": 0,
-        "raw_acquisition_complete_years": list(BACKFILL_YEARS),
+        "raw_acquisition_complete_years": list(staging.spec.years),
         "certified_complete_canonical_years": [],
         "momentum_window_readiness": {
             "2020-2022": False,
@@ -2011,8 +2057,8 @@ def build_historical_replay_bundle(
         report_artifact = replace(report_artifact, content=b"")
     all_artifacts = (*artifacts, report_artifact)
     unsigned_bundle_manifest: dict[str, object] = {
-        "bundle_version": HISTORICAL_REPLAY_BUNDLE_VERSION,
-        "replay_version": HISTORICAL_REPLAY_VERSION,
+        "bundle_version": staging.bundle_version,
+        "replay_version": staging.replay_version,
         "source_manifest_checksum": staging.source_manifest_checksum,
         "source_manifest_path": staging.source_manifest_path.name,
         "cutoff_timestamp": staging.cutoff_timestamp,
@@ -2030,6 +2076,8 @@ def build_historical_replay_bundle(
         "reviewed_field_ledgers": False,
         "metric_observations_created": 0,
     }
+    if staging.spec.id != HEP_TH_HISTORICAL_BACKFILL.id:
+        unsigned_bundle_manifest["acquisition_scope"] = staging.spec.id
     bundle_manifest = {
         **unsigned_bundle_manifest,
         "bundle_manifest_checksum": _checksum_json(unsigned_bundle_manifest),

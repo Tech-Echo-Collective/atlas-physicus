@@ -110,6 +110,33 @@ parents, unavailable parent metadata, inactive or withdrawn organizations, and
 predecessor/successor relationships are not resolved by ordering or name
 similarity; their mass remains withheld for review.
 
+For external historical staging, an exact INSPIRE institution recid already
+present in paper-time evidence may be looked up to obtain an explicit ROR
+identifier. The target set is derived from a checksum-verified replay, every
+target must complete before a crosswalk or supplemental ROR target is emitted,
+and no name search is allowed. Supplemental canonical authority bundles are
+merged only when their exact ROR identities do not conflict; direct paper ROR
+anchors retain precedence.
+
+Likewise, an existing matched arXiv-only replay component with missing
+affiliation mass may be queried in INSPIRE by its exact arXiv identifier. New
+paper-native affiliation evidence is projected only when the result is exact
+and the full positional author list agrees. No hits, multiple hits, nonexact
+identities, and author-order conflicts remain unresolved. Every exactly aligned
+INSPIRE author slot is retained, including slots that already contain arXiv
+evidence. Exact normalized provider-text sets are recorded as corroboration and
+the INSPIRE source is selected under the precedence policy; differing or
+non-comparable assertions remain an explicit unresolved conflict. Existing
+multi-affiliation shares retain their individual identities and exact mass, and
+coverage recovery is counted only for a formerly missing author slot. This
+evidence-coverage measure continues to count a present source assertion even
+when two sources conflict; the conflicting mass is reported separately and is
+withheld from canonical institution resolution. Evidence-presence and
+resolution-eligibility partitions each conserve exact paper mass. This
+enrichment cannot add a paper to the corpus or mutate the immutable replay.
+Both boundaries are staging-only, content-addressed, resumable, and incapable
+of writing a metric observation or production history.
+
 ## Fractional Attribution v1
 
 Let a paper have `N` provider author slots. In the absence of reliable numeric

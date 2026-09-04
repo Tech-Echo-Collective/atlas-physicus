@@ -99,15 +99,17 @@ single versioned activation manifest demonstrates all of the following:
 9. metric-specific normalization has passed numerical and cohort validation;
 10. raw inputs, fitted parameters, versions, and calculation provenance are
     sufficient to reproduce every observation.
-11. Diversity has been reviewed on a sufficiently broad Physics evidence
-    boundary; a field-conditioned scope such as `hep-th-v1` cannot supply this
-    proof.
+11. Diversity has been reviewed on an explicitly classified `broad-physics`
+    evidence boundary; a named specialty field, or an unreviewed union of
+    specialty trials, remains `field-conditioned` and cannot supply this proof.
 
-Persisted activation evidence records the exact `acquisitionScope`, immutable
+Persisted activation evidence records the exact `acquisitionScope`, its
+`acquisitionBoundaryKind` (`field-conditioned` or `broad-physics`), immutable
 `dataSourceVersion`, and current `diversity-breadth-review-v1` proof. Public
-reads require the scope and dataset version to match the current live dataset.
-A legacy, stale-dataset, or manually asserted `jointGatePassed` flag without
-those current proofs cannot expose or preserve live observations.
+reads require a reviewed `broad-physics` boundary and require the scope and
+dataset version to match the current live dataset. A legacy, specialty-only,
+stale-dataset, or manually asserted `jointGatePassed` flag without those current
+proofs cannot expose or preserve live observations.
 
 The gate fails closed:
 

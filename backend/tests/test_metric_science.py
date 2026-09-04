@@ -624,3 +624,54 @@ def test_activation_requires_validated_contract_and_every_sanity_check() -> None
     assert rejected_lineage.reasons == (
         "partition input update sequence does not match the summary",
     )
+
+
+def test_staging_scope_override_preserves_the_default_scope_gate() -> None:
+    contract = METRIC_CONTRACTS["research_activity_score"]
+    validated_contract = replace(
+        contract,
+        provenance=replace(contract.provenance, status="validated"),
+    )
+    staging_scope = "cond-mat-validation-v1"
+    summary = replace(
+        _sufficient_activity_summary(),
+        acquisition_scope=staging_scope,
+    )
+    checks = tuple(
+        MetricSanityCheck(check_id, True, "deterministic test passed")
+        for check_id in REQUIRED_SANITY_CHECKS[contract.metric_id]
+    )
+    readiness = MetricPartitionReadiness(
+        metric_id=contract.metric_id,
+        metric_version=contract.version,
+        entity_type="institution",
+        scope_kind="research-field",
+        scope_id="cond-mat",
+        period="2024-2026",
+        dataset_version="live-sufficient-test-v1",
+        acquisition_scope=staging_scope,
+        update_sequence=1,
+        input_lineage_complete=True,
+        per_entity_minimums_passed=True,
+        cohort_requirements_passed=True,
+        missing_data_checks_passed=True,
+    )
+
+    default_decision = assess_metric_activation(
+        validated_contract,
+        summary,
+        checks,
+        readiness,
+    )
+    assert default_decision.status == "withheld"
+    assert "acquisition scope does not match" in " ".join(default_decision.reasons)
+
+    staging_decision = assess_metric_activation(
+        validated_contract,
+        summary,
+        checks,
+        readiness,
+        expected_acquisition_scope=staging_scope,
+    )
+    assert staging_decision.status == "eligible-for-reviewed-activation"
+    assert staging_decision.reasons == ()

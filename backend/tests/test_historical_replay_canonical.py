@@ -159,6 +159,48 @@ def test_secondary_merge_requires_all_exact_independent_evidence() -> None:
     ]
 
 
+def test_merge_evidence_is_assigned_to_its_final_transitive_component() -> None:
+    doi_side = occurrence(
+        "inspire",
+        "transitive-doi",
+        identifiers=(("doi", "10.1234/transitive"),),
+    )
+    bridge = occurrence(
+        "crossref",
+        "transitive-bridge",
+        identifiers=(
+            ("doi", "10.1234/transitive"),
+            ("arxiv", "2401.12345"),
+        ),
+    )
+    arxiv_side = occurrence(
+        "arxiv",
+        "2401.12345",
+        identifiers=(("arxiv", "2401.12345"),),
+    )
+    unrelated = occurrence(
+        "inspire",
+        "unrelated",
+        identifiers=(("inspire", "999999"),),
+        title="A separate paper",
+    )
+
+    plan = build_canonical_paper_merge_plan(
+        [unrelated, arxiv_side, bridge, doi_side],
+        enable_secondary_merge=False,
+    )
+
+    merged = next(item for item in plan.components if len(item.occurrences) == 3)
+    singleton = next(item for item in plan.components if len(item.occurrences) == 1)
+    assert [
+        (item.method, item.scheme, item.value) for item in merged.merge_evidence
+    ] == [
+        ("strong-identifier", "arxiv", "2401.12345"),
+        ("strong-identifier", "doi", "10.1234/transitive"),
+    ]
+    assert singleton.merge_evidence == ()
+
+
 @pytest.mark.parametrize(
     ("authors", "year", "journal"),
     [

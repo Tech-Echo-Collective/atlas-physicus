@@ -55,6 +55,7 @@ def complete_evidence() -> MetricSystemActivationEvidence:
         field_reconciliation_version=CROSS_PROVIDER_FIELD_RECONCILIATION_VERSION,
         field_weight_conservation_passed=True,
         acquisition_scope="reviewed-broad-physics-v1",
+        acquisition_boundary_kind="broad-physics",
         data_source_version="reviewed-dataset-v1",
         diversity_breadth_review_version=DIVERSITY_BREADTH_REVIEW_VERSION,
         diversity_breadth_review_passed=True,
@@ -143,10 +144,42 @@ def test_joint_gate_requires_a_current_broad_field_diversity_review() -> None:
     assert "acquisition scope is missing" in missing_scope.reasons
 
     conditioned = assess_joint_metric_activation(
-        replace(evidence, acquisition_scope="hep-th-v1")
+        replace(
+            evidence,
+            acquisition_scope="hep-th-v1",
+            acquisition_boundary_kind="field-conditioned",
+        )
     )
     assert conditioned.status == "withheld"
     assert "hep-th-v1 cannot validate" in " ".join(conditioned.reasons)
+
+    mislabeled_cond_mat = assess_joint_metric_activation(
+        replace(
+            evidence,
+            acquisition_scope="cond-mat-validation-v1",
+            acquisition_boundary_kind="broad-physics",
+        )
+    )
+    assert mislabeled_cond_mat.status == "withheld"
+    assert "cond-mat-validation-v1 cannot validate" in " ".join(
+        mislabeled_cond_mat.reasons
+    )
+
+    arbitrary_conditioned = assess_joint_metric_activation(
+        replace(
+            evidence,
+            acquisition_scope="specialty-validation-corpus-v1",
+            acquisition_boundary_kind="field-conditioned",
+        )
+    )
+    assert arbitrary_conditioned.status == "withheld"
+    assert "not certified as broad Physics" in " ".join(arbitrary_conditioned.reasons)
+
+    missing_boundary = assess_joint_metric_activation(
+        replace(evidence, acquisition_boundary_kind=None)
+    )
+    assert missing_boundary.status == "withheld"
+    assert "not certified as broad Physics" in " ".join(missing_boundary.reasons)
 
     missing = assess_joint_metric_activation(
         replace(

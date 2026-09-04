@@ -9,7 +9,12 @@ from typing import Any, Self
 
 import pytest
 
-from physics_atlas_api.backfill import build_partitions, execute_backfill
+from physics_atlas_api.backfill import (
+    BACKFILL_SCOPE,
+    COND_MAT_HISTORICAL_BACKFILL,
+    build_partitions,
+    execute_backfill,
+)
 from physics_atlas_api.config import Settings
 from physics_atlas_api.connectors.base import normalize_external_id
 from physics_atlas_api.historical_replay import StrongIdentifier
@@ -166,7 +171,14 @@ class _HistoricalStagingTransport:
                         "arxiv_eprints": [{"value": "2001.00001"}],
                         "dois": [{"value": "10.1234/replay"}],
                         "inspire_categories": [
-                            {"term": "Theory-HEP", "source": "INSPIRE"}
+                            {
+                                "term": (
+                                    "Condensed Matter"
+                                    if "Condensed Matter" in query
+                                    else "Theory-HEP"
+                                ),
+                                "source": "INSPIRE",
+                            }
                         ],
                         "publication_info": [
                             {
@@ -201,8 +213,9 @@ class _HistoricalStagingTransport:
         assert year_match is not None
         year = int(year_match.group(1))
         entry = ""
-        if year == 2020:
-            entry = """
+        if year == 2020 and ("cond-mat.*" not in query or f"{year}01010000" in query):
+            category = "cond-mat.mes-hall" if "cond-mat.*" in query else "hep-th"
+            entry = f"""
             <entry>
               <id>https://arxiv.org/abs/2001.00001v2</id>
               <updated>2021-03-02T00:00:00Z</updated>
@@ -218,9 +231,9 @@ class _HistoricalStagingTransport:
                 <arxiv:affiliation>First unresolved institute</arxiv:affiliation>
                 <arxiv:affiliation>Second unresolved institute</arxiv:affiliation>
               </author>
-              <category term="hep-th"
+              <category term="{category}"
                 scheme="http://arxiv.org/schemas/atom" />
-              <arxiv:primary_category term="hep-th"
+              <arxiv:primary_category term="{category}"
                 scheme="http://arxiv.org/schemas/atom" />
               <arxiv:doi>10.1234/replay</arxiv:doi>
               <arxiv:journal_ref>JHEP 03 2021 001</arxiv:journal_ref>
@@ -236,14 +249,18 @@ class _HistoricalStagingTransport:
         </feed>"""
 
 
-def _staged_acquisition(tmp_path: Path) -> tuple[Path, Path]:
+def _staged_acquisition(
+    tmp_path: Path,
+    *,
+    scope: str = BACKFILL_SCOPE,
+) -> tuple[Path, Path]:
     staging = tmp_path / "staging"
     manifest = execute_backfill(
         "acquire",
         output=staging,
         settings=Settings(database_url="sqlite://", fixture_mode=True),
         now=_CUTOFF,
-        partitions=build_partitions(),
+        partitions=build_partitions(scope=scope),
         transports={
             "inspire": _HistoricalStagingTransport("inspire"),
             "arxiv": _HistoricalStagingTransport("arxiv"),
@@ -252,6 +269,30 @@ def _staged_acquisition(tmp_path: Path) -> tuple[Path, Path]:
     assert manifest.successful is True
     assert manifest.output_path is not None
     return staging, manifest.output_path
+
+
+def test_condensed_matter_scope_replays_with_distinct_fail_closed_lineage(
+    tmp_path: Path,
+) -> None:
+    staging, manifest = _staged_acquisition(
+        tmp_path,
+        scope=COND_MAT_HISTORICAL_BACKFILL.id,
+    )
+
+    result = materialize_historical_replay(
+        staging_root=staging,
+        source_manifest=manifest,
+    )
+
+    assert result.report["acquisition_scope"] == "cond-mat-validation-v1"
+    assert result.report["replay_version"] == (
+        "cond-mat-validation-v1-historical-replay-materialization-v2"
+    )
+    assert result.bundle_manifest["acquisition_scope"] == ("cond-mat-validation-v1")
+    assert result.report["field_conservation_failures"] == 0
+    assert result.report["total_assigned_field_mass"] == pytest.approx(0.5)
+    assert result.report["total_explicit_unmapped_field_mass"] == pytest.approx(0.5)
+    assert result.report["metric_observations_created"] == 0
 
 
 def _artifact_rows(bundle: HistoricalReplayBundle, role: str) -> list[dict[str, Any]]:
@@ -276,6 +317,15 @@ def test_plan_verifies_pages_and_builds_withheld_evidence_bundle(
     bundle = build_historical_replay_bundle(verified)
 
     assert result.mode == "plan"
+    assert result.source_manifest_checksum == (
+        "31e6a00694b5782f500bb2031ed6fdf649894d14f38054cfe61570a547bdd862"
+    )
+    assert result.replay_digest == (
+        "9e30cf4ec9c6cddac579cadac2c60fe4bc4f9af165e42973af1f06a6247e5fc4"
+    )
+    assert result.bundle_manifest["bundle_manifest_checksum"] == (
+        "21f3ac1a254e2b945ba6c3e065d753cb994c765cf0cf0841ae21d77856b8c279"
+    )
     assert result.output_manifest_path is None
     assert result.report["verified_page_count"] == 12
     assert result.report["provider_record_counts"] == {"arxiv": 1, "inspire": 1}
@@ -359,6 +409,7 @@ def test_plan_verifies_pages_and_builds_withheld_evidence_bundle(
         "historical-paper-merge-plan-v1"
     )
     assert result.bundle_manifest["merge_plan_digest"]
+    assert "acquisition_scope" not in result.bundle_manifest
 
     occurrences = _artifact_rows(bundle, "source-occurrences")
     assert {item["provider"] for item in occurrences} == {"inspire", "arxiv"}

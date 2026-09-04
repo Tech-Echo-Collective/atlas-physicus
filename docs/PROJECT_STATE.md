@@ -1,380 +1,231 @@
 # Physics Atlas project state
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-04
 
-This file records the factual operating state of the project. Read it with [durable decisions](DECISIONS.md), the [roadmap](roadmap.md), and the [worklog](WORKLOG.md) before major work.
+This is the canonical snapshot of the project's current operating and
+scientific state. Read it with [durable decisions](DECISIONS.md), the
+[roadmap](roadmap.md), the compact [history](HISTORY_SUMMARY.md), and the
+recent [worklog](WORKLOG.md). Exact scientific measurements belong in the
+linked validation reports rather than being repeated throughout the project
+documentation.
 
-## Current release
+## Release and scope
 
-- Current release: `v3.0.5-alpha`.
+- Current release: `v3.0.5-alpha`; the annotated tag remains at `b1974d2`.
 - Source branch: `main` in `Tech-Echo-Collective/Physics-Atlas`.
-- The `v3.0.5-alpha` annotated tag identifies the stabilization and scientific-
-  validation release commit. Existing `v3.0.4-alpha` remains unchanged at
-  `09f5d855a3ef28d687f5f888f0227a8f911b69de`.
-- The active source phase is the post-v3.0.5 scientific-modeling foundation
-  within **Stabilization & Scientific Validation**. It adds Metric System v1
-  implementation and attribution infrastructure without changing the released
-  tag, widening the live corpus, or beginning v3.1.
+- The active phase is post-release **Stabilization & Scientific Validation**
+  for Metric System v1. It does not change the release tag, begin v3.1, or
+  authorize a Full Physics load.
+- Production acquisition remains `hep-th-v1`. Condensed Matter work is an
+  isolated, staging-only validation scope; it is not a production source or a
+  broad-Physics activation boundary.
+- Public live observations for Activity, Impact, Connectivity, Diversity, and
+  Momentum remain jointly withheld. Missing evidence is not displayed as
+  zero, and no partial activation is allowed.
 
-## Implemented systems
+## Operated system
 
-### Frontend
+### Public Atlas
 
-- React, TypeScript, Vite, MapLibre GL JS, and Zod application.
-- Map-first world → country → institution → researcher exploration.
-- Domain, field, and continuous time navigation.
-- Static synthetic repository, preserved historical INSPIRE-HEP pilot repository, and API-backed repository behind one repository boundary.
-- Validated API responses, pagination, caching, cancellation, stale-response protection, scoped map/profile loading, and deep-link hydration.
-- Explicit provenance and missing-data treatment; a missing metric is not converted to zero.
-- Viewport-bounded desktop controls, independently scrollable field and
-  institution lists, compact live-data language, and tablet timeline/card
-  overlap protection.
-- Compact live methodology/status inside the existing information control;
-  map presentation remains primary.
-- Multipolygon, disconnected-territory, and antimeridian rendering, including the established China geographic-view behavior and Russia/Kaliningrad handling.
+- React, TypeScript, Vite, MapLibre GL JS, and Zod implement the map-first
+  Physics domain → field → time → world → country → institution → researcher
+  exploration path.
+- The normal public source is `APIRepository`. Synthetic fixtures and the
+  historical pilot remain isolated internal sources for tests,
+  reproducibility, and explicit fallback only.
+- Repository and dataset-kind checks prevent live/static data mixing.
+  Missing observations render as a neutral state.
+- The public Pages project is
+  `Tech-Echo-Collective/Physics-Atlas-Web`. Its configured backend is
+  <https://physics-atlas-api-production.up.railway.app/api>.
+- `https://atlas.techecho.org/` is the canonical target hostname. The legacy
+  Pages/inherited origins remain in transition CORS until DNS, Pages custom
+  domain, certificate, redirects, and client behavior are separately verified.
 
-### Backend and data platform
+### Backend and evidence platform
 
-- FastAPI read service with typed, paginated Atlas, profile, provenance, search, update-status, and health endpoints.
-- PostgreSQL persistence through SQLAlchemy and Alembic.
-- Canonical entities and temporal relationships, raw provider evidence, source snapshots, authority identifiers, resolution/review records, dataset updates, cursors, resources, metric observations, paper-time attribution projections, and joint metric-system release manifests.
-- Incremental, auditable, idempotent update engine with closed-window checkpoints and PostgreSQL advisory locking.
-- Versioned `hep-th-v1` scheduled acquisition: INSPIRE `subject:Theory-HEP`,
-  arXiv `cat:hep-th`, and direct ROR refreshes only for configured known IDs.
-- Targeted record lookup implementations for known ORCID iDs and DOIs through ORCID and Crossref.
-- External-resource enrichment and bounded resource-health monitoring.
-- Scope-bound provider cursors, snapshots, and dataset provenance that fail closed
-  rather than reusing or mixing a broader acquisition scope.
-- Bounded provider HTTP retries, rate-limit handling, per-provider origin
-  isolation, strict response envelopes, and conservative authority-conflict review.
-- Affected metric-partition planning still uses `NoFormulaMetricRecalculator`;
-  no unreviewed scientific scores are written by the production worker.
-- Paper-time affiliation materialization with exact Fractional Attribution v1
-  conservation, explicit unresolved/ambiguous/missing mass, preserved subunit
-  and contribution-statement provenance, versioned supersession, and explicit
-  paper-native/INSPIRE → arXiv precedence. Undated ORCID and current-profile
-  evidence cannot become a historical projection, unresolved cross-provider
-  target conflicts remain withheld regardless of provider tier, and partial
-  evidence cannot erase stronger author-slot evidence.
-- The versioned Physics Field Ontology v1 and separate INSPIRE/arXiv provider
-  mapping layer, including raw-category and primary/secondary-role preservation,
-  explicit unmapped evidence, one conserved cross-provider selected ledger, and
-  equal mapped-field shares when no reviewed unequal policy exists.
-- Deterministic raw calculators and metric-specific normalization for exactly
-  Activity, Impact, Connectivity, Diversity, and Momentum, plus field-balanced,
-  coverage-aware Physics aggregation.
-- Versioned Metric Validation Thresholds v1 and a fail-closed exact-five Joint
-  Activation Gate. It now requires the exact field-weighting and reconciliation
-  versions plus an explicit conservation pass; a legacy generic `jointGatePassed`
-  flag cannot publish observations. The implementation is testable scientific
-  infrastructure, not evidence that the live system is scientifically validated.
-- Additive metric-observation reconstruction metadata: definition, algorithm,
-  dataset and scope versions; raw value/unit; normalization method/parameters;
-  input count; quality flags; and calculation partition/time.
-- Current-version metric reads exclude stale definitions and dataset lineages,
-  deterministically select only same-algorithm recalculations, and fail
-  conflicting-algorithm partitions closed across map and profile endpoints.
-- Database-backed scientific activation reports and a joint release manifest
-  that fail closed, reject partial metric publication, and never create
-  observations by themselves.
-- Deterministic identity-review sampling, independently labeled validation
-  reports, and an aggregate public identity-quality summary.
-- Deterministic fixtures, PostgreSQL integration tests, and Docker Compose services for database, migration, API, and worker validation.
-- A staging-only `physics-atlas-backfill` boundary can acquire the fixed
-  `hep-th-v1`, 2020–2025 INSPIRE/arXiv raw trial into immutable external pages
-  with exact totals, checksums, and verified resume state. A separate
-  deterministic file-only replay now materializes content-addressed paper,
-  date, researcher-appearance, paper-time affiliation, ROR-anchor, citation,
-  field-ledger, attribution, and review-status evidence without database or
-  production-cursor access.
+- FastAPI, PostgreSQL, SQLAlchemy, and Alembic provide typed, paginated Atlas,
+  profile, search, provenance, update-status, metric, and health APIs.
+- Canonical entities, temporal relationships, raw provider records, immutable
+  source snapshots, authority and review decisions, cursors, update lineage,
+  paper-time attribution, and release manifests are persisted with explicit
+  provenance.
+- The update worker is bounded, resumable, idempotent, and scope-aware.
+  INSPIRE and arXiv are the scheduled `hep-th-v1` sources; ROR, ORCID, and
+  Crossref remain exact known-identifier enrichers rather than discovery
+  crawlers.
+- `NoFormulaMetricRecalculator` remains the production recalculation path. It
+  plans affected partitions but does not fabricate or publish scientific
+  scores.
+- Staging-only acquisition and file replay can preserve content-addressed raw
+  pages and deterministically materialize papers, authors, dates,
+  affiliations, institutions, citations, field ledgers, attribution, and
+  review status without touching production cursors or history.
 
-## Public deployment state
+## Production health
 
-- The public entry point is the separate
-  `Tech-Echo-Collective/Physics-Atlas-Web` GitHub Pages project. Its canonical
-  target URL is <https://atlas.techecho.org/>.
-- The deployed application is built with
-  `VITE_ATLAS_API_URL=https://physics-atlas-api-production.up.railway.app/api`
-  and uses `APIRepository` on normal clean routes. The previous inherited Pages
-  path, <https://techecho.org/Physics-Atlas-Web/>, remains a migration origin
-  until the separate DNS, Pages custom-domain, certificate, and redirect
-  cutover is completed and verified; this source change does not claim that
-  cutover has occurred.
-- The normal public source selector exposes only the live API. Synthetic framework and historical pilot repositories remain available only through explicit internal routes for tests, reproducibility, and first-load failure fallback.
-- Data-source resolution, repository boundaries, dataset-kind validation, and scoped live merges prevent live/static record mixing.
-- The production API currently publishes no reviewed metric observations. All
-  five live layers fail the joint evidence gate and remain
-  explicitly withheld. The public map stays neutral; missing data is not zero.
-- The post-v3.0.5 source foundation does not itself claim a production schema
-  migration, historical materialization, backfill, worker recalculation, or
-  public deployment. The operated v3.0.5 baseline remains the live reference
-  until those steps are separately validated.
+Read-only verification on 2026-09-04 found:
 
-## Repository and CI health
+- runtime `3.0.5-alpha` and database health both healthy;
+- last successful update at `2026-09-04T11:06:52.602129Z`;
+- INSPIRE and arXiv healthy with zero consecutive failures;
+- metric recalculation idle;
+- 440 unresolved entities and three existing resource-check failures reported
+  for follow-up, with no current provider failure;
+- zero public metric observations.
 
-- The `v3.0.5-alpha` release gate includes 123 frontend component/data tests,
-  seven deterministic pipeline tests, 113 backend tests, strict TypeScript and
-  mypy checks, ESLint/Ruff, production builds, a fresh migration plus drift
-  check, deterministic fixture ingestion, local API/CORS contract checks, and
-  zero npm audit findings. The tag is created only after the GitHub frontend,
-  PostgreSQL backend, and container jobs pass on the release commit.
-- The v3.0.5 implementation commit `ba44c7e` passed GitHub Actions
-  [run 33191858046](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33191858046): frontend verification, PostgreSQL-backed backend validation and migration drift checks, deterministic ingestion/API checks, and the Docker Compose job all succeeded.
-- The preceding main failure was a stale CI assertion that expected scheduled ROR
-  output even when no reviewed ROR IDs were configured. CI now verifies the
-  intentional `hep-th-v1` INSPIRE/arXiv safe default and its scope versions.
-- The preceding v3.0.4 public activation at `Physics-Atlas-Web` main commit
-  `13f1d5b` passed and deployed through GitHub Pages
-  [run 33186585196](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33186585196). Its `atlas` submodule is pinned to validated Physics Atlas main commit `45da545`; the `v3.0.4-alpha` tag was not moved.
-- The v3.0.5 public deployment updates that submodule to the release commit and
-  retains `APIRepository` as the normal clean-route source; synthetic and pilot
-  repositories remain isolated reproducibility/fallback modes.
-- Both npm dependency audits reported zero vulnerabilities, and the installed
-  backend environment reported no broken Python requirements. No broad
-  dependency upgrade was justified.
+Railway production data, update history, and release tags have not been
+modified by the current validation work. Backup/restore evidence, restart and
+incident rehearsal, rate protection, longer-running monitoring, and alerting
+remain operator responsibilities.
 
-The post-v3.0.5 Metric System v1 implementation completed its local validation
-gate on 2026-08-30: frontend type checking, lint, 130 Vitest tests across 24
-files, seven deterministic pipeline tests, and the production build passed;
-backend Ruff, strict mypy across 48 source files, and 172 pytest tests passed;
-Alembic upgrade, drift check, head verification, and upgrade/downgrade coverage
-passed. A fresh deterministic fixture worker database produced one canonical
-paper, two paper-time affiliation rows, zero metric observations, and one
-withheld joint release, as intended.
+## Metric System v1
 
-After that full run, a URL-state regression was corrected so an absent `year`
-parameter remains absent and the repository dataset period is used instead of
-coercing the missing value to year `0`; a regression test records the case. The
-complete frontend validation rerun then passed. Docker is not available in this
-local environment, so GitHub Actions remains the final PostgreSQL/container
-validation gate. The implementation is recorded in commit `fe752f0`; its
-GitHub Actions validation passed in [run 33300307090](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33300307090), including the PostgreSQL and container jobs.
-
-The bounded canonical-replay implementation completed its local validation gate
-on 2026-08-31: frontend type checking, lint, 130 Vitest tests, seven pipeline
-tests, and the production build passed; backend Ruff across 81 files, strict
-mypy across 52 source files, and all 258 pytest tests passed. A fresh migration,
-drift check, deterministic fixture seed/update, replay/ROR artifact verification,
-idempotency, and exact conservation checks passed. Implementation commit
-`b20e3d9` passed GitHub Actions
-[run 33368874387](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33368874387),
-including the PostgreSQL migration/fixture/API and container jobs.
-
-## Backend deployment state
-
-- The production Railway API is operating at <https://physics-atlas-api-production.up.railway.app/api> with a healthy database and runtime version `3.0.5-alpha`.
-- The production evidence verified on 2026-08-31 reported `datasetKind:
-  live-api`, acquisition scope `hep-th-v1`, period `2026`, update sequence 12,
-  dataset version `live-20260830T204627Z-518fb4d4`, and a last successful
-  update at 2026-08-30 20:46:38 UTC. INSPIRE and arXiv reported healthy cursor
-  state, zero consecutive failures, and idle metric recalculation. The metric
-  endpoint returned zero observations. The
-  persisted additive dataset schema identifier remains `3.0.4-alpha`; the
-  runtime and newly emitted provenance are v3.0.5.
-- Earlier representative v3.0.5 warm API reads returned HTTP 200 in
-  0.19--0.27 seconds. The bounded responses ranged from 43 bytes for an empty
-  metric page to 10,135 bytes for the seven-definition metric registry; these
-  timings were not remeasured in the 2026-08-30 production snapshot.
-- The transition CORS contract admits the exact legacy GitHub Pages origin,
-  the inherited `techecho.org` origin, and `https://atlas.techecho.org` for GET
-  and preflight requests, while denying an untrusted origin. The deployed Pages
-  bundle contains the configured
-  HTTPS API endpoint. The public Pages root returns HTTP 200; direct deep-link
-  transport returns GitHub Pages HTTP 404 with the expected SPA fallback shell,
-  which the client uses to restore the route.
-- `compose.production.yml`, Caddy configuration, a production environment
-  template, and an operator runbook now configure PostgreSQL, migrations,
-  FastAPI, the bounded worker, and automatic HTTPS for a single authorized host.
-- The API now consumes Railway's standard `DATABASE_URL` and `PORT`, normalizes
-  generic PostgreSQL URLs to the installed psycopg 3 driver, and refuses to
-  start in production fixture mode. The runbook records the required Dockerfile
-  path, API migration/health gate, and separately sequenced worker service.
-- The production definition fixes `hep-th-v1`, disables fixtures, admits only
-  the three exact transition origins, keeps PostgreSQL/FastAPI unpublished, and
-  leaves credentials in an ignored operator environment file.
-- Railway provisioning, managed PostgreSQL, API, and bounded worker activation are complete. Secret values remain outside the repository.
-- Off-host backup/restore evidence, rate protection, longer-running monitoring,
-  alerting, and operational rehearsal remain operator responsibilities and have
-  not been verified from this repository context.
-
-## Data-source state
-
-All retained modes remain isolated:
-
-- **Synthetic framework:** hand-authored UI and architecture test data.
-- **Historical INSPIRE-HEP pilot:** bounded, reproducible provider metadata retained for methodology and regression work.
-- **Live API fixture mode:** deterministic connector fixtures exercising the complete database/API path in development and CI.
-- **Provider-backed live mode:** deployed through Railway and used by the public Pages application as the normal data path.
-
-The implemented provider-backed path is bounded to the requested activation
-corpus:
-
-- `hep-th-v1` is the only accepted acquisition policy.
-- INSPIRE requests `subject:Theory-HEP`; arXiv requests `cat:hep-th`.
-- ROR never scans the registry. It refreshes only configured, normalized known
-  IDs and is skipped when the target list is empty.
-- ORCID and Crossref remain targeted lookups. Crossref was smoke-tested with a
-  DOI already discovered in the bounded corpus; no known ORCID was present, so
-  ORCID was correctly not queried.
-- A scope mismatch in the provider cursor or live dataset fails before provider
-  I/O. Synthetic, fixture, pilot, and provider-backed records remain isolated.
-
-An isolated local provider smoke run covered the closed historical window
-2025-01-01 through 2025-01-02. It persisted four real INSPIRE/arXiv source
-snapshots, 22 raw records, and seven canonical papers in a temporary database;
-the arXiv window completed and the deliberately one-record INSPIRE pagination
-checkpoint remained resumable. Fresh worker processes resumed both provider
-checkpoints, FastAPI served the persisted records before and after restart, and
-a three-resource monitoring pass completed. This is staging evidence, not a
-production update or public dataset.
-
-A separate staging-only 2020–2025 `hep-th-v1` raw trial completed on 2026-08-30:
-43,439 INSPIRE plus 44,773 arXiv occurrences across 628 verified pages and 12
-exact provider/year partitions. Final manifest checksum is
-`e3dba5492e0dee3fb0b359cd90acd9cc07991e83b89cb6f16c49b498c4e65536`.
-The first run failed safely at arXiv 2025 offset 4,600; the finalized loader
-verified/skipped all completed pages and resumed only the unfinished partition.
-This established raw provider-record completeness, not normalized
-publication-year completeness, canonical materialization, or metric-year
-certification. Full evidence is recorded in the
-[bounded dry-run report](validation/metric-system-v1-hep-th-2020-2025-dry-run.md).
-
-On 2026-08-31, a deterministic file-only replay reused that exact acquisition
-without redownloading the papers. It preserved 88,212 source occurrences as
-47,726 paper components, 142,309 researcher appearances, 183,247 affiliation
-shares, 47,726 field/attribution ledgers, and 43,439 citation observations.
-Target-only ROR acquisition preserved and canonicalized 2,131 exact staged
-identifiers; no registry search occurred. The replay and institution projections
-remain external staging artifacts and created no database row or metric
-observation. Full evidence is
-recorded in the
-[canonical replay report](validation/metric-system-v1-hep-th-2020-2025-canonical-replay.md).
-
-## Scientific validation result and limitations
-
-### Metric System v1 source foundation
-
-- The canonical scientific-attribution policy is implemented as
-  `fractional-attribution-v1`: each paper carries total mass one, author shares
-  are equal by default, multi-affiliation author shares are divided equally,
-  and unresolved mass remains withheld rather than being redistributed.
-- `physics-field-ontology-v1` supplies a broad, versioned Physics hierarchy.
-  `provider-field-mapping-v1` keeps INSPIRE/arXiv taxonomy evidence separate,
-  preserves raw categories and roles, and does not invent unmapped membership.
-- The five versioned Metric System v1 algorithms now implement fractional
-  Activity, cohort-normalized Impact with PP(top 10%) evidence, collaboration
-  proportions, normalized Shannon Diversity, and backward-looking
-  field-relative Momentum. Raw inputs and fitted normalization provenance are
-  preserved for reconstruction.
-- Physics-wide results are derived only after field-specific calculation and
-  normalization, using `physics-field-balanced-coverage-aware-v1`; raw counts
-  are never pooled across fields.
-- `metric-validation-thresholds-v1` and the exact-five activation manifest keep
-  every live layer jointly withheld until attribution, ontology/mapping,
-  history, citation maturity, coverage, normalization, and deterministic
-  reproduction evidence all pass review.
-- Reference seeding preserves an exact reviewed activation but never creates
-  one. Public reads also require the complete exact-five live definition set;
-  a partial or internally inconsistent activation returns no observations.
-- The user composite remains an explicitly confirmed exploratory perspective
-  over exactly the five dimensions. It is not an official score or ranking.
-- A linked Paper ↔ Researcher ↔ paper-time Affiliation ↔ Institution reference
-  validation framework is present. Named research ecosystems are sanity-check
-  anchors only and cannot impose a preferred ordering.
+- The system consists of exactly Activity, Impact, Connectivity, Diversity,
+  and Momentum.
+- `fractional-attribution-v1` conserves one paper unit and leaves unresolved
+  mass explicit. Paper-time evidence follows paper-native/INSPIRE → arXiv →
+  dated ORCID precedence; current profiles cannot overwrite history.
+- `physics-field-ontology-v1` and `provider-field-mapping-v1` preserve provider
+  categories and roles. Each paper conserves exactly one unit across mapped
+  field weights plus explicit unmapped mass.
+- Raw calculators, dimension-specific normalization, and
+  `physics-field-balanced-coverage-aware-v1` Physics aggregation are
+  deterministic and reconstructable from versioned evidence.
+- `metric-validation-thresholds-v1` and the exact-five Joint Activation Gate
+  require sufficient attribution, reviewed mappings, comparable citations,
+  certified history, eligible cohorts, normalization sanity, provenance, and
+  deterministic reproduction.
+- Joint evidence must identify its acquisition boundary. Public activation
+  requires reviewed `broad-physics` evidence; `hep-th-v1`, the Condensed Matter
+  trial, and an unreviewed union of specialty trials remain
+  `field-conditioned` under PA-040.
+- Passing implementation tests or a specialty-field sanity check is not
+  scientific activation. A single-field `hep-th-v1` Diversity result cannot
+  validate Physics-wide Diversity.
 
 Canonical specifications are [Scientific Attribution](scientific-attribution.md),
 [Field Ontology](field-ontology.md), [Metric System v1](metrics-spec-v1.md), and
 [Metric Validation](metric-validation.md).
 
-### Current operated evidence
+## Track A — `hep-th-v1` evidence
 
-- The bounded production snapshot verified on 2026-08-30 has 177 canonical
-  papers, 475 researchers, 501 authorships, nine source snapshots, and nine
-  dataset updates. It still has zero canonical institutions, zero profile
-  affiliations, and zero metric observations. Historical-window completeness
-  has not been established.
-- Identity resolution has 1,383 outcomes: 1,028 matched, 355 unresolved and
-  open for review, and zero ambiguous. Researcher outcomes total 780 (754
-  matched and 26 unresolved); paper outcomes total 603 (274 matched and 329
-  unresolved); institution outcomes remain zero. These counts describe
-  workflow and evidence coverage, not precision, error rate, or scientific
-  validity.
-- A bounded Metric System v1 activation diagnostic on 2026-08-30 found 603
-  incremental raw paper occurrences and 177 canonical papers. Raw records
-  contain 1,643 author slots, of which 1,499 (91.236%) carry at least one of
-  2,021 affiliation assertions, but there are still zero canonical institutions
-  and therefore zero allocatable canonical institution mass. All 177 matched
-  canonical papers have at least one finite raw citation count and a provider-
-  derived field label; neither result is reviewed activation evidence. The
-  reviewed field-attribution numerator and the set of certified complete years
-  are both zero.
-- The final staging replay grouped 80,957 provider occurrences into 40,471
-  multi-record paper components and retained 7,255 singletons. Of 47,726 total
-  components, 47,254 are matched and 472 remain `needs_review`. Every component
-  has valid normalized event-date evidence, but no canonical metric cohort date
-  was selected and no year is certified.
-- Fractional paper-time affiliation evidence covers 89.263140% of total paper
-  mass. Exact canonical-child ROR resolution covers 41.961719%; the stricter
-  PA-035 active parent/self rollup covers 34.969191% against the 95% gate. Five
-  non-unique author projections remain explicitly unmaterialized. All evaluated
-  attribution and institution mass-conservation checks pass.
-- Field ledgers conserve 44,360.570996 mapped plus 3,365.429004 explicit
-  unmapped units with zero violations. Multi-field ledgers are 76.419562%, but
-  all 47,726 classifications remain unreviewed, so activation coverage is zero.
-- Raw non-self citation-count presence is 91.011189%, but common-cutoff
-  comparable coverage and mature certified Impact cohorts are both zero. The
-  acquisition completion timestamp is only an upper bound because source-page
-  capture times are unavailable. Raw 2020–2025 partitions are complete, while
-  certified canonical years remain zero and both Momentum windows remain false.
-- The same diagnostic corrected four bounded implementation defects: live
-  validation now measures current `PaperAffiliation` mass rather than profile
-  `Affiliation` rows, does not treat "paper has an author" as collaboration
-  relationship coverage, and does not require geographic attribution for a
-  researcher-only Connectivity partition. INSPIRE normalization also now uses
-  a valid `earliest_date` when journal-year metadata is absent. No production
-  records were reprocessed and no metric was activated.
-- No independently labeled live truth sample exists, so precision, recall, and
-  confidence calibration remain withheld. Institution/ROR validation cannot be
-  measured against the operated canonical graph until reviewed production
-  institution materialization exists.
+The immutable 2026-08-31 source and canonical-replay reports remain the source
+of truth:
 
-- Raw INSPIRE/arXiv affiliation, reference, field, date, and citation structures
-  are preserved. The staging replay can create versioned paper-time and exact-
-  ROR projections conservatively, but no production migration, reviewed
-  backfill, or sufficient activation coverage has been demonstrated.
-- Institution/country attribution therefore remains too incomplete for a useful live geographic research view.
-- The five formulas are implemented and deterministic, but they have not passed
-  representative scientific review or the Joint Activation Gate. Affected
-  partitions are recorded, but no live country or institution heat values are
-  fabricated.
-- The live frontend can correctly show a neutral missing-data map, but that is not yet a useful scientific activity heatmap.
-- Resolver precision has not been calibrated against a representative reviewed truth set, and there is no public resolution-review interface. The deterministic sample/report framework is present for that next bounded review.
-- arXiv acquisition tracks new submissions through `submittedDate`; it is not a complete subsequent-revision stream.
-- Production ROR targets remain operator-configured. Historical replay uses
-  only exact ROR IDs already preserved in staged affiliation evidence; it does
-  not authorize automatic registry search or a production historical write.
-- Retraction, tombstone, cross-provider conflict, large-backfill, and long-term provider-payload retention policies require review before wider operation.
+- source manifest `e3dba5492e0dee3fb0b359cd90acd9cc07991e83b89cb6f16c49b498c4e65536`;
+- replay bundle `d125a0861df03c5e1e7e20202db06f7d2506e0e8e9fb3fca732e7208f4349d82`;
+- institution-resolution manifest
+  `4e0f58bdc4d44836e013a2b311998858e4a1894bcecd06d617e2cfa5211ece38`;
+- 88,212 provider occurrences and 47,726 paper components;
+- paper-time affiliation evidence: 42,601.726004 / 47,726 = 89.263140%;
+- activation-eligible canonical institution mass: 16,689.396051 / 47,726 =
+  34.969191%;
+- common-cutoff comparable citations: 0 / 47,726;
+- reviewed field ledgers: 0 / 47,726;
+- certified canonical years: none; both Momentum windows unready;
+- 472 paper components need merge review, 11,143 researcher appearances lack
+  authority, 61 authority conflicts remain, and five author projections were
+  not uniquely materialized;
+- all measured attribution, institution, and field-mass conservation checks
+  passed; metric observations created: zero.
 
-## Immediate task after the bounded canonical replay
+The original external raw/replay payloads are no longer available, so those
+row-level results cannot be enriched or recomputed from Git alone. A new run
+must be a fresh, separately versioned paired capture rather than mixing current
+provider data with the historical denominator. Validated staging tooling now
+supports exact INSPIRE institution-to-ROR evidence and exact arXiv-ID
+paper-affiliation enrichment while retaining precedence and conservation, but
+no new evidence delta is claimed.
 
-Preserve the hosted source → PostgreSQL → FastAPI → `APIRepository` path and
-keep `hep-th-v1` bounded. Do not repeat paper acquisition. The next minimum
-action is independent review and missing-evidence work:
+Against the unchanged thresholds, the historical replay remains short by at
+least 351.673996 paper units of affiliation evidence and 28,650.303949 paper
+units of activation-eligible institution evidence. Citation comparability and
+reviewed field attribution each require at least 42,954 components, and six
+canonical years, eligible Impact cohorts, and both Momentum windows still need
+certification.
 
-1. review the 472 paper identities and select a versioned canonical metric
-   cohort-date rule before certifying any year;
-2. resolve/review the exact-ROR parent and missing-authority blockers, starting
-   with the 31,036.603949 paper mass withheld by the strict institution gate;
-3. independently label provider field mappings and retain explicit unmapped
-   mass; `hep-th-v1` still cannot validate broad-field Diversity;
-4. acquire source-page or equivalent citation observation timestamps at a
-   common cutoff, then form mature field/year/document cohorts;
-5. certify all six canonical years, validate Impact and Momentum cohorts and
-   normalization, and rerun the exact Joint Gate;
-6. prepare an activation manifest only if all five dimensions pass together.
+Exact evidence:
 
-Do not begin v3.1, expand to all Physics, or activate a live heatmap merely to
-fill the map. Canonical merge, ROR authority, citation-cutoff, multi-source
-field review, affiliation precedence, and field conservation policies are now
-frozen. The replay remains staging-only; production history and public metrics
-stay unchanged until the reviewed gate genuinely passes.
+- [raw dry run](validation/metric-system-v1-hep-th-2020-2025-dry-run.md)
+- [canonical replay](validation/metric-system-v1-hep-th-2020-2025-canonical-replay.md)
+- [bounded improvement readiness](validation/metric-system-v1-hep-th-evidence-improvement-readiness.md)
+
+## Track B — bounded Condensed Matter validation
+
+The isolated, field-conditioned `cond-mat-validation-v1` trial completed its
+staging-only 2020–2025 acquisition and deterministic replay without touching
+production:
+
+- 160,294 source records—32,198 INSPIRE and 128,096 arXiv—were preserved across
+  30 complete provider partitions and replayed into 129,464 paper components;
+- source manifest
+  `484880ef2fd03163b393fff2a38a1901340550d5423da058c43f5210c9ed0384`,
+  replay bundle
+  `26c51e77b696e2d4d3636074107f0751be9289b9e95f62f837abd8b106f8376f`,
+  and content-addressed report
+  `8d9b04e2616ee8450b7aef919f3dfded2bcb8004c9f4c031fb6aade96f3409cd`
+  reproduced exactly across two complete replays;
+- paper-time affiliation coverage is 32,893.131711 / 129,464 = 25.407165%,
+  short by 83,624.468289 paper units; 48 paper ledgers have non-unique author
+  projections;
+- canonical-institution coverage is not measurable, rather than zero: 34,541
+  direct ROR alignments across 1,667 provider authority anchors were not
+  promoted to canonical institutions;
+- reviewed field attribution and common-cutoff comparable citations are each
+  0 / 129,464, short by 116,518 components apiece; 55,228 field ledgers retain
+  explicit unmapped mass;
+- affiliation, attribution, and field-weight conservation all pass with zero
+  failures; no missing or unresolved mass was reassigned;
+- raw provider query windows are complete for all six years, but certified
+  canonical metric years remain 0 / 6, mature Impact cohorts remain zero, and
+  both Momentum windows remain unready;
+- unresolved evidence includes 510,576 shares with no affiliation evidence,
+  189,863 unresolved shares, 222 ambiguous shares, 516,108 researcher
+  appearances without an authority identifier, 135,945 with unreviewed
+  authority evidence, two with conflicting identifiers, and 354 paper
+  components requiring identity review.
+
+Activity, Impact, Connectivity, Diversity, and Momentum are all **withheld**.
+No eligible normalization cohort was materialized, and no metric observation
+was calculated or published. Exact evidence and limitations are in the
+[Condensed Matter validation report](validation/metric-system-v1-cond-mat-2020-2025-validation.md).
+
+## Joint activation state
+
+The completed comparison-only exact-five assessment is **WITHHELD** for
+Activity, Impact, Connectivity, Diversity, and Momentum. It keeps the two
+specialty tracks separate—no denominators were averaged and no combined data
+source was invented. Both tracks have 0% comparable-citation and reviewed-field
+coverage, 0 / 6 certified canonical years, and 0 / 2 ready Momentum windows;
+their distinct affiliation and institution deficits are recorded above.
+
+The comparison remains field-conditioned, has no reviewed broad-Physics
+Diversity evidence, no eligible normalization cohorts, and incomplete
+reconstruction provenance. It therefore cannot satisfy PA-040 even if a
+specialty-field internal check later passes. Public metric observations remain
+zero, no activation manifest was prepared, and Full Physics loading is **not
+authorized**. The exact gate input and output are preserved in the
+[dual-track Joint Activation assessment](validation/metric-system-v1-dual-track-joint-activation.md).
+
+## Repository validation state
+
+- The last committed baseline, `f88385c`, passed GitHub Actions run
+  [33369163931](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33369163931).
+- The completed bounded dual-track work passes backend Ruff format and lint,
+  strict mypy, and all 284 pytest tests; pytest reports one dependency
+  deprecation warning.
+- Frontend TypeScript checking and lint pass, as do 130 Vitest tests, seven
+  pipeline tests, and the production build. The existing bundle chunk-size
+  warning remains non-blocking.
+- The result commit, push, clean-tree confirmation, and GitHub Actions run are
+  pending. Existing release tags remain unchanged.
+
+## Immediate next action
+
+Commit and push the validated dual-track result, then require a green GitHub
+Actions run and record its provenance. The next scientific work must remain a
+separately reviewed evidence task: canonical institution projection, reviewed
+field mapping, common-cutoff citation cohorts, canonical cohort dates, and
+historical-window certification. Keep production history and public metrics
+unchanged; Full Physics loading and v3.1 remain unauthorized.

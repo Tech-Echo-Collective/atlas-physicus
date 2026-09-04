@@ -35,8 +35,8 @@ The release tag remains the architectural baseline. The follow-up Production Act
 
 ## Current milestone — v3.0.5-alpha Stabilization & Scientific Validation
 
-Status: **released baseline with post-release scientific foundation in
-validation**. This milestone stabilizes the live v3.0.4 system; it does not
+Status: **released baseline with completed bounded dual-track validation**.
+This milestone stabilizes the live v3.0.4 system; it does not
 expand beyond the bounded Physics scope or redesign the production
 architecture.
 
@@ -91,7 +91,8 @@ historical materialization, citation reconstruction, wider ingestion, and
 public recalculation are not implied. All five live layers remain jointly
 withheld.
 
-The bounded 2020–2025 acquisition and staging replay are now complete: 88,212
+The bounded `hep-th-v1` 2020–2025 acquisition and staging replay are complete:
+88,212
 official provider occurrences across 12 exact provider/year partitions were
 preserved as 47,726 paper components with content-addressed relationship,
 field, citation, attribution, and ROR-authority evidence outside the database.
@@ -100,6 +101,17 @@ readiness. It leaves zero metric-certified years, zero comparable citation
 cohorts, zero reviewed field ledgers, and only 34.969191% activation-eligible
 institution rollup mass. It does not authorize a production historical write,
 metric activation, or wider acquisition.
+
+Current bounded validation also includes an isolated 2020–2025 Condensed
+Matter trial. It is a complementary full-five-metric method test, not a
+production load. Its completed replay preserved 160,294 provider records as
+129,464 paper components, but paper-time affiliation coverage is only
+25.407165%; reviewed field and common-cutoff citation coverage are both zero;
+canonical-institution coverage is not measurable; and certified canonical
+years and ready Momentum windows remain zero. All five metrics are withheld.
+Both specialty trials remain field-conditioned; neither their individual
+results nor an unreviewed comparison can satisfy the PA-040 broad-Physics
+activation boundary.
 
 Remaining scientific and operational gates are:
 
@@ -130,9 +142,9 @@ Before broad live ingestion, the project should validate:
 
 The roadmap does not currently commit to a graph database, Kubernetes, authentication, full-text paper archive, recommendation engine, prediction model, automatic researcher ranking, or universal live-data coverage. Those additions require a demonstrated scientific or operational need.
 
-The next minimum action is independent review of the staged paper identities,
-canonical cohort dates, institution-parent rollups, and field mappings, plus
-common-cutoff citation evidence. Only after all six canonical years and the
-Impact/Momentum/normalization evidence are certified should the exact Joint
-Gate be rerun. Production history, broader Physics coverage, v3.1, and live
-metric activation remain gated.
+The current minimum action is to record the validated dual-track commit and
+green CI, then separately scope the smallest reviewed evidence work for
+canonical institutions, field mappings, common-cutoff citations, canonical
+cohort dates, and six-year historical certification. The completed exact Joint
+Gate remains withheld. Production history, broader Physics coverage, v3.1,
+and live metric activation remain gated.

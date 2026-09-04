@@ -434,23 +434,26 @@ def build_canonical_paper_merge_plan(
     for index in range(len(occurrences)):
         indices_by_root[union_find.find(index)].append(index)
 
+    occurrence_index_by_id = {
+        occurrence.occurrence_id: index for index, occurrence in enumerate(occurrences)
+    }
+    evidence_by_root: dict[int, list[PaperMergeEvidence]] = defaultdict(list)
+    for item in all_evidence:
+        left_root = union_find.find(occurrence_index_by_id[item.left_occurrence_id])
+        right_root = union_find.find(occurrence_index_by_id[item.right_occurrence_id])
+        if left_root != right_root:
+            raise AssertionError("merge evidence crosses canonical components")
+        evidence_by_root[left_root].append(item)
+
     components: list[CanonicalPaperComponent] = []
-    for indices in indices_by_root.values():
+    for root, indices in indices_by_root.items():
         component_occurrences = tuple(
             sorted(
                 (occurrences[index] for index in indices),
                 key=lambda item: item.occurrence_id,
             )
         )
-        component_ids = {item.occurrence_id for item in component_occurrences}
-        component_evidence = tuple(
-            sorted(
-                item
-                for item in all_evidence
-                if item.left_occurrence_id in component_ids
-                and item.right_occurrence_id in component_ids
-            )
-        )
+        component_evidence = tuple(sorted(evidence_by_root.get(root, ())))
         identifier_values = _component_identifier_values(component_occurrences)
         conflict_schemes = tuple(
             scheme

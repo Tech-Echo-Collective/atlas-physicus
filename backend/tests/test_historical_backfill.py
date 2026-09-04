@@ -1,6 +1,7 @@
 import hashlib
 import json
 import re
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
@@ -13,14 +14,19 @@ from physics_atlas_api.backfill import (
     ARXIV_QUERY_VERSION,
     BACKFILL_SCOPE,
     BACKFILL_YEARS,
+    COND_MAT_HISTORICAL_BACKFILL,
     INSPIRE_QUERY_VERSION,
     LEGACY_INSPIRE_QUERY_VERSION,
     BackfillAcquisitionError,
     BackfillSafetyError,
     HistoricalPartition,
+    PartitionResult,
+    StoredPage,
     _exact_inspire_total,
     _json_checksum,
+    _partition_result_from_dict,
     _print_progress,
+    _write_partition_state,
     build_partitions,
     execute_backfill,
     load_partition_states,
@@ -29,6 +35,8 @@ from physics_atlas_api.backfill import (
     validate_request,
 )
 from physics_atlas_api.config import Settings
+from physics_atlas_api.connectors.acquisition import resolve_acquisition_scope
+from physics_atlas_api.connectors.base import ConnectorConfigurationError
 
 
 class HistoricalFixtureTransport:
@@ -173,6 +181,18 @@ class HistoricalFixtureTransport:
         </feed>"""
 
 
+class _OverLimitArxivTransport(HistoricalFixtureTransport):
+    def _arxiv(self, params: dict[str, Any] | None) -> str:
+        return (
+            super()
+            ._arxiv(params)
+            .replace(
+                "<opensearch:totalResults>3</opensearch:totalResults>",
+                "<opensearch:totalResults>10000</opensearch:totalResults>",
+            )
+        )
+
+
 def settings() -> Settings:
     return Settings(
         database_url="sqlite://",
@@ -184,6 +204,16 @@ def settings() -> Settings:
 
 def partitions() -> tuple[HistoricalPartition, ...]:
     return build_partitions(
+        inspire_base_url="https://inspire.test/api",
+        arxiv_base_url="https://arxiv.test/api/query",
+        inspire_page_size=2,
+        arxiv_page_size=2,
+    )
+
+
+def cond_mat_partitions() -> tuple[HistoricalPartition, ...]:
+    return build_partitions(
+        scope=COND_MAT_HISTORICAL_BACKFILL.id,
         inspire_base_url="https://inspire.test/api",
         arxiv_base_url="https://arxiv.test/api/query",
         inspire_page_size=2,
@@ -227,6 +257,258 @@ def test_partitions_use_exact_fixed_scope_and_closed_year_queries() -> None:
             item.query_checksum
             == hashlib.sha256(item.query.encode("utf-8")).hexdigest()
         )
+
+
+def test_condensed_matter_trial_uses_exact_staging_only_provider_queries() -> None:
+    planned = build_partitions(scope=COND_MAT_HISTORICAL_BACKFILL.id)
+
+    assert len(planned) == 30
+    assert {item.acquisition_scope for item in planned} == {"cond-mat-validation-v1"}
+    assert [item.provider for item in planned[:6]] == ["inspire"] * 6
+    assert [item.year for item in planned[:6]] == list(BACKFILL_YEARS)
+    for item in planned:
+        if item.provider == "inspire":
+            assert item.query == (
+                'document_type:article and subject:"Condensed Matter" and '
+                f"de >= {item.year}-01-01 and de <= {item.year}-12-31"
+            )
+            assert item.query_version == (
+                "cond-mat-validation-v1:inspire:earliest-record-date-v1"
+            )
+        else:
+            boundaries = {
+                "q1": ("0101", "0331"),
+                "q2": ("0401", "0630"),
+                "q3": ("0701", "0930"),
+                "q4": ("1001", "1231"),
+            }
+            start, end = boundaries[item.segment]
+            assert item.query == (
+                f"(cat:cond-mat.*) AND submittedDate:[{item.year}{start}0000 "
+                f"TO {item.year}{end}2359]"
+            )
+            assert item.query_version == (
+                "cond-mat-validation-v1:arxiv:quarterly-submission-window-v2:"
+                f"{item.segment}"
+            )
+            assert item.page_size == 100
+
+    with pytest.raises(ConnectorConfigurationError, match="Unsupported"):
+        resolve_acquisition_scope(COND_MAT_HISTORICAL_BACKFILL.id)
+
+
+def test_condensed_matter_trial_rejects_an_unexpected_annual_arxiv_segment(
+    tmp_path: Path,
+) -> None:
+    planned = list(cond_mat_partitions())
+    q1_index = next(
+        index
+        for index, item in enumerate(planned)
+        if item.provider == "arxiv" and item.year == 2020 and item.segment == "q1"
+    )
+    planned[q1_index] = replace(planned[q1_index], segment="annual")
+
+    with pytest.raises(BackfillSafetyError, match="approved provider/year segments"):
+        execute_backfill(
+            "acquire",
+            output=tmp_path / "invalid-segment",
+            settings=settings(),
+            partitions=planned,
+            transports=transports(),
+        )
+
+
+def test_condensed_matter_segment_failure_resumes_in_its_own_state_directory(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "cond-resume"
+    first_transports = transports()
+    first_transports["arxiv"].fail_once = (2020, 2)
+    first = execute_backfill(
+        "acquire",
+        output=output,
+        settings=settings(),
+        partitions=cond_mat_partitions(),
+        transports=first_transports,
+    )
+
+    q1_first = next(
+        item
+        for item in first.partitions
+        if item.partition.provider == "arxiv"
+        and item.partition.year == 2020
+        and item.partition.segment == "q1"
+    )
+    assert q1_first.complete is False
+    assert q1_first.records_seen == 2
+    assert list((output / "partition-state" / "arxiv" / "2020" / "q1").glob("*.json"))
+
+    resumed_transports = transports()
+    resumed = execute_backfill(
+        "acquire",
+        output=output,
+        settings=settings(),
+        partitions=cond_mat_partitions(),
+        transports=resumed_transports,
+    )
+
+    assert resumed.successful is True
+    q1_calls = [
+        params
+        for _url, params in resumed_transports["arxiv"].calls
+        if params is not None and "202001010000" in str(params.get("search_query"))
+    ]
+    assert q1_calls == [
+        {
+            "search_query": (
+                "(cat:cond-mat.*) AND submittedDate:[202001010000 TO 202003312359]"
+            ),
+            "start": 2,
+            "max_results": 2,
+            "sortBy": "submittedDate",
+            "sortOrder": "ascending",
+        }
+    ]
+
+
+def test_condensed_matter_segment_rejects_provider_total_at_offset_boundary(
+    tmp_path: Path,
+) -> None:
+    result = execute_backfill(
+        "acquire",
+        output=tmp_path / "offset-boundary",
+        settings=settings(),
+        partitions=cond_mat_partitions(),
+        transports={
+            "inspire": HistoricalFixtureTransport("inspire"),
+            "arxiv": _OverLimitArxivTransport("arxiv"),
+        },
+    )
+
+    q1 = next(
+        item
+        for item in result.partitions
+        if item.partition.provider == "arxiv"
+        and item.partition.year == 2020
+        and item.partition.segment == "q1"
+    )
+    assert q1.complete is False
+    assert q1.records_seen == 0
+    assert q1.error is not None
+    assert "must remain below the provider offset boundary 10000" in q1.error
+
+    raw = PartitionResult(q1.partition, expected_total=10_000).as_dict()
+    with pytest.raises(BackfillSafetyError, match="provider offset boundary"):
+        _partition_result_from_dict(raw, {q1.partition.id: q1.partition})
+
+
+def test_condensed_matter_resume_metadata_rejects_segment_tampering() -> None:
+    q1 = next(
+        item
+        for item in cond_mat_partitions()
+        if item.provider == "arxiv" and item.year == 2020 and item.segment == "q1"
+    )
+    raw = {
+        **PartitionResult(q1).as_dict(),
+        "segment": "q2",
+    }
+    raw.pop("partition_checksum")
+    raw["partition_checksum"] = _json_checksum(raw)
+
+    with pytest.raises(BackfillSafetyError, match="metadata changed"):
+        _partition_result_from_dict(raw, {q1.id: q1})
+
+
+def test_annual_resume_metadata_rejects_an_explicit_segment_field() -> None:
+    annual = partitions()[0]
+    raw = {
+        **PartitionResult(annual).as_dict(),
+        "segment": "annual",
+    }
+    raw.pop("partition_checksum")
+    raw["partition_checksum"] = _json_checksum(raw)
+
+    with pytest.raises(BackfillSafetyError, match="metadata changed"):
+        _partition_result_from_dict(raw, {annual.id: annual})
+
+
+def test_same_rank_partition_state_conflict_fails_closed(tmp_path: Path) -> None:
+    planned = cond_mat_partitions()
+    q1 = next(
+        item
+        for item in planned
+        if item.provider == "arxiv" and item.year == 2020 and item.segment == "q1"
+    )
+    for marker in ("a", "b"):
+        checksum = marker * 64
+        _write_partition_state(
+            tmp_path,
+            PartitionResult(
+                partition=q1,
+                expected_total=3,
+                records_seen=1,
+                seen_unique_ids=1,
+                unique_ids_checksum="c" * 64,
+                duplicate_count=0,
+                page_count=1,
+                terminal_status="failed",
+                complete=False,
+                pages=[
+                    StoredPage(
+                        page_number=1,
+                        record_count=1,
+                        checksum=checksum,
+                        path=f"pages/arxiv/2020/{checksum}.xml",
+                    )
+                ],
+                resume_checkpoint={"start": 1},
+                error="fixture interruption",
+            ),
+        )
+
+    with pytest.raises(BackfillSafetyError, match="same-rank partition states"):
+        load_partition_states(tmp_path, planned)
+
+
+def test_same_rank_manifest_and_partition_state_conflict_fails_closed(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "resume-conflict"
+    planned = partitions()
+    first = execute_backfill(
+        "acquire",
+        output=output,
+        settings=settings(),
+        partitions=planned,
+        transports=transports(inspire_failure=(2020, 2)),
+    )
+    assert first.output_path is not None
+    failed = next(
+        item
+        for item in first.partitions
+        if item.partition.provider == "inspire" and item.partition.year == 2020
+    )
+    state_directory = output / "partition-state" / "inspire" / "2020"
+    for path in state_directory.glob("*.json"):
+        path.unlink()
+    _write_partition_state(
+        output,
+        replace(failed, error="different same-progress failure evidence"),
+    )
+    retry_transports = transports()
+
+    with pytest.raises(BackfillSafetyError, match="same-rank resume evidence"):
+        execute_backfill(
+            "acquire",
+            output=output,
+            settings=settings(),
+            partitions=planned,
+            transports=retry_transports,
+            resume_manifest=first.output_path,
+        )
+
+    assert retry_transports["inspire"].calls == []
+    assert retry_transports["arxiv"].calls == []
 
 
 def test_inspire_count_requires_explicit_exact_relation() -> None:
@@ -603,7 +885,7 @@ def test_duplicate_provider_records_fail_completeness_without_certification(
 
 
 def test_scope_year_and_repository_output_safety(tmp_path: Path) -> None:
-    with pytest.raises(BackfillSafetyError, match="fixed to hep-th-v1"):
+    with pytest.raises(BackfillSafetyError, match="unsupported historical scope"):
         validate_request(
             scope="all-physics",
             start_year=2020,
