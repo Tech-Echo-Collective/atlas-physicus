@@ -55,9 +55,13 @@ reports.
   mypy, and 284 pytest tests pass with one dependency deprecation warning;
   frontend TypeScript, lint, 130 Vitest tests, seven pipeline tests, and the
   production build pass with the existing non-blocking chunk-size warning.
-- **Provenance and next action:** The validated result commit, push, clean-tree
-  check, and GitHub Actions result are pending; existing release tags are
-  unchanged. Record green CI next, then scope only the reviewed institution,
+- **Provenance and next action:** Result commit `5e3ba1f` is on `main` and
+  GitHub Actions run
+  [33884017132](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33884017132)
+  passed its frontend, backend/PostgreSQL, and containerized API/worker jobs.
+  A post-push read-only production check remained healthy with expected CORS,
+  healthy provider cursors, and zero public metric observations. Existing
+  release tags are unchanged. Next, scope only the reviewed institution,
   field, citation, cohort-date, and historical-certification evidence needed
   by the existing gate.
 

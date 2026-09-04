@@ -27,7 +27,7 @@ current facts in [`PROJECT_STATE.md`](PROJECT_STATE.md), durable policy in
 | Metric System v1 foundation | `fe752f0`, 2026-08-30 | Fractional paper-time attribution, Physics ontology/provider mappings, exact five raw metrics and dimension-specific normalization, field-balanced aggregation, and fail-closed Joint Activation Gate. No live metric was activated. |
 | Bounded activation diagnostic and acquisition | `0b6b08a`, `d3b5cc8`, 2026-08-30 | Corrected readiness measurement, froze cross-provider affiliation precedence and field-mass conservation, and acquired a resumable staging-only 2020–2025 `hep-th-v1` corpus. |
 | Canonical replay and authority materialization | `b20e3d9`; CI record `f88385c`, 2026-08-31 | Deterministic file-only paper/author/affiliation/field/citation replay plus target-only ROR authority projection. The exact-five gate remained withheld and production history was untouched. |
-| Bounded dual-field validation | validated worktree; commit/CI pending, 2026-09-04 | Preserved the `hep-th-v1` baseline and completed a reproducible 2020–2025 Condensed Matter replay. Both specialty tracks and the comparison-only exact-five gate remain withheld; Full Physics loading stays unauthorized. |
+| Bounded dual-field validation | `5e3ba1f`; CI run `33884017132`, 2026-09-04 | Preserved the `hep-th-v1` baseline and completed a reproducible 2020–2025 Condensed Matter replay. Both specialty tracks and the comparison-only exact-five gate remain withheld; Full Physics loading stays unauthorized. |
 
 The detailed v3.0.4 activation and v3.0.5 release history is archived in
 [`archive/worklog-through-v3.0.5-release.md`](archive/worklog-through-v3.0.5-release.md).

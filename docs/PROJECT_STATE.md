@@ -64,7 +64,7 @@ documentation.
 
 ## Production health
 
-Read-only verification on 2026-09-04 found:
+Read-only verification on 2026-09-04 after the dual-track result commit found:
 
 - runtime `3.0.5-alpha` and database health both healthy;
 - last successful update at `2026-09-04T11:06:52.602129Z`;
@@ -210,22 +210,23 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
-- The last committed baseline, `f88385c`, passed GitHub Actions run
-  [33369163931](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33369163931).
+- The bounded dual-track result is commit `5e3ba1f`; it passed GitHub Actions
+  run [33884017132](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33884017132),
+  including frontend, backend/PostgreSQL, and containerized API/worker jobs.
 - The completed bounded dual-track work passes backend Ruff format and lint,
   strict mypy, and all 284 pytest tests; pytest reports one dependency
   deprecation warning.
 - Frontend TypeScript checking and lint pass, as do 130 Vitest tests, seven
   pipeline tests, and the production build. The existing bundle chunk-size
   warning remains non-blocking.
-- The result commit, push, clean-tree confirmation, and GitHub Actions run are
-  pending. Existing release tags remain unchanged.
+- Post-push production checks confirm healthy service/database status, expected
+  public-origin CORS, healthy INSPIRE/arXiv cursors, and zero public metric
+  observations. Existing release tags remain unchanged.
 
 ## Immediate next action
 
-Commit and push the validated dual-track result, then require a green GitHub
-Actions run and record its provenance. The next scientific work must remain a
-separately reviewed evidence task: canonical institution projection, reviewed
-field mapping, common-cutoff citation cohorts, canonical cohort dates, and
-historical-window certification. Keep production history and public metrics
-unchanged; Full Physics loading and v3.1 remain unauthorized.
+The next scientific work must remain a separately reviewed evidence task:
+canonical institution projection, reviewed field mapping, common-cutoff
+citation cohorts, canonical cohort dates, and historical-window certification.
+Keep production history and public metrics unchanged; Full Physics loading and
+v3.1 remain unauthorized.

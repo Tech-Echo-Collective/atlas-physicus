@@ -142,9 +142,9 @@ Before broad live ingestion, the project should validate:
 
 The roadmap does not currently commit to a graph database, Kubernetes, authentication, full-text paper archive, recommendation engine, prediction model, automatic researcher ranking, or universal live-data coverage. Those additions require a demonstrated scientific or operational need.
 
-The current minimum action is to record the validated dual-track commit and
-green CI, then separately scope the smallest reviewed evidence work for
-canonical institutions, field mappings, common-cutoff citations, canonical
-cohort dates, and six-year historical certification. The completed exact Joint
-Gate remains withheld. Production history, broader Physics coverage, v3.1,
-and live metric activation remain gated.
+The validated dual-track commit and green CI are recorded. The current minimum
+action is to separately scope the smallest reviewed evidence work for canonical
+institutions, field mappings, common-cutoff citations, canonical cohort dates,
+and six-year historical certification. The completed exact Joint Gate remains
+withheld. Production history, broader Physics coverage, v3.1, and live metric
+activation remain gated.
