@@ -144,8 +144,17 @@ No new map behavior, scientific layer or metric observation is enabled.
   zero failure streaks, recalculation idle, 440 unresolved entities and the
   diagnosed one resource failure. Public `/api/metric-observations` returns
   `total: 0`. No production payload was migrated or deleted.
-- Commit, CI and public deployment outcomes are recorded after validation in
-  the current worklog/state; local tests alone do not assert deployment success.
+- Source commit `1601b7e` passed
+  [CI 33937979974](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33937979974),
+  including all 452 backend fixture tests, PostgreSQL/API/worker and containers.
+  Web commit `14ff4df` pins that source and passed
+  [Pages build/deploy 33938111627](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33938111627):
+  typecheck/lint, 12 routing/branding tests and production build. Its pre-existing
+  `atlas.techecho.org` domain/routing commits were preserved. The live root and
+  direct Atlas reload show Atlas Physica, matching project information and Live
+  API mode with no scores. Post-publication production check at `02:07:55Z`
+  remains healthy with unchanged cursors, one diagnosed DOI failure and zero
+  observations; expected public-origin CORS is present. No tag was moved.
 
 ## Smallest next action
 

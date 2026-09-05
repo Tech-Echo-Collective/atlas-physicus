@@ -42,9 +42,15 @@ documentation.
 - The public Pages project is
   `Tech-Echo-Collective/Physics-Atlas-Web`. Its configured backend is
   <https://physics-atlas-api-production.up.railway.app/api>.
-- `https://atlas.techecho.org/` is the canonical target hostname. The legacy
-  Pages/inherited origins remain in transition CORS until DNS, Pages custom
-  domain, certificate, redirects, and client behavior are separately verified.
+- `https://atlas.techecho.org/` serves the public Atlas Physica instance.
+  Existing Web domain/routing commits `f1e3be4`/`f4c4e21` were preserved, not
+  changed by the rename. Root and direct Atlas route loading, HTTPS, current
+  branding, Live API mode and public-origin CORS were verified on September 5.
+  Legacy-origin retirement/redirect policy still requires separate review.
+- Web commit `14ff4df` pins source `1601b7e` and passed
+  [Pages build/deploy 33938111627](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33938111627).
+  App, page metadata, secondary documentation and API display metadata agree
+  on Atlas Physica; unvalidated observations remain absent.
 
 ### Backend and evidence platform
 
@@ -68,7 +74,7 @@ documentation.
 
 ## Production health
 
-Read-only verification on 2026-09-05 at `02:00:44Z` found:
+Read-only verification on 2026-09-05 at `02:07:55Z` found:
 
 - runtime `3.0.5-alpha` and database health both healthy;
 - INSPIRE and arXiv healthy with zero consecutive failures and September 4
@@ -79,7 +85,7 @@ Read-only verification on 2026-09-05 at `02:00:44Z` found:
   payload storage. No monitor fix or scientific-data correction is justified;
   see the [diagnosis](validation/staging-dual-read-2026-09-05.md#existing-resource-check-failure);
 - zero public metric observations; expected `https://atlas.techecho.org`
-  CORS was separately verified at `00:16:29Z`.
+  CORS and successful browser Live API reads were verified after publication.
 
 Railway production data, update history, and release tags have not been
 modified by the current validation work. Backup/restore evidence, restart and
@@ -295,7 +301,10 @@ authorized**. The exact gate input and output are preserved in the
   pass. Current Atlas Physica frontend typecheck/lint, 132 Vitest tests, seven
   pipeline tests and production build pass. See the
   [staging report](validation/staging-dual-read-2026-09-05.md) for scope and
-  proof limitations. Publication/CI results are recorded after pushing.
+  proof limitations. Source commit `1601b7e` is pushed and passed
+  [CI 33937979974](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33937979974),
+  including all 452 backend fixture tests, PostgreSQL migrations/API/worker
+  and container checks. No production payload integration was enabled.
 - The one-batch payload-reference pilot passes 123 focused tests (2.82s), Ruff
   over 11 changed/storage files, and strict mypy over 79 source files. Native
   PostgreSQL SQL-to-cold recovery verifies all 3,179 paper/author-fragment

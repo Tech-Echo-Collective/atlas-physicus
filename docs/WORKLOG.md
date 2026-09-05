@@ -31,9 +31,17 @@ reports.
 - Validation: 130 focused backend tests, Ruff lint/format, strict mypy
   (80 source files); frontend typecheck/lint, 132 Vitest + seven pipeline tests,
   production build; native staging PostgreSQL proof. The private server is
-  stopped. Production API/database/providers remain healthy, observations zero;
-  only the diagnosed DOI link failure remains. Commit/CI/deployment results
-  will be recorded after validated publication.
+  stopped. Source commit `1601b7e` passed
+  [CI 33937979974](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33937979974),
+  including all 452 backend tests and PostgreSQL/API/worker/container checks.
+  Web commit `14ff4df` pins that source and passed
+  [Pages 33938111627](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33938111627)
+  with 12 deployment/branding tests. Preserved its newer existing custom-domain
+  commits `f1e3be4`/`f4c4e21`; no domain/routing migration was made here.
+  Public root and direct Atlas route reload show Atlas Physica, Live API mode,
+  neutral missing metrics and matching secondary documentation. At `02:07:55Z`
+  production API/database/providers remain healthy, observations zero; only the
+  diagnosed DOI link failure remains. All release tags are unchanged.
 
 ## 2026-09-05 — One-batch payload-reference recovery pilot
 
