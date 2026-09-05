@@ -9,6 +9,23 @@ recent [worklog](WORKLOG.md). Exact scientific measurements belong in the
 linked validation reports rather than being repeated throughout the project
 documentation.
 
+## Current task: lightweight scientific launch
+
+The requested compact, historical five-metric launch was checked on September 5
+from source `8571c21`. **Scientific NO-GO:** existing real evidence has no
+reviewed field/date/researcher certification populations, eligible citation
+cohorts or certified historical windows. Current rules require those approvals;
+provider presence cannot substitute. A bounded certified population is allowed:
+neither Full Physics completeness nor legacy storage consolidation blocks this
+launch. No new acquisition, dataset generation, migration or activation occurred.
+
+Read-only live checks at 12:22 UTC found healthy API/database/providers and
+zero exposed metric observations. Fifty-five focused scientific/gate tests pass;
+the one temporary test directory was removed. **LOCAL BUILD CLEANUP = PASS.**
+The next action is authenticated scientific review of an eligible bounded
+population, not another storage project. Exact blockers, deployment limitations
+and cleanup accounting: [launch readiness](validation/lightweight-launch-readiness-2026-09-05.md).
+
 ## Release and scope
 
 - Canonical public/product name: **Atlas Physicus**, part of **Tech Echo
@@ -45,8 +62,10 @@ documentation.
   Physics domain → field → time → world → country → institution → researcher
   exploration path.
 - The normal public source is `APIRepository`. Synthetic fixtures and the
-  historical pilot remain isolated internal sources for tests,
-  reproducibility, and explicit fallback only.
+  historical pilot remain separate sources for tests and reproducibility.
+  The current Web wrapper also allows automatic synthetic fallback on initial
+  API failure; this must be removed before the requested no-synthetic production
+  launch. Hiding fixture choices alone does not enforce that requirement.
 - Repository and dataset-kind checks prevent live/static data mixing.
   Missing observations render as a neutral state.
 - The public Pages project is
@@ -57,10 +76,10 @@ documentation.
   changed by the rename. Root and direct Atlas route loading, HTTPS, current
   branding, Live API mode and public-origin CORS were verified on September 5.
   Legacy-origin retirement/redirect policy still requires separate review.
-- Web commit `14ff4df` pins source `1601b7e` and passed
-  [Pages build/deploy 33938111627](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33938111627).
-  App, page metadata, secondary documentation and API display metadata agree
-  on Atlas Physica; unvalidated observations remain absent.
+- Current Web commit `bf39f192` pins source `21bfcdb8` and passed
+  [Pages build/deploy 33947886469](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33947886469).
+  Public page metadata displays Atlas Physicus; unvalidated observations remain
+  absent. The lightweight-launch check did not change this pin or deployment.
 
 ### Backend and evidence platform
 

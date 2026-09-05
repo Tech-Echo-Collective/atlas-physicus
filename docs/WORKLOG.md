@@ -7,6 +7,23 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Lightweight launch scientific readiness
+
+- Checked source `8571c21` and current public API before generating any dataset.
+  All five exposed observation counts are zero; API/database/providers healthy.
+- Confirmed a scientific NO-GO: reviewed field/date/researcher populations,
+  eligible common-cutoff citation cohorts and certified historical windows are
+  absent. Existing automatic certification paths work; changing review-required
+  evidence into automatic approval would change policy. Full Physics coverage
+  and legacy storage are not used as launch blockers.
+- 55 focused certification/metric/gate/conservation tests pass. One isolated
+  temporary directory peaked at an observed 672,408 bytes; final 593,920 bytes
+  removed, directory absent and no unapproved scientific/build leftovers.
+- No acquisitions, legacy-evidence processing, dataset builds, deployments,
+  scientific changes or tag movement. Documented the current Web automatic
+  synthetic fallback as incompatible with the requested launch; no public
+  five-metric success is claimed. [Exact report](validation/lightweight-launch-readiness-2026-09-05.md).
+
 ## 2026-09-05 — Final bounded storage consolidation
 
 - Continued verified `main` at `3b30124` (CI 33962228728 green). Classified all
