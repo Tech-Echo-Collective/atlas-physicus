@@ -50,7 +50,11 @@ where `Mi` represents a supplied metric observation and `wi` represents a normal
 - Global Connectivity
 - Research Diversity
 
-Definitions, normalization methods, provenance rules, uncertainty treatment, and weights for these metrics require separate scientific methodology work. They are not inferred by the frontend.
+These long-term family names do not imply that every future family member has
+a formula. Metric System v1 separately defines exactly five versioned methods,
+with certified scientific inputs, preserved raw values, and a presentation-only
+Atlas Scale. Future family members still require separate methodology work;
+none is inferred by the frontend.
 
 ## Alpha metric layers
 
@@ -107,7 +111,8 @@ The implemented v1 calculators can replace synthetic or pilot values only
 after the complete system passes reviewed activation and a production
 recalculator is explicitly configured. The map continues to render supplied
 observations without owning the scientific calculation. See the
-[canonical v1 specification](metrics-spec-v1.md).
+[canonical v1 specification](metrics-spec-v1.md), [evidence-certification
+boundary](evidence-certification.md), and [Atlas Scale rules](normalization.md).
 
 The UI is responsible for:
 

@@ -234,6 +234,29 @@ A change of name, merger, split, or historical affiliation needs versioned
 evidence. An ambiguous match stays unresolved and enters the review path rather
 than being assigned to the most convenient current institution.
 
+## Certification boundary
+
+Materialized shares remain evidence until
+`scientific-evidence-certification-v1` evaluates them. A source assertion can
+certify paper-time affiliation presence while its canonical institution stays
+`needs_review`; the two dimensions are never collapsed. The generic resolver
+automatically certifies a direct valid ROR identity bound to its exact
+authority records. Canonical/alias/historical-name matches, caller-supplied
+crosswalks, and contextual candidates require dated explicit review. A unique
+name in a supplied authority subset cannot establish global uniqueness. The
+paired adapter can project direct ROR evidence from an exact INSPIRE
+institution response only after verifying the stored enrichment lineage;
+unbound crosswalks cannot use this path. Ambiguous parents, inactive entities,
+and predecessor/successor relations remain withheld pending review.
+A subunit rolls up only when the authority explicitly marks its one exact active parent as
+eligible, or a dated review approves that exact relationship.
+
+Coverage for certification uses the full conserved paper denominator,
+including missing and unresolved mass. Raw relationship presence or an
+`eligible_for_public_metrics` flag from an older artifact cannot bypass the
+current decision digest. See
+[Scientific Evidence Certification v1](evidence-certification.md).
+
 ## Limitations
 
 - Provider author and affiliation lists can be incomplete or internally

@@ -28,6 +28,7 @@ current facts in [`PROJECT_STATE.md`](PROJECT_STATE.md), durable policy in
 | Bounded activation diagnostic and acquisition | `0b6b08a`, `d3b5cc8`, 2026-08-30 | Corrected readiness measurement, froze cross-provider affiliation precedence and field-mass conservation, and acquired a resumable staging-only 2020–2025 `hep-th-v1` corpus. |
 | Canonical replay and authority materialization | `b20e3d9`; CI record `f88385c`, 2026-08-31 | Deterministic file-only paper/author/affiliation/field/citation replay plus target-only ROR authority projection. The exact-five gate remained withheld and production history was untouched. |
 | Bounded dual-field validation | `5e3ba1f`; CI run `33884017132`, 2026-09-04 | Preserved the `hep-th-v1` baseline and completed a reproducible 2020–2025 Condensed Matter replay. Both specialty tracks and the comparison-only exact-five gate remain withheld; Full Physics loading stays unauthorized. |
+| Scientific certification and capacity foundation | current source, final validation pending, 2026-09-05 | Explicit certification, exact reviewed populations, separate Atlas Scale, small official paired capture, conservative replay, PostgreSQL audit, and independent Storage Budget Gate. Public metrics and Full Physics loading remain withheld. |
 
 The detailed v3.0.4 activation and v3.0.5 release history is archived in
 [`archive/worklog-through-v3.0.5-release.md`](archive/worklog-through-v3.0.5-release.md).
@@ -53,6 +54,10 @@ and
   scientific providers directly, and dataset modes are never silently mixed.
 - Metric System v1 consists of Activity, Impact, Connectivity, Diversity, and
   Momentum. It activates only through one reviewed exact-five manifest.
+- Certification binds evidence and exact populations without replacing
+  scientific review. Full Physics loading also requires measured storage and
+  reviewed restore evidence; content-addressed warm/cold artifacts preserve
+  raw lineage without making PostgreSQL the permanent payload archive.
 
 The authoritative wording and consequences of these boundaries are in
 [`DECISIONS.md`](DECISIONS.md); this summary is not a substitute for that log.
@@ -67,8 +72,8 @@ The authoritative wording and consequences of these boundaries are in
   from a subfield sanity check.
 - Backup/restore, restart rehearsal, rate protection, monitoring, alerting, and
   long-running production observation remain operator evidence requirements.
-- Full Physics acquisition and v3.1 remain deferred until the current
-  stabilization and exact-five scientific gate are complete.
+- Full Physics acquisition remains gated by both the exact-five scientific
+  gate and independent Storage Budget Gate. v3.1 remains deferred.
 
 ## Normal context-reading path
 

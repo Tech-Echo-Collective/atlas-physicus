@@ -15,6 +15,13 @@ from physics_atlas_api.backfill import (
     build_partitions,
     execute_backfill,
 )
+from physics_atlas_api.certification import (
+    CertificationError,
+    canonical_digest,
+    certify_replay_bundle,
+    summarize_replay_bundle,
+    write_replay_certification_bundle,
+)
 from physics_atlas_api.config import Settings
 from physics_atlas_api.connectors.base import normalize_external_id
 from physics_atlas_api.historical_replay import StrongIdentifier
@@ -27,6 +34,7 @@ from physics_atlas_api.historical_replay_materialization import (
     validate_replay_request,
     verify_historical_staging,
 )
+from physics_atlas_api.replay_certification import run as run_replay_certification
 
 _CUTOFF = datetime(2026, 8, 31, 0, 0, tzinfo=UTC)
 
@@ -321,10 +329,10 @@ def test_plan_verifies_pages_and_builds_withheld_evidence_bundle(
         "31e6a00694b5782f500bb2031ed6fdf649894d14f38054cfe61570a547bdd862"
     )
     assert result.replay_digest == (
-        "9e30cf4ec9c6cddac579cadac2c60fe4bc4f9af165e42973af1f06a6247e5fc4"
+        "3319385dadeaa18089b6fd9340bb985f2fd8a6b32119f214be446c5a72cbf24e"
     )
     assert result.bundle_manifest["bundle_manifest_checksum"] == (
-        "21f3ac1a254e2b945ba6c3e065d753cb994c765cf0cf0841ae21d77856b8c279"
+        "6a64a3bd3408ce16cbfe835afe6c55ada43111e8fdb723d0d8bce3f1edef780c"
     )
     assert result.output_manifest_path is None
     assert result.report["verified_page_count"] == 12
@@ -409,7 +417,7 @@ def test_plan_verifies_pages_and_builds_withheld_evidence_bundle(
         "historical-paper-merge-plan-v1"
     )
     assert result.bundle_manifest["merge_plan_digest"]
-    assert "acquisition_scope" not in result.bundle_manifest
+    assert result.bundle_manifest["acquisition_scope"] == "hep-th-v1"
 
     occurrences = _artifact_rows(bundle, "source-occurrences")
     assert {item["provider"] for item in occurrences} == {"inspire", "arxiv"}
@@ -574,6 +582,249 @@ def test_execute_is_content_addressed_idempotent_and_checksum_verified(
         path = output / str(artifact["path"])
         assert path.is_file()
         assert hashlib.sha256(path.read_bytes()).hexdigest() == artifact["checksum"]
+
+
+def test_cond_replay_certification_is_streamed_fail_closed_and_content_addressed(
+    tmp_path: Path,
+) -> None:
+    staging, source_manifest = _staged_acquisition(
+        tmp_path,
+        scope=COND_MAT_HISTORICAL_BACKFILL.id,
+    )
+    replay_root = tmp_path / "cond-replay"
+    replay = materialize_historical_replay(
+        staging_root=staging,
+        source_manifest=source_manifest,
+        output=replay_root,
+        execute=True,
+    )
+    assert replay.output_manifest_path is not None
+
+    certification = certify_replay_bundle(
+        bundle_root=replay_root,
+        bundle_manifest=replay.output_manifest_path,
+    )
+
+    assert certification.report["acquisition_scope"] == "cond-mat-validation-v1"
+    assert certification.report["source_bundle_version"] == (
+        "cond-mat-validation-v1-historical-replay-bundle-v2"
+    )
+    assert certification.report["certified_complete_years"] == []
+    assert certification.report["metric_window_certifications"] == 0
+    assert certification.report["metric_observations_created"] == 0
+    states = certification.report["state_counts"]
+    assert isinstance(states, dict)
+    assert states["field-classification"] == {"needs_review": 1}
+    assert states["field-weight-conservation"] == {"certified": 1}
+    assert states["citation-cutoff-compatibility"] == {"withheld": 1}
+
+    bounded = summarize_replay_bundle(
+        bundle_root=replay_root,
+        bundle_manifest=replay.output_manifest_path,
+        output_root=tmp_path / "bounded-certification",
+    )
+    decision_artifact = next(
+        item
+        for item in certification.artifacts
+        if item.role == "evidence-certification-decisions"
+    )
+    assert bounded.decision_count == len(certification.decisions)
+    assert bounded.decision_stream_checksum == decision_artifact.checksum
+    assert bounded.report["decision_stream"]["artifact_available"] is False
+
+    retained_root = tmp_path / "retained-certification"
+    retained = summarize_replay_bundle(
+        bundle_root=replay_root,
+        bundle_manifest=replay.output_manifest_path,
+        output_root=retained_root,
+        retain_decisions=True,
+    )
+    assert retained.report == certification.report
+    assert retained.certification_manifest == certification.certification_manifest
+    retained_path = retained_root / decision_artifact.relative_path
+    assert retained_path.read_bytes() == decision_artifact.content
+    assert not tuple(retained_root.glob(".certification-decisions-*"))
+    repeated = summarize_replay_bundle(
+        bundle_root=replay_root,
+        bundle_manifest=replay.output_manifest_path,
+        output_root=retained_root,
+        retain_decisions=True,
+    )
+    assert repeated.output_manifest_path == retained.output_manifest_path
+    retained_path.write_bytes(b"tampered decision stream\n")
+    with pytest.raises(CertificationError, match="existing decision artifact differs"):
+        summarize_replay_bundle(
+            bundle_root=replay_root,
+            bundle_manifest=replay.output_manifest_path,
+            output_root=retained_root,
+            retain_decisions=True,
+        )
+    assert retained_path.read_bytes() == b"tampered decision stream\n"
+    assert not tuple(retained_root.glob(".certification-decisions-*"))
+
+    with pytest.raises(CertificationError, match="requires an output root"):
+        summarize_replay_bundle(
+            bundle_root=replay_root,
+            bundle_manifest=replay.output_manifest_path,
+            retain_decisions=True,
+        )
+
+    authority_entry = next(
+        item
+        for item in replay.bundle_manifest["artifacts"]
+        if isinstance(item, dict) and item["role"] == "institution-authority-anchors"
+    )
+    authority_rows = [
+        json.loads(line)
+        for line in (replay_root / str(authority_entry["path"]))
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line
+    ]
+    assert authority_rows[0]["required_authority_bundle_version"] == (
+        "cond-mat-validation-v1-historical-canonical-institutions-v2"
+    )
+
+    output_root = tmp_path / "certification-output"
+    first_manifest = write_replay_certification_bundle(output_root, certification)
+    second_manifest = write_replay_certification_bundle(output_root, certification)
+    assert first_manifest == second_manifest
+    assert first_manifest.is_file()
+    written_manifest = json.loads(first_manifest.read_text(encoding="utf-8"))
+    assert written_manifest == certification.certification_manifest
+    for artifact in certification.artifacts:
+        path = output_root / artifact.relative_path
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == artifact.checksum
+
+
+def test_replay_certification_rejects_tampered_artifact(tmp_path: Path) -> None:
+    staging, source_manifest = _staged_acquisition(tmp_path)
+    replay_root = tmp_path / "replay"
+    replay = materialize_historical_replay(
+        staging_root=staging,
+        source_manifest=source_manifest,
+        output=replay_root,
+        execute=True,
+    )
+    assert replay.output_manifest_path is not None
+    artifact = next(
+        item
+        for item in replay.bundle_manifest["artifacts"]
+        if isinstance(item, dict) and item["role"] == "field-ledgers"
+    )
+    path = replay_root / str(artifact["path"])
+    path.write_bytes(path.read_bytes() + b" ")
+
+    with pytest.raises(CertificationError, match="artifact checksum failed"):
+        certify_replay_bundle(
+            bundle_root=replay_root,
+            bundle_manifest=replay.output_manifest_path,
+        )
+
+
+def test_replay_certification_rejects_false_artifact_row_count(
+    tmp_path: Path,
+) -> None:
+    staging, source_manifest = _staged_acquisition(tmp_path)
+    replay_root = tmp_path / "replay"
+    replay = materialize_historical_replay(
+        staging_root=staging,
+        source_manifest=source_manifest,
+        output=replay_root,
+        execute=True,
+    )
+    assert replay.output_manifest_path is not None
+    manifest = json.loads(replay.output_manifest_path.read_text(encoding="utf-8"))
+    artifact = next(
+        item
+        for item in manifest["artifacts"]
+        if item["role"] == "institution-authority-anchors"
+    )
+    artifact["row_count"] += 1
+    unsigned = {
+        key: value
+        for key, value in manifest.items()
+        if key != "bundle_manifest_checksum"
+    }
+    manifest["bundle_manifest_checksum"] = canonical_digest(unsigned)
+    changed_manifest = replay_root / "manifests" / "false-row-count.json"
+    changed_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(CertificationError, match="row count failed"):
+        summarize_replay_bundle(
+            bundle_root=replay_root,
+            bundle_manifest=changed_manifest,
+        )
+
+
+def test_replay_certification_rejects_missing_acquisition_scope(
+    tmp_path: Path,
+) -> None:
+    staging, source_manifest = _staged_acquisition(tmp_path)
+    replay_root = tmp_path / "replay"
+    replay = materialize_historical_replay(
+        staging_root=staging,
+        source_manifest=source_manifest,
+        output=replay_root,
+        execute=True,
+    )
+    assert replay.output_manifest_path is not None
+    manifest = json.loads(replay.output_manifest_path.read_text(encoding="utf-8"))
+    manifest.pop("acquisition_scope")
+    unsigned = {
+        key: value
+        for key, value in manifest.items()
+        if key != "bundle_manifest_checksum"
+    }
+    manifest["bundle_manifest_checksum"] = canonical_digest(unsigned)
+    changed_manifest = replay_root / "manifests" / "missing-scope.json"
+    changed_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(CertificationError, match="acquisition scope"):
+        summarize_replay_bundle(
+            bundle_root=replay_root,
+            bundle_manifest=changed_manifest,
+        )
+
+
+@pytest.mark.parametrize("retain_decisions", (False, True))
+def test_replay_certification_cli_prints_and_writes_summary(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    retain_decisions: bool,
+) -> None:
+    staging, source_manifest = _staged_acquisition(tmp_path)
+    replay_root = tmp_path / "replay"
+    replay = materialize_historical_replay(
+        staging_root=staging,
+        source_manifest=source_manifest,
+        output=replay_root,
+        execute=True,
+    )
+    assert replay.output_manifest_path is not None
+    output = tmp_path / "certification"
+
+    assert (
+        run_replay_certification(
+            (
+                "--bundle-root",
+                str(replay_root),
+                "--bundle-manifest",
+                str(replay.output_manifest_path),
+                "--output",
+                str(output),
+                *(("--retain-decisions",) if retain_decisions else ()),
+            )
+        )
+        == 0
+    )
+
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["metric_observations_created"] == 0
+    assert summary["decision_stream"]["artifact_available"] is retain_decisions
+    output_manifest = Path(summary["output_manifest_path"])
+    assert output_manifest.is_relative_to(output)
+    assert output_manifest.is_file()
 
 
 def test_execute_refuses_to_overwrite_nonidentical_content(tmp_path: Path) -> None:

@@ -15,7 +15,7 @@ SQLAlchemy models define the application persistence layer; Alembic owns schema 
 | Graph relationships | `PaperField`, `Authorship`, `Affiliation`, `PaperAffiliation`, `Citation` |
 | Metrics and history | `MetricDefinition`, `MetricObservation`, `MetricSystemRelease`, `HistoricalEvent` |
 | Resource enrichment | `ExternalResource`, `ResourceCheck` |
-| Source evidence | `SourceSnapshot`, `RawEntityRecord` |
+| Source evidence | `SourceSnapshot`, `RawEntityRecord`; certification decisions remain content-addressed staging artifacts until a compact persistence schema is designed, deployed, and load-tested |
 | Identity audit | `IdentityResolution`, `IdentityReview` |
 | Update operations | `SourceCursor`, `DatasetUpdate`, `UpdateRun` |
 
@@ -70,6 +70,17 @@ The migration does not import the historical pilot automatically. `physics-atlas
 
 Production retention must account for provider terms, personal-data minimization, storage cost, audit requirements, and backup recovery. Raw payload availability does not imply unrestricted redistribution. Secrets never belong in database seed files, migrations, JSON provenance, or committed compose configuration.
 
+PostgreSQL is the hot canonical/query store, not the permanent home for every
+provider page. Recent certification inputs belong in a checksum-verifiable warm
+tier; raw pages, full snapshots, backfill bundles, and replay archives belong
+in cold external storage. `SourceSnapshot.storage_reference` is the existing
+migration seam. Externalization must verify the immutable artifact before a
+database reference or cursor can advance, and existing production payloads
+must not be removed until a backup and isolated-restore path is demonstrated
+and reviewed. See the
+[storage architecture](storage-architecture.md) and the
+[2026-09-04 production sizing](validation/storage-sizing-2026-09-04.md).
+
 ## Current limitations
 
 - The schema is an alpha foundation and has not been benchmarked on a complete all-physics corpus.
@@ -77,3 +88,7 @@ Production retention must account for provider terms, personal-data minimization
 - The derived search-term index is prefix-oriented and has not been benchmarked against a full all-physics corpus.
 - There is no automated backup/restore service, replica, or hosted database in this repository.
 - Tombstone, retraction, legal erasure, and long-term raw-payload retention policies need operational review before large-scale production ingestion.
+- The current 823-paper production sample is not a representative capacity
+  benchmark. `storage-budget-gate-v1` remains withheld; neither evaluated
+  field-scale shape fits safely in the measured volume under the current
+  relation shape, and no Full Physics population has been authorized.

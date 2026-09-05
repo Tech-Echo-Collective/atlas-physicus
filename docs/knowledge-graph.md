@@ -20,6 +20,10 @@ The public GitHub Pages instance uses the operated Railway API as its normal
 repository. That bounded graph remains incomplete, and deployment does not make
 its scientific relationships or metrics validated.
 
+Graph presence is provider/canonical evidence, not activation-grade
+certification. The current certification and Atlas Scale proof artifacts are
+staging-only and are not persisted in, or exposed by, the public API.
+
 ## Canonical nodes
 
 The canonical vocabulary includes:

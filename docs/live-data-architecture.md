@@ -32,7 +32,11 @@ identifier-led entity resolution
         ↓
 canonical PostgreSQL entities, paper-time affiliations, and temporal relationships
         ↓
-affected metric-partition planning
+explicit evidence certification and affected metric-partition planning
+        ↓
+certified raw metrics → metric-specific normalization → Atlas Scale
+        ↓
+reviewed exact-five publication gate
         ↓
 FastAPI read models
         ↓
@@ -47,7 +51,17 @@ The browser never contacts scientific providers directly. Provider syntax, crede
 
 ## Persistence and provenance
 
-PostgreSQL stores canonical entities, normalized relationships, raw evidence, update lineage, resolution decisions, review items, resource checks, and versioned metric observations. `SourceSnapshot` retains each exact provider response envelope, including Atom XML; `RawEntityRecord` separately retains normalized record-level evidence. A canonical update does not destroy the evidence that produced an earlier decision.
+PostgreSQL stores canonical/queryable entities, normalized relationships,
+compact provenance, update lineage, resolution decisions, review items,
+resource checks, and versioned metric observations. The target hot tier also
+includes compact certification/review state, but the current certification
+bundles remain content-addressed external staging evidence until that schema is
+designed, deployed, and load-tested. The current production schema still
+retains provider response envelopes in `SourceSnapshot` and normalized row
+evidence in `RawEntityRecord`; a verified future migration may move large
+immutable payloads to warm/cold content-addressed storage while keeping their
+references hot. A canonical update does not destroy the lineage that produced
+an earlier decision.
 
 Real-data records retain, where applicable:
 

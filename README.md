@@ -29,9 +29,10 @@ bounded `hep-th-v1` provider scope through the production FastAPI/PostgreSQL
 service. INSPIRE and arXiv supply literature evidence; ROR, ORCID, and Crossref
 are used only through constrained identifier-led workflows.
 
-The repository now contains the implemented, deterministic Physics Atlas Metric
-System v1 framework. It is not yet scientifically validated on representative
-live evidence. The five live metric layers remain jointly withheld, so the
+The repository contains the deterministic Metric System v1 framework, explicit
+evidence certification, a separate 0–100 Atlas Scale, and a measured storage
+readiness gate. Representative scientific validation remains incomplete. The
+five live metric layers remain jointly withheld, so the
 public map does not substitute zero or synthetic values for missing live
 observations. Full Physics expansion and v3.1 have not started.
 
@@ -92,13 +93,19 @@ INSPIRE / arXiv / reviewed identifier lookups
   → immutable source evidence and update lineage
   → normalization and conservative entity resolution
   → paper-time attribution and canonical field mapping
-  → PostgreSQL relational knowledge graph
-  → versioned Metric System and joint activation gate
+  → PostgreSQL canonical graph and compact provenance
+  → explicit scientific evidence certification
+  → exact eligible populations → certified raw metrics
+  → metric-specific normalization → Atlas Scale
+  → reviewed Joint Activation Gate
   → FastAPI → APIRepository → map-first React application
 ```
 
 The frontend uses React, TypeScript, Vite, MapLibre GL JS, and Zod. The backend
 uses Python, FastAPI, SQLAlchemy, Alembic, and PostgreSQL.
+
+Full Physics loading additionally requires the independent Storage Budget
+Gate. Normal public map/API reads continue on the bounded production dataset.
 
 ## Data and provenance
 
@@ -108,10 +115,11 @@ tests, reproducibility, and explicit fallback; they are never silently mixed
 with provider-backed live data.
 
 Raw provider categories remain separate from the versioned Atlas field
-ontology. Raw records, mappings, identity decisions, attribution shares,
-normalization parameters, and dataset lineage are retained so derived results
-can be reconstructed. Provider data remains subject to its own terms and
-licensing.
+ontology. Required source evidence, mappings, identity decisions, attribution
+shares, normalization parameters, and dataset lineage are retained—either as
+queryable canonical state or content-addressed warm/cold artifacts—so derived
+results can be reconstructed. Provider data remains subject to its own terms
+and licensing.
 
 ## Public access
 
@@ -138,6 +146,8 @@ have been verified in production.
 - [Physics Field Ontology v1](docs/field-ontology.md)
 - [Metric System v1 specification](docs/metrics-spec-v1.md)
 - [Metric System v1 validation](docs/metric-validation.md)
+- [Scientific evidence certification](docs/evidence-certification.md) and
+  [hot/warm/cold storage architecture](docs/storage-architecture.md)
 - [Entity resolution](docs/entity-resolution.md),
   [data sources](docs/data-sources.md), and
   [knowledge graph](docs/knowledge-graph.md)

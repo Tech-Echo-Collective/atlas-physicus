@@ -1,24 +1,122 @@
 import math
 from dataclasses import replace
-from datetime import date
+from datetime import UTC, date, datetime
 
 import pytest
+from certification_helpers import (
+    certify_citation_reference_cohort,
+    certify_normalization_populations,
+    certify_partition,
+)
 
+from physics_atlas_api.certification import CertificationError
+from physics_atlas_api.fields import PHYSICS_FIELD_ONTOLOGY_V1
 from physics_atlas_api.metrics import (
     METRIC_VALIDATION_THRESHOLDS_V1,
     AttributedPaperEvidence,
+    CertifiedPhysicsAggregation,
     CitationReferenceCohort,
+    FieldPopulationEvidence,
     MetricCoverageEvidence,
     MetricPartitionInput,
     aggregate_physics_wide,
-    calculate_activity_raw,
-    calculate_connectivity,
-    calculate_diversity,
-    calculate_impact_raw,
-    calculate_momentum_raw,
+    apply_atlas_scale,
+    bind_metric_calculation,
+    certify_field_population,
     normalize_activity_results,
     normalize_momentum_results,
 )
+from physics_atlas_api.metrics import (
+    calculate_activity_raw as calculate_certified_activity_raw,
+)
+from physics_atlas_api.metrics import (
+    calculate_connectivity as calculate_certified_connectivity,
+)
+from physics_atlas_api.metrics import (
+    calculate_diversity as calculate_certified_diversity,
+)
+from physics_atlas_api.metrics import (
+    calculate_impact_raw as calculate_certified_impact_raw,
+)
+from physics_atlas_api.metrics import (
+    calculate_momentum_raw as calculate_certified_momentum_raw,
+)
+
+
+def calculate_activity_raw(
+    input_partition: MetricPartitionInput,
+    thresholds=METRIC_VALIDATION_THRESHOLDS_V1,  # type: ignore[no-untyped-def]
+):  # type: ignore[no-untyped-def]
+    return calculate_certified_activity_raw(
+        certify_partition(
+            input_partition,
+            "research_activity_score",
+            threshold_version=thresholds.version,
+        ),
+        thresholds,
+    )
+
+
+def calculate_impact_raw(
+    input_partition: MetricPartitionInput,
+    cohorts: tuple[CitationReferenceCohort, ...],
+    thresholds=METRIC_VALIDATION_THRESHOLDS_V1,  # type: ignore[no-untyped-def]
+):  # type: ignore[no-untyped-def]
+    certified_cohorts = tuple(
+        certify_citation_reference_cohort(item, input_partition) for item in cohorts
+    )
+    return calculate_certified_impact_raw(
+        certify_partition(
+            input_partition,
+            "research_impact",
+            threshold_version=thresholds.version,
+            citation_cohorts=certified_cohorts,
+        ),
+        certified_cohorts,
+        thresholds,
+    )
+
+
+def calculate_connectivity(
+    input_partition: MetricPartitionInput,
+    thresholds=METRIC_VALIDATION_THRESHOLDS_V1,  # type: ignore[no-untyped-def]
+):  # type: ignore[no-untyped-def]
+    return calculate_certified_connectivity(
+        certify_partition(
+            input_partition,
+            "collaboration",
+            threshold_version=thresholds.version,
+        ),
+        thresholds,
+    )
+
+
+def calculate_diversity(
+    input_partition: MetricPartitionInput,
+    thresholds=METRIC_VALIDATION_THRESHOLDS_V1,  # type: ignore[no-untyped-def]
+):  # type: ignore[no-untyped-def]
+    return calculate_certified_diversity(
+        certify_partition(
+            input_partition,
+            "research_diversity",
+            threshold_version=thresholds.version,
+        ),
+        thresholds,
+    )
+
+
+def calculate_momentum_raw(
+    input_partition: MetricPartitionInput,
+    thresholds=METRIC_VALIDATION_THRESHOLDS_V1,  # type: ignore[no-untyped-def]
+):  # type: ignore[no-untyped-def]
+    return calculate_certified_momentum_raw(
+        certify_partition(
+            input_partition,
+            "momentum",
+            threshold_version=thresholds.version,
+        ),
+        thresholds,
+    )
 
 
 def complete_coverage(**changes: float | None) -> MetricCoverageEvidence:
@@ -84,7 +182,7 @@ def partition(
         acquisition_scope="hep-th-v1",
         attribution_policy_version="fractional-attribution-v1",
         ontology_version="physics-field-ontology-v1",
-        mapping_policy_version="provider-atlas-field-mapping-v1",
+        mapping_policy_version="provider-field-mapping-v1",
         citation_policy_version="non-self-citation-cutoff-v1",
         coverage=coverage or complete_coverage(),
         complete_source_years=complete_years,
@@ -222,7 +320,7 @@ def test_impact_calculates_fractional_mncs_and_pp_top_10_companion() -> None:
     assert result.components["mncs"] == pytest.approx(20 / 12)
     assert result.components["pp_top_10_share"] == 1.0
     assert result.components["eligible_papers"] == 10
-    assert result.components["citation_cutoff"] == "2026-12-31"
+    assert result.components["citation_cutoff"] == "2026-12-31T00:00:00+00:00"
     assert result.normalized_value is None
     assert result.missing_reasons == ()
 
@@ -237,12 +335,8 @@ def test_impact_distinguishes_missing_citations_from_recorded_zero() -> None:
         ),
         *input_partition.papers[1:],
     )
-    missing = calculate_impact_raw(
-        replace(input_partition, papers=missing_papers), cohorts
-    )
-    assert missing.components["citation_coverage"] == pytest.approx(0.9)
-    assert missing.components["eligible_papers"] == 9
-    assert missing.raw_value is None
+    with pytest.raises(CertificationError, match="differs from its certified cohort"):
+        calculate_impact_raw(replace(input_partition, papers=missing_papers), cohorts)
 
     zero_papers = (
         replace(input_partition.papers[0], citation_count=0),
@@ -295,16 +389,14 @@ def test_connectivity_withholds_unresolved_relationships_instead_of_zeroing() ->
         paper(index, 2025, cross_institution=None if index < 2 else False)
         for index in range(10)
     )
-    result = calculate_connectivity(
-        partition(
-            "institution-unresolved",
-            papers,
-            coverage=complete_coverage(collaboration_relationship=0.8),
+    with pytest.raises(CertificationError, match="coverage is not certified"):
+        calculate_connectivity(
+            partition(
+                "institution-unresolved",
+                papers,
+                coverage=complete_coverage(collaboration_relationship=0.8),
+            )
         )
-    )
-    assert result.raw_value is None
-    assert result.normalized_value is None
-    assert "relationship coverage" in " ".join(result.missing_reasons)
 
 
 def test_researcher_connectivity_does_not_require_geographic_attribution() -> None:
@@ -425,55 +517,99 @@ def test_momentum_is_backward_looking_field_relative_and_robust() -> None:
     assert normalized[1].components["field_relative_log_change"] == 0
     assert normalized[1].components["persistence_fraction_of_years"] == 1
 
-    incomplete_year = calculate_momentum_raw(
-        replace(momentum_partition("current-year", 4, 4), terminal_year=2026),
-        thresholds,
-    )
-    assert incomplete_year.raw_value is None
-    assert "incomplete current calendar year" in " ".join(
-        incomplete_year.missing_reasons
-    )
+    with pytest.raises(CertificationError, match="metric window is not certified"):
+        calculate_momentum_raw(
+            replace(momentum_partition("current-year", 4, 4), terminal_year=2026),
+            thresholds,
+        )
 
 
 def test_physics_wide_aggregation_is_field_balanced_and_coverage_aware() -> None:
-    low = calculate_connectivity(
-        partition(
-            "institution-domain",
-            tuple(
-                paper(index, 2025, cross_institution=index < 2) for index in range(10)
+    leaf_fields = tuple(
+        item.id
+        for item in PHYSICS_FIELD_ONTOLOGY_V1.fields
+        if item.node_kind == "field"
+    )
+    field_calculations = tuple(
+        bind_metric_calculation(
+            calculate_certified_connectivity(certified),
+            certified,
+        )
+        for field_index, field_id in enumerate(leaf_fields)
+        for certified in (
+            certify_partition(
+                partition(
+                    "institution-domain",
+                    tuple(
+                        paper(
+                            field_index * 100 + index,
+                            2025,
+                            cross_institution=index
+                            < ({"hep-th": 2, "cond-mat": 8}.get(field_id, 5)),
+                        )
+                        for index in range(10)
+                    ),
+                    field_id=field_id,
+                ),
+                "collaboration",
             ),
-            field_id="hep-th",
         )
     )
-    high = calculate_connectivity(
-        partition(
-            "institution-domain",
-            tuple(
-                paper(index + 100, 2025, cross_institution=index < 8)
-                for index in range(10)
-            ),
-            field_id="cond-mat",
-        )
+    field_observations = apply_atlas_scale(
+        field_calculations,
+        normalization_populations=certify_normalization_populations(field_calculations),
     )
+
+    def field_population():  # type: ignore[no-untyped-def]
+        complete_weights = tuple((field_id, 1.0) for field_id in leaf_fields)
+        evidence = FieldPopulationEvidence(
+            entity_id="institution-domain",
+            metric_id="collaboration",
+            period="2025",
+            dataset_version="dataset-test-v1",
+            acquisition_scope="hep-th-v1",
+            ontology_version="physics-field-ontology-v1",
+            field_weights=complete_weights,
+            source_manifest_digest="a" * 64,
+            review_state="reviewed-approved",
+            reviewed_by="test-fixture-reviewer",
+            reviewed_at=datetime(2026, 8, 30, tzinfo=UTC),
+        )
+        return certify_field_population(
+            replace(evidence, source_manifest_digest=evidence.content_digest)
+        )
+
+    population_proof = field_population()
     aggregated = aggregate_physics_wide(
-        (low, high),
-        {
-            ("institution-domain", "hep-th"): 100.0,
-            ("institution-domain", "cond-mat"): 10.0,
-            ("institution-domain", "quant-ph"): 5.0,
-        },
+        field_observations,
+        (population_proof,),
     )[0]
-    assert aggregated.normalized_value == 50
-    assert aggregated.components["publication_volume_used_as_final_weight"] is False
-    assert aggregated.components["field_evidence_coverage"] == pytest.approx(110 / 115)
+    assert aggregated.calculation.normalized_value == 50
+    assert (
+        aggregated.calculation.components["publication_volume_used_as_final_weight"]
+        is False
+    )
+    assert aggregated.calculation.components["field_evidence_coverage"] == 1
+    with pytest.raises(CertificationError, match="Atlas field observations"):
+        CertifiedPhysicsAggregation(  # type: ignore[arg-type]
+            calculation=aggregated.calculation,
+            field_observations=(object(),),
+            field_population_proof=population_proof,
+            thresholds=aggregated.thresholds,
+            proof_digest=aggregated.proof_digest,
+        )
+    with pytest.raises(CertificationError, match="field-population proof"):
+        CertifiedPhysicsAggregation(  # type: ignore[arg-type]
+            calculation=aggregated.calculation,
+            field_observations=aggregated.field_observations,
+            field_population_proof=object(),
+            thresholds=aggregated.thresholds,
+            proof_digest=aggregated.proof_digest,
+        )
 
     withheld = aggregate_physics_wide(
-        (low, high),
-        {
-            ("institution-domain", "hep-th"): 100.0,
-            ("institution-domain", "cond-mat"): 10.0,
-            ("institution-domain", "quant-ph"): 20.0,
-        },
+        field_observations[:-2],
+        (field_population(),),
     )[0]
-    assert withheld.normalized_value is None
-    assert "field evidence coverage" in " ".join(withheld.missing_reasons)
+    assert withheld.calculation.normalized_value is None
+    assert "field evidence coverage" in " ".join(withheld.calculation.missing_reasons)

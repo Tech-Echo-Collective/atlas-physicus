@@ -7,6 +7,42 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Scientific certification, paired evidence, and capacity
+
+- Implemented explicit certification states, per-kind formula-input binding,
+  exact reviewed eligibility and normalization populations, citation cohorts,
+  complete-year/window proofs, and the separate 0–100 Atlas Scale. Raw Metric
+  System v1 formulas and thresholds are unchanged. Typed content attestations
+  do not replace authenticated scientific/operator review (PA-046).
+- Captured the closed week 2020-01-13–19 through official INSPIRE/arXiv paths
+  for hep-th and Condensed Matter: 635 occurrences, 474 canonical components,
+  14 shared components, and 9,999 retained decisions. Direct authority
+  enrichment reaches 219 ROR records. Record-level certification is nonzero,
+  but reviewed dates/identities/fields, metric-eligible citation cohorts,
+  certified years/windows, and generated observations remain zero. Exact
+  manifests and results are in the
+  [certification report](validation/scientific-evidence-certification-2026-09-05.md).
+- Preserved the removed-row hep-th baseline without claiming a new replay
+  improvement. Offline Condensed Matter rematerialization corrects 1,667
+  wrong-scope authority anchors while preserving seven other artifact hashes.
+  The retained 2,766,760-decision certification stream still has zero eligible
+  affiliation/institution/field/date/researcher/citation coverage; legacy
+  fractional affiliation presence remains 25.407165%. Both exact paired Joint
+  Gate executions return withheld; the diagnostic and all paired artifacts
+  independently reproduce byte-for-byte.
+- The read-only PostgreSQL audit found 306.5 MB database size on a 4.364 GiB
+  volume, 499.1 MB used, and 52.35% of public relations occupied by duplicated
+  raw evidence. Added a local content-addressed artifact-store abstraction and
+  a separate Storage Budget Gate; measured sample, target population, final
+  schema, and isolated restore requirements keep the gate withheld. See
+  [storage sizing](validation/storage-sizing-2026-09-04.md).
+- Frontend typecheck/lint, 130 Vitest tests, seven pipeline tests, and build
+  pass. Backend Ruff format/lint, strict mypy, and 376 pytest tests pass with
+  one existing dependency deprecation warning. Post-push CI remains pending. Read-only
+  production checks on September 5 confirm healthy API/database/providers,
+  expected Atlas CORS, and zero public observations. No production data,
+  cursor, release tag, or Full Physics scope was changed.
+
 ## 2026-09-04 — Bounded dual-field Metric System v1 validation
 
 - **Scope:** Reuse the preserved 2020–2025 `hep-th-v1` replay as a theory-heavy

@@ -170,6 +170,22 @@ categories and conservative reviewed mappings where a source category spans
 more than one Atlas field. It does not infer membership from provider prefixes,
 free text, author affiliations, or citation networks.
 
+## Certification overlay
+
+Mapping and certification are separate. An exact mapping rule or agreement
+between providers supplies evidence but does not itself constitute scientific
+review. `scientific-evidence-certification-v1` certifies only a complete
+selected ledger whose reviewed decision, source evidence, ontology/mapping
+versions, and digest agree. Disagreement and explicit unmapped mass remain in
+the ledger. Certified mapped and unmapped mass remains separate in the ledger
+artifact and may be reported alongside whole-ledger coverage, so partial
+mapping cannot inflate readiness.
+
+The January 2020 paired trial intentionally leaves its field decisions
+`needs_review`: reviewer/sign-off semantics and a new INSPIRE Condensed Matter
+mapping version have not been approved. That is a policy boundary, not a reason
+to reinterpret the immutable v1 mapping.
+
 ## Evolution policy
 
 The v1 IDs and meanings are immutable within `physics-field-ontology-v1`.

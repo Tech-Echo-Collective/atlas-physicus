@@ -35,7 +35,8 @@ The release tag remains the architectural baseline. The follow-up Production Act
 
 ## Current milestone — v3.0.5-alpha Stabilization & Scientific Validation
 
-Status: **released baseline with completed bounded dual-track validation**.
+Status: **released baseline; scientific certification and capacity foundation
+under final validation**.
 This milestone stabilizes the live v3.0.4 system; it does not
 expand beyond the bounded Physics scope or redesign the production
 architecture.
@@ -113,6 +114,25 @@ Both specialty trials remain field-conditioned; neither their individual
 results nor an unreviewed comparison can satisfy the PA-040 broad-Physics
 activation boundary.
 
+### Scientific Evidence Certification and storage sizing
+
+The current source implements an explicit certification boundary, exact
+reviewed eligibility/normalization populations, complete-year/window proofs,
+and a separate 0–100 Atlas Scale over the unchanged five raw metrics. A small
+official January 2020 paired capture demonstrates nonzero record-level
+certification without certifying a year or activating metrics. Existing
+Condensed Matter artifacts are replayed conservatively; missing hep-th row
+artifacts cannot be reconstructed from Git. The
+[certification report](validation/scientific-evidence-certification-2026-09-05.md)
+is the canonical evidence record.
+
+A read-only production PostgreSQL audit and hot/warm/cold artifact abstraction
+establish the storage boundary. Full Physics loading requires **both** the
+Joint Metric Gate and Storage Budget Gate. The present sample and capacity
+projections do not pass the latter; no object-store deployment, production
+payload migration, or wider load is implied. Next capacity work is a
+representative final-schema staging sample and reviewed isolated restore.
+
 Remaining scientific and operational gates are:
 
 1. durable backup/restore, restart, rate-protection, logging, monitoring, and alerting evidence in the operated environment;
@@ -122,7 +142,10 @@ Remaining scientific and operational gates are:
    normalization, uncertainty, and version lineage before any live metric
    observations are published;
 5. a single reviewed activation manifest demonstrating that all five metric
-   dimensions pass together.
+   dimensions pass together;
+6. a reviewed exact target population and representative final-schema storage
+   measurement/restore evidence passing the independent Storage Budget Gate
+   before Full Physics loading.
 
 ## Gates before broader Physics coverage or v3.1
 
@@ -142,9 +165,10 @@ Before broad live ingestion, the project should validate:
 
 The roadmap does not currently commit to a graph database, Kubernetes, authentication, full-text paper archive, recommendation engine, prediction model, automatic researcher ranking, or universal live-data coverage. Those additions require a demonstrated scientific or operational need.
 
-The validated dual-track commit and green CI are recorded. The current minimum
-action is to separately scope the smallest reviewed evidence work for canonical
-institutions, field mappings, common-cutoff citations, canonical cohort dates,
-and six-year historical certification. The completed exact Joint Gate remains
-withheld. Production history, broader Physics coverage, v3.1, and live metric
-activation remain gated.
+The validated dual-track commit and green CI are recorded; the certification
+milestone is awaiting final commit/CI verification. The current minimum
+scientific action is reviewed canonical dates, identities, institution
+targets/rollups, field mappings, common-cutoff populations, and complete
+historical certification. The Joint and Storage gates remain withheld.
+Production history, Full Physics loading, v3.1, and live metric activation
+remain gated.

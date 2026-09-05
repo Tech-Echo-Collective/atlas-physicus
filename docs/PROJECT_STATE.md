@@ -1,6 +1,6 @@
 # Physics Atlas project state
 
-Last reviewed: 2026-09-04
+Last reviewed: 2026-09-05
 
 This is the canonical snapshot of the project's current operating and
 scientific state. Read it with [durable decisions](DECISIONS.md), the
@@ -64,15 +64,15 @@ documentation.
 
 ## Production health
 
-Read-only verification on 2026-09-04 after the dual-track result commit found:
+Read-only verification on 2026-09-05 at `00:14:15Z` found:
 
 - runtime `3.0.5-alpha` and database health both healthy;
-- last successful update at `2026-09-04T11:06:52.602129Z`;
 - INSPIRE and arXiv healthy with zero consecutive failures;
 - metric recalculation idle;
-- 440 unresolved entities and three existing resource-check failures reported
+- 440 unresolved entities and two existing resource-check failures reported
   for follow-up, with no current provider failure;
-- zero public metric observations.
+- zero public metric observations and expected `https://atlas.techecho.org`
+  CORS, verified at `00:16:29Z`.
 
 Railway production data, update history, and release tags have not been
 modified by the current validation work. Backup/restore evidence, restart and
@@ -107,6 +107,53 @@ remain operator responsibilities.
 Canonical specifications are [Scientific Attribution](scientific-attribution.md),
 [Field Ontology](field-ontology.md), [Metric System v1](metrics-spec-v1.md), and
 [Metric Validation](metric-validation.md).
+
+## Scientific certification and capacity foundation
+
+The current source adds `scientific-evidence-certification-v1` between
+canonicalization and metric calculation. It binds per-dimension decisions,
+full coverage denominators, exact reviewed populations, source years, metric
+windows, citation cohorts, and preserved formula inputs. Institution evidence
+uses direct ROR or an explicit reviewed candidate; field/date/researcher
+approvals are not inferred from provider presence. Typed content hashes prove
+reconstruction, while reviewer authority and semantic completeness remain
+responsibilities of the operating review process.
+
+The fresh official paired capture covers only 2020-01-13–19: 635 provider
+occurrences become 474 canonical components, with 14 shared across tracks.
+Record-level affiliation, institution, citation-observation, identity,
+conservation, and provenance decisions now have nonzero certified coverage.
+However, reviewed dates, researcher identities, field ledgers, metric-eligible
+citation cohorts, certified years, and metric windows remain zero. Exact
+fractions, retained manifests, and replay limitations belong in the
+[certification report](validation/scientific-evidence-certification-2026-09-05.md).
+The small week's results must not be reported as six-year coverage gains.
+
+The retained Condensed Matter source was replayed into a new immutable bundle
+to correct 1,667 institution anchors mislabeled with the hep-th scope; all
+seven other data artifact hashes are unchanged. The final overlay retains
+2,766,760 decisions: paper identity is 99.726565% certified and conservation/
+provenance 100%, but affiliation, institution, field, date, researcher, and
+comparable-citation certification remain zero. The corrected anchors now need
+review rather than being scope-conflicted. Legacy fractional affiliation
+presence remains 25.407165%; this is not the strict certification measure.
+
+`normalized-atlas-scale-v1` adds a separate 0–100 presentation proof for all
+five unchanged raw metrics. It binds exact reviewed normalization populations,
+fitted parameters, cutoff, coverage, and missing reasons. These certification
+and Atlas artifacts are staging-only; production has no deployed certification
+schema and still publishes zero live metric observations.
+
+The read-only PostgreSQL audit measured a 306.5 MB database and 499.1 MB total
+use on an actual 4.364 GiB volume. Raw snapshot/record relations occupy 52.35%
+of public relations. The **Storage Budget Gate is WITHHELD**: the 823-paper
+sample is unrepresentative, final hot evidence rows are unmeasured, the Full
+Physics target population is unreviewed, and isolated restore evidence is
+incomplete. A checksum-verifiable local artifact-store abstraction supports
+future warm/cold storage without migrating current production payloads.
+Full Physics loading requires both this gate and the Joint Gate; ordinary
+bounded map/API reads do not require a Full Load gate. See
+[storage sizing](validation/storage-sizing-2026-09-04.md).
 
 ## Track A — `hep-th-v1` evidence
 
@@ -193,7 +240,14 @@ was calculated or published. Exact evidence and limitations are in the
 
 ## Joint activation state
 
-The completed comparison-only exact-five assessment is **WITHHELD** for
+The exact current Joint evaluator was independently rerun on each final paired
+scope and returns **WITHHELD** for all five metrics, with eleven explicit
+scientific blockers. Its diagnostic reproduces byte-for-byte. See the
+[current certification report](validation/scientific-evidence-certification-2026-09-05.md)
+for the exact inputs, output digest, and distinction between algorithm tests,
+artifact reproduction, and missing metric-system reproduction.
+
+The historical comparison-only exact-five assessment also remains **WITHHELD** for
 Activity, Impact, Connectivity, Diversity, and Momentum. It keeps the two
 specialty tracks separate—no denominators were averaged and no combined data
 source was invented. Both tracks have 0% comparable-citation and reviewed-field
@@ -210,6 +264,14 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
+- The current certification/capacity changes are awaiting their validated
+  commit and post-push CI. Frontend type checking, lint, 130 Vitest tests,
+  seven pipeline tests, and production build pass. Backend Ruff format/lint,
+  strict mypy, and all 376 pytest tests pass with one existing dependency
+  deprecation warning. No new CI success is claimed yet.
+- The starting `main` commit is `3ab1456`, with green Actions run
+  [33884328992](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33884328992).
+
 - The bounded dual-track result is commit `5e3ba1f`; it passed GitHub Actions
   run [33884017132](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33884017132),
   including frontend, backend/PostgreSQL, and containerized API/worker jobs.
@@ -225,8 +287,9 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Immediate next action
 
-The next scientific work must remain a separately reviewed evidence task:
-canonical institution projection, reviewed field mapping, common-cutoff
-citation cohorts, canonical cohort dates, and historical-window certification.
-Keep production history and public metrics unchanged; Full Physics loading and
-v3.1 remain unauthorized.
+Complete the certification milestone's commit and CI verification, then perform only
+reviewed evidence work for canonical dates, researcher identities, fields,
+institution targets/rollups, common-cutoff cohort populations, and complete
+historical windows. The separate capacity task is a representative final-schema
+staging measurement with a reviewed target and isolated restore. Both gates
+remain withheld; Full Physics loading and v3.1 remain unauthorized.

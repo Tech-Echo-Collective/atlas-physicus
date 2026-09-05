@@ -24,6 +24,8 @@ Use these canonical documents for current behavior:
 - [Physics Field Ontology v1](field-ontology.md)
 - [Metric System v1 validation](metric-validation.md)
 - [Metric normalization](normalization.md)
+- [Scientific Evidence Certification v1](evidence-certification.md)
+- [Scientific evidence storage and Full Load gate](storage-architecture.md)
 
 All five live metric layers remain withheld until the Joint Activation Gate
 passes. This compatibility note must not be used to reconstruct or publish a

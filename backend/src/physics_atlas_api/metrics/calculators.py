@@ -8,6 +8,18 @@ from dataclasses import asdict, dataclass, field, replace
 from datetime import date
 from typing import Literal
 
+from ..certification.citations import (
+    CITATION_CERTIFICATION_RULE_VERSION,
+    impact_comparable_paper_ids,
+)
+from ..certification.contracts import (
+    CertificationError,
+    CertifiedCitationCohort,
+    CertifiedMetricPartition,
+    require_certified_citation_cohort,
+    require_certified_partition,
+)
+from ..certification.years import CertifiedMetricWindow
 from .contracts import get_metric_contract
 from .normalization import (
     log_midrank_percentiles,
@@ -152,6 +164,10 @@ class CitationReferenceCohort:
         return (self.field_id, self.publication_year, self.document_type)
 
 
+CertifiedMetricPartitionInput = CertifiedMetricPartition[MetricPartitionInput]
+CertifiedCitationReferenceCohort = CertifiedCitationCohort[CitationReferenceCohort]
+
+
 @dataclass(frozen=True)
 class MetricCalculationResult:
     metric_id: str
@@ -169,9 +185,11 @@ class MetricCalculationResult:
     normalization_parameters: Mapping[str, MetricMetadataValue]
     input_count: int
     input_manifest_digest: str
+    certification_manifest_digest: str
     threshold_version: str
     dataset_version: str
     acquisition_scope: str
+    evidence_cutoff: str
     attribution_policy_version: str
     ontology_version: str
     mapping_policy_version: str
@@ -292,6 +310,16 @@ def _complete_window_reason(partition: MetricPartitionInput, count: int) -> str 
     return None
 
 
+def _validate_threshold_contract(thresholds: MetricValidationThresholds) -> None:
+    if (
+        thresholds.version == METRIC_VALIDATION_THRESHOLDS_V1.version
+        and thresholds != METRIC_VALIDATION_THRESHOLDS_V1
+    ):
+        raise CertificationError(
+            "the public v1 threshold version must match its canonical definition"
+        )
+
+
 def _result(
     partition: MetricPartitionInput,
     metric_id: str,
@@ -301,9 +329,12 @@ def _result(
     components: Mapping[str, MetricMetadataValue],
     parameters: Mapping[str, MetricMetadataValue],
     input_count: int,
+    certification_manifest_digest: str,
+    evidence_cutoff: str,
     thresholds: MetricValidationThresholds,
     missing_reasons: Sequence[str] = (),
 ) -> MetricCalculationResult:
+    _validate_threshold_contract(thresholds)
     definition_version, algorithm_version, normalization_version, raw_unit = (
         _contract_versions(metric_id)
     )
@@ -323,9 +354,11 @@ def _result(
         normalization_parameters=parameters,
         input_count=input_count,
         input_manifest_digest=_manifest_digest(partition, metric_id),
+        certification_manifest_digest=certification_manifest_digest,
         threshold_version=thresholds.version,
         dataset_version=partition.dataset_version,
         acquisition_scope=partition.acquisition_scope,
+        evidence_cutoff=evidence_cutoff,
         attribution_policy_version=partition.attribution_policy_version,
         ontology_version=partition.ontology_version,
         mapping_policy_version=partition.mapping_policy_version,
@@ -335,9 +368,14 @@ def _result(
 
 
 def calculate_activity_raw(
-    partition: MetricPartitionInput,
+    certified_partition: CertifiedMetricPartitionInput,
     thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
 ) -> MetricCalculationResult:
+    partition: MetricPartitionInput = require_certified_partition(
+        certified_partition,
+        metric_id="research_activity_score",
+        threshold_version=thresholds.version,
+    )
     papers = _window_papers(partition, 3)
     fractional_papers = math.fsum(paper.attribution_weight for paper in papers)
     researchers = {item for paper in papers for item in paper.researcher_ids}
@@ -367,6 +405,10 @@ def calculate_activity_raw(
         },
         parameters={},
         input_count=len(papers),
+        certification_manifest_digest=(
+            certified_partition.certification.certification_digest
+        ),
+        evidence_cutoff=(certified_partition.certification.evidence_cutoff.isoformat()),
         thresholds=thresholds,
         missing_reasons=reasons,
     )
@@ -387,8 +429,10 @@ def _normalization_cohorts(
             result.period,
             result.metric_definition_version,
             result.algorithm_version,
+            result.normalization_version,
             result.dataset_version,
             result.acquisition_scope,
+            result.evidence_cutoff,
             result.attribution_policy_version,
             result.ontology_version,
             result.mapping_policy_version,
@@ -407,6 +451,7 @@ def normalize_activity_results(
     results: Sequence[MetricCalculationResult],
     thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
 ) -> tuple[MetricCalculationResult, ...]:
+    _validate_threshold_contract(thresholds)
     output = list(results)
     for cohort in _normalization_cohorts(results, "research_activity_score").values():
         raw = {
@@ -445,10 +490,51 @@ def _months_elapsed(start: date, end: date) -> int:
 
 
 def calculate_impact_raw(
-    partition: MetricPartitionInput,
-    citation_cohorts: Sequence[CitationReferenceCohort],
+    certified_partition: CertifiedMetricPartitionInput,
+    certified_citation_cohorts: Sequence[CertifiedCitationReferenceCohort],
     thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
 ) -> MetricCalculationResult:
+    partition: MetricPartitionInput = require_certified_partition(
+        certified_partition,
+        metric_id="research_impact",
+        threshold_version=thresholds.version,
+    )
+    window_proof = certified_partition.window_proof
+    if not isinstance(window_proof, CertifiedMetricWindow) or (
+        certified_partition.certification.citation_cohort_certification_ids
+        != window_proof.certification.citation_cohort_certification_ids
+    ):
+        raise CertificationError(
+            "Impact partition citation cohort proofs differ from its certified window"
+        )
+    citation_cohorts: tuple[CitationReferenceCohort, ...] = tuple(
+        require_certified_citation_cohort(
+            item,
+            dataset_version=partition.dataset_version,
+            acquisition_scope=partition.acquisition_scope,
+            cutoff=partition.as_of_date,
+            rule_version=CITATION_CERTIFICATION_RULE_VERSION,
+        )
+        for item in certified_citation_cohorts
+    )
+    supplied_cohort_ids = tuple(
+        item.certification_id for item in certified_citation_cohorts
+    )
+    if len(set(supplied_cohort_ids)) != len(supplied_cohort_ids):
+        raise CertificationError("Impact received duplicate certified citation cohorts")
+    if set(supplied_cohort_ids) != set(
+        certified_partition.certification.citation_cohort_certification_ids
+    ):
+        raise CertificationError(
+            "Impact citation cohort proofs do not match the certified metric window"
+        )
+    exact_cutoffs = {item.cutoff for item in certified_citation_cohorts}
+    if len(exact_cutoffs) != 1 or exact_cutoffs != {
+        certified_partition.certification.evidence_cutoff
+    }:
+        raise CertificationError(
+            "Impact citation cohorts do not share the certified exact cutoff"
+        )
     papers = _window_papers(partition, 3)
     reasons = _base_coverage_reasons(
         partition,
@@ -461,10 +547,24 @@ def calculate_impact_raw(
     cohort_by_key = {cohort.key: cohort for cohort in citation_cohorts}
     if len(cohort_by_key) != len(citation_cohorts):
         raise ValueError("citation reference cohort keys must be unique")
+    for paper in papers:
+        cohort = cohort_by_key.get(
+            (partition.field_id, paper.publication_date.year, paper.document_type)
+        )
+        if cohort is None:
+            continue
+        certified_value = dict(cohort.citations).get(paper.paper_id)
+        if certified_value is not None and paper.citation_count != certified_value:
+            raise CertificationError(
+                "partition citation value differs from its certified cohort evidence"
+            )
 
     total_weight = math.fsum(paper.attribution_weight for paper in papers)
+    comparable_ids = frozenset(
+        impact_comparable_paper_ids(partition, tuple(certified_citation_cohorts))
+    )
     observed_weight = math.fsum(
-        paper.attribution_weight for paper in papers if paper.citation_count is not None
+        paper.attribution_weight for paper in papers if paper.paper_id in comparable_ids
     )
     calculated_coverage = observed_weight / total_weight if total_weight > 0 else None
     effective_coverage_values = [
@@ -553,12 +653,18 @@ def calculate_impact_raw(
             "eligible_fractional_paper_mass": eligible_weight,
             "citation_coverage": effective_coverage,
             "citation_maturity_months": thresholds.impact.citation_maturity_months,
-            "citation_cutoff": partition.as_of_date.isoformat(),
+            "citation_cutoff": (
+                certified_partition.certification.evidence_cutoff.isoformat()
+            ),
             "maturity_ineligible_papers": ineligible_maturity,
             "unavailable_reference_cohorts": unavailable_cohort,
         },
         parameters={},
         input_count=eligible_count,
+        certification_manifest_digest=(
+            certified_partition.certification.certification_digest
+        ),
+        evidence_cutoff=(certified_partition.certification.evidence_cutoff.isoformat()),
         thresholds=thresholds,
         missing_reasons=reasons,
     )
@@ -568,6 +674,7 @@ def normalize_impact_results(
     results: Sequence[MetricCalculationResult],
     thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
 ) -> tuple[MetricCalculationResult, ...]:
+    _validate_threshold_contract(thresholds)
     output = list(results)
     for cohort in _normalization_cohorts(results, "research_impact").values():
         raw = {
@@ -614,9 +721,14 @@ def _weighted_boolean_share(
 
 
 def calculate_connectivity(
-    partition: MetricPartitionInput,
+    certified_partition: CertifiedMetricPartitionInput,
     thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
 ) -> MetricCalculationResult:
+    partition: MetricPartitionInput = require_certified_partition(
+        certified_partition,
+        metric_id="collaboration",
+        threshold_version=thresholds.version,
+    )
     papers = _window_papers(partition, 3)
     fractional_papers = math.fsum(paper.attribution_weight for paper in papers)
     researchers = {item for paper in papers for item in paper.researcher_ids}
@@ -688,15 +800,24 @@ def calculate_connectivity(
             "threshold_version": thresholds.version,
         },
         input_count=len(papers),
+        certification_manifest_digest=(
+            certified_partition.certification.certification_digest
+        ),
+        evidence_cutoff=(certified_partition.certification.evidence_cutoff.isoformat()),
         thresholds=thresholds,
         missing_reasons=reasons,
     )
 
 
 def calculate_diversity(
-    partition: MetricPartitionInput,
+    certified_partition: CertifiedMetricPartitionInput,
     thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
 ) -> MetricCalculationResult:
+    partition: MetricPartitionInput = require_certified_partition(
+        certified_partition,
+        metric_id="research_diversity",
+        threshold_version=thresholds.version,
+    )
     papers = _window_papers(partition, 3)
     total_weight = math.fsum(paper.attribution_weight for paper in papers)
     category_totals = {
@@ -765,15 +886,24 @@ def calculate_diversity(
             "threshold_version": thresholds.version,
         },
         input_count=len(papers),
+        certification_manifest_digest=(
+            certified_partition.certification.certification_digest
+        ),
+        evidence_cutoff=(certified_partition.certification.evidence_cutoff.isoformat()),
         thresholds=thresholds,
         missing_reasons=reasons,
     )
 
 
 def calculate_momentum_raw(
-    partition: MetricPartitionInput,
+    certified_partition: CertifiedMetricPartitionInput,
     thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
 ) -> MetricCalculationResult:
+    partition: MetricPartitionInput = require_certified_partition(
+        certified_partition,
+        metric_id="momentum",
+        threshold_version=thresholds.version,
+    )
     required_years = thresholds.momentum.required_complete_years
     reasons = _base_coverage_reasons(
         partition,
@@ -848,6 +978,10 @@ def calculate_momentum_raw(
         },
         parameters={},
         input_count=len(window_papers),
+        certification_manifest_digest=(
+            certified_partition.certification.certification_digest
+        ),
+        evidence_cutoff=(certified_partition.certification.evidence_cutoff.isoformat()),
         thresholds=thresholds,
         missing_reasons=reasons,
     )
@@ -857,6 +991,7 @@ def normalize_momentum_results(
     results: Sequence[MetricCalculationResult],
     thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
 ) -> tuple[MetricCalculationResult, ...]:
+    _validate_threshold_contract(thresholds)
     output = list(results)
     for cohort in _normalization_cohorts(results, "momentum").values():
         raw = {

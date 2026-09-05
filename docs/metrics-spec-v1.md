@@ -20,7 +20,8 @@ Metric System.
 
 ## Shared calculation boundary
 
-Every calculation is scoped to an exact partition containing:
+Every calculation request is bound to an immutable supplied partition
+containing:
 
 - entity type and canonical entity ID;
 - canonical field ID or Physics domain;
@@ -28,6 +29,12 @@ Every calculation is scoped to an exact partition containing:
 - immutable dataset version and acquisition scope;
 - scientific-attribution, ontology, provider-mapping, metric-definition,
   algorithm, normalization, and threshold versions.
+
+That binding does not by itself prove that the caller supplied every eligible
+paper. Activation-grade calculation additionally requires a certified exact
+population ledger that accounts for each included, excluded, and unresolved
+paper in the declared entity/field/window universe. The eligibility ledger and
+its review are part of [Scientific Evidence Certification v1](evidence-certification.md).
 
 For paper `p`, entity `e`, and field `f`, let:
 
@@ -264,6 +271,8 @@ bounded `hep-th-v1` production dataset does not pass the complete five-metric
 activation requirements. All five live metric layers remain withheld together.
 
 See [Metric Validation](metric-validation.md) for thresholds, reference
-ecosystem checks, and the Joint Activation Gate; [Scientific Attribution](scientific-attribution.md)
-for the entity weights; and [Field Ontology](field-ontology.md) for
-classification rules.
+ecosystem checks, and the Joint Activation Gate; [Scientific Evidence
+Certification](evidence-certification.md) for calculation eligibility;
+[Normalization](normalization.md) for the separate Atlas Scale; [Scientific
+Attribution](scientific-attribution.md) for the entity weights; and [Field
+Ontology](field-ontology.md) for classification rules.

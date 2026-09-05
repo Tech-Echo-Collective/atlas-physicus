@@ -97,6 +97,12 @@ def _replay_versions(spec: HistoricalBackfillSpec) -> tuple[str, str, str]:
     )
 
 
+def _canonical_institution_version(spec: HistoricalBackfillSpec) -> str:
+    if spec.id == HEP_TH_HISTORICAL_BACKFILL.id:
+        return HISTORICAL_CANONICAL_INSTITUTION_VERSION
+    return f"{spec.id}-historical-canonical-institutions-v2"
+
+
 class HistoricalReplaySafetyError(ValueError):
     """Raised before or during replay when immutable evidence cannot be proven."""
 
@@ -1208,6 +1214,7 @@ def _relationship_rows(
     staging: VerifiedHistoricalStaging,
 ) -> _RelationshipRows:
     relationship_version = staging.relationship_projection_version
+    canonical_institution_version = _canonical_institution_version(staging.spec)
     appearances: list[dict[str, object]] = []
     shares: list[dict[str, object]] = []
     ledgers: list[dict[str, object]] = []
@@ -1381,7 +1388,7 @@ def _relationship_rows(
                             "canonical_institution_id": None,
                             "metadata_status": "metadata-pending",
                             "required_authority_bundle_version": (
-                                HISTORICAL_CANONICAL_INSTITUTION_VERSION
+                                canonical_institution_version
                             ),
                             "source_assertion_ids": set(),
                             "source_occurrence_ids": set(),
@@ -1856,14 +1863,13 @@ def build_historical_replay_bundle(
         "bundle_version": staging.bundle_version,
         "replay_version": staging.replay_version,
         "source_manifest_checksum": staging.source_manifest_checksum,
+        "acquisition_scope": staging.spec.id,
         "cutoff_timestamp": staging.cutoff_timestamp,
         "merge_plan_version": PAPER_MERGE_PLAN_VERSION,
         "merge_plan_digest": merge_plan.digest,
         "canonical_paper_merge_policy_version": (CANONICAL_PAPER_MERGE_POLICY_VERSION),
         "artifacts": artifact_entries,
     }
-    if staging.spec.id != HEP_TH_HISTORICAL_BACKFILL.id:
-        replay_identity["acquisition_scope"] = staging.spec.id
     replay_digest = _checksum_json(replay_identity)
     status_counts = {
         "matched": sum(item.status == "matched" for item in merge_plan.components),
@@ -2061,6 +2067,7 @@ def build_historical_replay_bundle(
         "replay_version": staging.replay_version,
         "source_manifest_checksum": staging.source_manifest_checksum,
         "source_manifest_path": staging.source_manifest_path.name,
+        "acquisition_scope": staging.spec.id,
         "cutoff_timestamp": staging.cutoff_timestamp,
         "replay_digest": replay_digest,
         "canonical_paper_merge_policy_version": (CANONICAL_PAPER_MERGE_POLICY_VERSION),
@@ -2076,8 +2083,6 @@ def build_historical_replay_bundle(
         "reviewed_field_ledgers": False,
         "metric_observations_created": 0,
     }
-    if staging.spec.id != HEP_TH_HISTORICAL_BACKFILL.id:
-        unsigned_bundle_manifest["acquisition_scope"] = staging.spec.id
     bundle_manifest = {
         **unsigned_bundle_manifest,
         "bundle_manifest_checksum": _checksum_json(unsigned_bundle_manifest),

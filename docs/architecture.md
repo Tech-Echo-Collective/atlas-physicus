@@ -30,9 +30,13 @@ canonical identity resolution
         ↓
 paper-time fractional attribution
         ↓
-PostgreSQL knowledge graph
+PostgreSQL canonical graph + immutable source lineage
         ↓
-affected metric partitions
+scientific evidence certification
+        ↓
+certified exact metric-eligible populations
+        ↓
+raw metrics → metric-specific normalization → 0–100 Atlas Scale
         ↓
 exact-five Joint Activation Gate
         ↓
@@ -133,12 +137,20 @@ explicit release manifest authorizes publication.
 The post-v3.0.5 foundation implements paper-time fractional Activity,
 MNCS-based Impact, collaboration proportions, Shannon-evenness Diversity, and
 field-relative rolling-window Momentum with metric-specific normalization and
-reconstructable metadata. Experimental and taxonomy-only definitions cannot
+reconstructable certification and normalization proofs. Metric calculators
+reject raw provider presence and uncertified partitions. Experimental and
+taxonomy-only definitions cannot
 enter live API map requests, layers, or composites. A `MetricSystemRelease`
 must publish all five exact compatible algorithms together. The current live
 evidence fails that gate, so no layer is enabled.
 
 Existing synthetic calculations and bounded pilot signals remain reproducible and source-separated. Missing observations remain missing, not zero. Every calculated value retains definition, algorithm, dataset, and calculation versions. See the [Metric Engine](metric-engine.md).
+
+Large immutable provider pages and replay bundles belong behind verified
+warm/cold artifact references; PostgreSQL remains the hot canonical/queryable
+state. Full Physics loading requires both the reviewed scientific gate and the
+independent storage-budget gate. See [evidence certification](evidence-certification.md)
+and [storage architecture](storage-architecture.md).
 
 ### Presentation and navigation
 

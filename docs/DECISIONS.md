@@ -1,6 +1,6 @@
 # Physics Atlas durable decisions
 
-Last reviewed: 2026-09-04
+Last reviewed: 2026-09-05
 
 These decisions constrain implementation and public communication. Add a dated superseding entry when a durable decision changes; do not silently rewrite project history.
 
@@ -46,6 +46,12 @@ These decisions constrain implementation and public communication. Add a dated s
 | PA-038 | The bounded `hep-th-v1` corpus cannot validate production Diversity. | Diversity remains implemented but withheld until a reviewed broad-Physics evidence boundary exists. Because Metric System v1 activates jointly, this condition keeps Activity, Impact, Connectivity, Diversity, and Momentum jointly withheld for this trial even if another metric's evidence minimum passes. |
 | PA-039 | Canonical paper identity uses strong identifiers in the order DOI, arXiv ID, then INSPIRE ID. | Exact normalized strong identifiers may join source occurrences while retaining every source lineage record. Without a shared strong identifier, an automatic merge requires the versioned conservative combination of normalized title, author overlap, year, and journal evidence; title alone never merges papers. Conflicting or insufficient evidence remains `needs_review`. |
 | PA-040 | Joint Activation evidence explicitly classifies its acquisition boundary as `field-conditioned` or `broad-physics`. | Public Metric System v1 activation requires a reviewed `broad-physics` boundary and fails closed when the classification is absent or narrower. A named specialty field, or an unreviewed union of specialty trials, remains field-conditioned regardless of favorable coverage or metric results; such trials may validate methods but cannot by themselves activate public metrics. |
+| PA-041 | Scientific evidence certification is an explicit, versioned boundary between canonicalization and metric calculation. | Raw provider presence, a mapped label, a resolved identifier, or a completed download never automatically becomes metric-eligible evidence. Calculators accept only a checksum-bound certified projection, while `needs_review`, `withheld`, `conflicted`, and `insufficient_evidence` remain explicit with their denominator mass and provenance. |
+| PA-042 | The Normalized Atlas Scale is a separate 0–100 presentation layer over preserved scientific raw metrics. | Keep each raw value and unit, metric-specific normalization and fitted parameters, exact field/time/entity cohort, cutoff, certification digest, coverage, uncertainty, and missing reasons. `100` is a cohort-relative fitted upper position, not perfection; `0` is not proof of no research; missing never becomes zero. The five-weight composite remains user-defined and exploratory. |
+| PA-043 | PostgreSQL stores canonical and queryable scientific state, not every immutable provider payload. | Keep canonical entities, relationships, compact citation/certification/review/metric state, cursors, and provenance references hot. Put raw pages, large snapshots, backfill bundles, and replay archives behind checksum-verifiable warm/cold artifact references. Do not delete existing production evidence until a verified migration and restore path exists. |
+| PA-044 | Full Physics loading requires both the Scientific Evidence / Joint Metric Gate and `storage-budget-gate-v1`. | The storage gate uses measured physical capacity and a representative final-schema load bound to an exact target-population manifest. The target cannot be smaller than the sample, the projection cannot fall below the versioned deterministic estimate, and audit, projection, population, and typed isolated-restore attestations must be content-addressed and verified. Withhold when the contingency-adjusted steady state exceeds 60% of capacity or peak exceeds 80%. A failed gate first prompts hot-state reduction and cold externalization, not an automatic plan upgrade. Artifact integrity preserves the reviewed attestation; it is not proof that the underlying physical operation occurred. |
+| PA-045 | An endpoint URL alone cannot make captured provider evidence “official.” | An official capture or enrichment manifest requires the internal live lineage-aware transport, exact approved endpoint, response status/timestamps, and checksum-bound stored bytes. Any injected transport remains fixture evidence even when configured with an official-looking URL. Changing certification semantics creates a new manifest/generator version; older outputs are explicitly superseded, never silently relabeled. |
+| PA-046 | Certification integrity and scientific authority are separate trust requirements. | Typed content-addressed acquisition, population, authority, and review records bind exact inputs and reconstruction; they do not authenticate a reviewer or prove scientific completeness. The operating review process must authenticate approvals. The generic institution resolver automatically certifies direct ROR only; name, crosswalk, and context candidates require dated explicit review unless a dedicated adapter has verified the original authority-bearing provider response. Exact population membership cannot substitute for semantic review. |
 
 ## Current activation decision
 
@@ -58,12 +64,16 @@ filtering.
 
 Existing default cadence remains INSPIRE daily, arXiv daily, ROR weekly, with the worker checking due work hourly unless measured provider or operational evidence justifies a change.
 
-## v3.0.5 scientific activation decision
+## Initial v3.0.5 release scientific activation decision
 
-The five accepted base metrics now have experimental candidate-v1 contracts,
-but the observed `hep-th-v1` live dataset has no canonical institutions,
-affiliations, citation edges, geographic cohort, or multi-year canonical
-history. All five live layers therefore remain withheld. This is an activation
+At the initial v3.0.5 release, the five accepted base metrics had experimental
+candidate-v1 contracts, but the then-observed `hep-th-v1` live dataset lacked
+canonical institutions, affiliations, citation edges, geographic cohorts, and
+multi-year canonical history. All five live layers were withheld. The later
+September 4 audit records 15,838 paper-time affiliation shares but still zero
+profile affiliation rows and canonical institutions; current factual counts
+belong in `PROJECT_STATE.md` and the timestamped validation reports.
+This remains an activation
 result, not a redesign of the composite weighting model; synthetic and pilot
 values remain confined to their isolated modes. A corpus-wide readiness count
 cannot activate a layer: the exact entity type, field/domain, period, dataset

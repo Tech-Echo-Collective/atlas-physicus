@@ -20,13 +20,17 @@ The synthetic dataset remains demonstration data. The historical INSPIRE pilot u
 ## Architecture
 
 ```text
-MetricDefinition → MetricRegistry → MetricCalculator / Metric Engine
+canonical graph + immutable source lineage
         ↓
-versioned MetricObservation
+scientific evidence certification → exact eligible populations
         ↓
-raw layer or explicitly confirmed user composite
+MetricDefinition → MetricRegistry → certified MetricCalculator / Metric Engine
         ↓
-shared map spectrum
+preserved raw metric → metric-specific normalization → Atlas Scale proof
+        ↓
+reviewed exact-five activation gate → versioned MetricObservation
+        ↓
+raw layer or explicitly confirmed user composite → shared map spectrum
 
 changed canonical records
         ↓
@@ -34,7 +38,7 @@ MetricRecomputationPlanner
         ↓
 affected entity/field/country/institution/year/metric partitions
         ↓
-jointly activated calculator (withheld) → new versioned observations
+certification/review queue → jointly activated calculator (withheld)
 ```
 
 React and MapLibre select supplied observations but never derive scientific metrics. Provider connectors normalize metadata but never calculate metrics.
@@ -128,7 +132,13 @@ remain taxonomy-only.
 
 ## Visualization contract
 
-Raw and composite observations use the existing normalized `0–100` display contract where applicable. Synthetic values are demonstrative; pilot values are sample-relative. The shared spectrum is violet → blue → cyan → green → yellow → orange → red. Missing uses a dark neutral color separate from low.
+The certified scientific path has a separate `normalized-atlas-scale-v1`
+presentation layer over preserved raw metrics. It is implemented as a
+withheld foundation and is not yet populated by live observations. Legacy
+synthetic `0–100` values remain demonstrative and historical pilot values
+remain sample-relative; neither is retroactively certified as an Atlas Scale
+observation. The shared spectrum is violet → blue → cyan → green → yellow →
+orange → red. Missing uses a dark neutral color separate from low.
 
 Country fill, institution heat surface, institution core, halos, and both pulse rings use the same computed active metric color. Pulse timing, expansion, and opacity are fixed decorative behavior and encode no value, uncertainty, rank, or additional metric.
 

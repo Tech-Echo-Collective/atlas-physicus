@@ -10,6 +10,17 @@ truth. Changing a threshold requires a new configuration version and a recorded
 validation decision. Passing a numeric minimum is necessary but not sufficient
 for scientific activation.
 
+## Certification boundary
+
+All readiness inputs pass through `scientific-evidence-certification-v1`.
+Canonicalization or provider presence alone is not eligibility. Each included
+paper, relationship, field ledger, and citation observation is bound to a
+checksum-verified decision; excluded and unresolved denominator mass remains
+visible in the certification manifest. Metric calculators reject an
+uncertified, stale, scope-incompatible, or digest-mismatched partition before
+a formula executes. The exact states and complete-year rule are documented in
+[Scientific Evidence Certification v1](evidence-certification.md).
+
 ## Global coverage thresholds
 
 | Evidence | Minimum |
@@ -122,6 +133,11 @@ There is no production state in which Activity alone is labeled validated while
 the other four official dimensions remain unfinished. An eligible gate result
 still requires an explicit reviewed activation decision; it does not publish
 layers automatically.
+
+The Joint Metric Activation Gate remains a scientific gate. Authorization to
+begin a Full Physics load additionally requires the independent
+[`storage-budget-gate-v1`](storage-architecture.md). Neither gate can override
+the other, and passing storage capacity does not activate a metric.
 
 The public repository read path independently verifies the exact five current
 definition versions and `live-calculated` statuses together with the exact

@@ -42,9 +42,31 @@ Crossref's distinct `Condensed Matter Physics` subject. arXiv category evidence
 continues through the existing catalog; reviewing a new INSPIRE rule requires
 a new mapping version rather than editing v1 in place.
 
+A separately versioned paired-certification trial uses only the closed UTC
+week `2020-01-13` through `2020-01-19` for hep-th and Condensed Matter. It is
+not registered as a production acquisition scope. The raw capture preserves
+request/response timestamps, HTTP source metadata, query identity, provider
+rows, and page checksums, and fails rather than truncating when its one-page
+INSPIRE or ten-page arXiv bounds are exceeded. This record-level proof cannot
+certify a complete calendar year or authorize production ingestion.
+
+The current paired capture/enrichment format records the internal live
+transport lineage and verifies the exact approved endpoint/query together
+with the retained response bytes. An injected transport remains fixture
+evidence even if it reports an official URL. Certification outputs are
+versioned separately; earlier generators are superseded rather than silently
+relabeling their results. Exact manifests and limitations are in the
+[certification validation report](validation/scientific-evidence-certification-2026-09-05.md).
+
 ## Normalization boundary
 
 All connectors emit a common `SourceRecord` and `NormalizedRecord` contract. Normalization can standardize IDs, dates, names, and provider syntax, but it does not choose a canonical identity. Each fetched JSON or Atom page is retained as an exact provider envelope in `SourceSnapshot`; normalized record evidence remains separately available in `RawEntityRecord`.
+
+For new staging certification work, exact provider pages are stored as
+content-addressed warm/cold artifacts and referenced from compact manifests.
+The current production duplication is retained until a verified migration;
+the long-term policy is described in the
+[scientific evidence storage architecture](storage-architecture.md).
 
 Authority identifiers dominate only when valid:
 
