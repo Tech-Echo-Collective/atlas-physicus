@@ -28,8 +28,8 @@ documentation.
   zero, and no partial activation is allowed.
 - PA-048: the nominal **5 GB budget covers all persistent Atlas data combined**,
   including archives, history, metadata and retained copies—not PostgreSQL only.
-  After the verified corrected-ledger retirement, retained evidence/archive/audit files
-  occupy 13.095 GB, plus approximately 1.878 GB of Atlas-only workspace: observed
+  After the bounded certification-ledger batch, retained evidence/archive/audit files
+  occupy 9.940 GB, plus approximately 1.878 GB of Atlas-only workspace: observed
   total-budget **FAIL**. Production migration execution is **NO-GO**; a future representative
   final-layout capacity assessment remains **WITHHELD**. No scientific history is lost
   or scientific policy weakened to fit the budget.
@@ -252,13 +252,24 @@ passed all seven fresh checks: **GO / COMPLETE**. Only corrected `459c1f40…`
 was removed, reclaiming **3,437,302,947 logical bytes**. Its 282,831,800-byte
 archive remains authoritative; descriptor, manifests/checksums and proofs remain
 unchanged. Post-delete archive integrity and historical binding pass without
-another full restore. Evidence is now **13,094,800,623 bytes**, approximately
+another full restore. Evidence was then **13,094,800,623 bytes**, approximately
 **14.973 GB combined** with Atlas-only workspace. Observed filesystem free space
 increased by 3,276,800,000 bytes, not an exclusive APFS block claim.
-The separate historical `8d9ba03a…` ledger remains intact and is not covered by
-this archive. No other evidence was removed. This is opt-in local tooling,
+At that single-artifact milestone, historical `8d9ba03a…` remained intact and no
+other evidence was removed. It is distinct from the corrected archive. This is opt-in local tooling,
 not production integration or transparent replacement of every direct-path caller.
 No scientific eligibility changed; independent durability and budget gates remain.
+
+The subsequently authorized [certification-ledger batch](validation/certification-ledger-batch-2026-09-05.md)
+examined nine remaining files / 3,533,688,096 bytes. Historical `8d9ba03a…` now
+has its own exact, independently restored 282,717,390-byte archive; only its
+3,437,391,298-byte expanded original was retired after all five gates passed.
+Its 1,667 historical conflicts remain preserved. Eight paired ledgers totaling
+96,296,798 bytes remain NO-GO because their manifest/path contracts are not
+supported by the unchanged resolver. Both historical and corrected archive
+authorities pass post-retirement checks; original manifests and old proof records
+are unchanged. Evidence is **9,940,187,795 bytes**, approximately **11.819 GB
+combined** with Atlas-only workspace. No other artifact class was processed.
 
 ## Track A — `hep-th-v1` evidence
 
@@ -438,12 +449,13 @@ Perform only reviewed evidence work for canonical dates, researcher identities, 
 institution targets/rollups, common-cutoff cohort populations, and complete
 historical windows. The production-compatible reader/schema and twelve-stage
 one-batch pilot plan are now documented, not implemented or approved to execute.
-The one-file lossless history compaction, bounded proof cleanup and explicitly
-authorized corrected-original retirement are complete. The archive-authority
-resolver retains exact recoverability of corrected `459c1f40…`; its original is
-now absent. No further unlink is cleared: historical manifest-bound copies and
-the distinct historical `8d9ba03a…` ledger remain retained. Preserve the archive,
-descriptor/manifests and validation receipts. No second-artifact compression is authorized.
+The bounded ledger batch is complete. Corrected `459c1f40…` and historical
+`8d9ba03a…` retain separate exact archive authorities; both expanded originals
+are now absent. The eight paired-ledger paths remain NO-GO pending a separately
+reviewed compatibility decision. Preserve both archives, descriptors/manifests
+and validation receipts. No further unlink or other-class processing is cleared.
+Affiliation evidence is the next class to review based on the prior inventory,
+not an approved compression/deletion run.
 A production JSONB representation,
 independent operational restore and full archive/backup peak still need isolated
 rehearsal and separate approval.

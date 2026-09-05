@@ -145,8 +145,10 @@ The [archive authority resolver](validation/artifact-resolver-2026-09-05.md) now
 passes an original-absent proof for the corrected ledger. The separately authorized
 [single-artifact retirement](validation/corrected-ledger-retirement-2026-09-05.md)
 now removes only that corrected original after fresh checks; the archive and all
-proof metadata stay. The distinct historical ledger remains intact; no further
-cleanup or second-artifact compression is authorized. Production
+proof metadata stay. The subsequent [bounded ledger batch](validation/certification-ledger-batch-2026-09-05.md)
+also archives and retires the distinct historical ledger after exact independent
+recovery; eight incompatible paired-ledger paths remain retained. No other-class
+processing or further cleanup is authorized. Production
 readiness still requires isolated testing of the proposed representation, durable
 restore and complete peak costs. Production payload deletion and broader loading
 remain unauthorized.

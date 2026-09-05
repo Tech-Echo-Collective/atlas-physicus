@@ -7,6 +7,25 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Bounded certification-ledger batch
+
+- Revalidated and pushed prior `5760524` before processing; CI 33945043808 green.
+  Published nine candidates / 3,533,688,096 bytes before ledger mutation.
+- Historical `8d9ba03a…` alone passes existing archive/restore/authority/dependency
+  checks: 3,437,391,298 → 282,717,390 bytes, exact 2,766,760 decisions including
+  1,667 conflicts preserved under OS-denied-original recovery. Original retired.
+- Eight paired ledgers / 96,296,798 bytes stay NO-GO: unsupported existing
+  manifest/path contracts. Both retained archive authorities and all remaining
+  ledger/manifest hashes pass postchecks; no historical record was rewritten.
+- 65 focused tests and independent review pass. Fixed only audit JSON timestamp
+  precision after a pre-deletion guard stopped; no shared-tool/source defect.
+- Net evidence-root reduction 3,154,612,828 bytes after archive/audit costs;
+  evidence 9,940,187,795 bytes, approximately 11.819 GB including Atlas workspace.
+  Exact per-ledger matrix, pins, scratch accounting and caveats:
+  [batch report](validation/certification-ledger-batch-2026-09-05.md).
+- No Railway, other-class processing, new data, replay, policy change or activation.
+  No further cleanup authorized; affiliation evidence is only a future review target.
+
 ## 2026-09-05 — Single corrected-ledger retirement
 
 - All seven fresh dependency/integrity/proof/scratch checks pass; retirement GO.
