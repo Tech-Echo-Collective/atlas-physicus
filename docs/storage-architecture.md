@@ -62,6 +62,17 @@ Existing `SourceSnapshot.storage_reference` is the migration seam. The current
 production schema still duplicates raw provider evidence at snapshot and
 record level; no destructive production migration is part of this milestone.
 
+The [bounded payload-reference pilot](validation/payload-reference-recovery-2026-09-05.md)
+demonstrates exact original-byte recovery and unchanged parser/canonicalization/
+certification outputs for one retained batch. Its SQL replica keeps required
+normalized attributes, IDs, timestamps, provenance and indexes hot, sharing
+checksum-bound page references across raw occurrences. Original payload hashes,
+compressed archive hashes and legacy identity/snapshot checksums remain distinct.
+This is not a deployed dual reader: current NOT NULL payload columns, worker
+transactions and cursor behavior are unchanged. Missing/corrupt references must
+fail closed, never masquerade as empty JSON. Production integration and a durable
+independent restore rehearsal remain separate from local artifact verification.
+
 ## Storage Budget Gate v1
 
 Full Physics loading requires both the existing Joint Metric Activation Gate

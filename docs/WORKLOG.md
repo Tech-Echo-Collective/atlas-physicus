@@ -7,6 +7,33 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — One-batch payload-reference recovery pilot
+
+- Reused only the existing paired week: eight provider pages, 635 occurrences,
+  474 canonical papers and retained exact-authority enrichment. No acquisition,
+  broad replay, production migration/write, tag change or metric activation.
+- Added a bounded local payload envelope/reference with separate original and
+  compressed hashes, exact acquisition metadata and fail-closed recovery.
+  All 449 source/authority/manifest files restore exactly; unchanged parsers,
+  canonicalization and certification reproduce the original manifest and all
+  ten artifacts, including 9,999 decisions. All 1,033 provenance links resolve;
+  certification states, conservation, missing semantics and eligibility remain
+  unchanged, with zero certified years/windows or metric observations created.
+- Native local PostgreSQL compares a staging current-layout replica—not
+  exported production rows—with 3,179 raw rows/four snapshots. All hot metadata
+  and indexes remain; shared page references reduce the raw/snapshot component
+  from 14.156 to 6.373 MB, 54.98%. Conditional production savings are not measured
+  reclamation or Full Physics capacity. Both gates remain withheld; the next
+  action is bounded additive dual-read/independent-restore integration, not
+  production payload retirement. Exact figures, artifact hashes, migration and
+  rollback requirements are in the [pilot report](validation/payload-reference-recovery-2026-09-05.md).
+- All 123 focused tests pass (2.82s); Ruff passes 11 changed/storage files and
+  strict mypy passes 79 source files. Native SQL-to-cold recovery independently
+  verifies all 3,179 paper/author-fragment locators. At `01:34:34Z`, production
+  API/database/providers remain healthy with zero provider failure streaks and
+  zero public observations; one existing resource-check failure remains. CI is
+  pending push; no deployment change is claimed.
+
 ## 2026-09-05 — Bounded storage amplification investigation
 
 - Read-only PostgreSQL-native accounting separates heap, auxiliary forks,

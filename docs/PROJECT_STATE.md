@@ -64,7 +64,7 @@ documentation.
 
 ## Production health
 
-Read-only verification on 2026-09-05 at `00:56:21Z` found:
+Read-only verification on 2026-09-05 at `01:34:34Z` found:
 
 - runtime `3.0.5-alpha` and database health both healthy;
 - INSPIRE and arXiv healthy with zero consecutive failures and September 4
@@ -72,8 +72,8 @@ Read-only verification on 2026-09-05 at `00:56:21Z` found:
 - metric recalculation idle;
 - 440 unresolved entities remain recorded for review; one resource-check
   failure is reported for follow-up, with no current provider failure;
-- zero public metric observations and expected `https://atlas.techecho.org`
-  CORS, verified at `00:16:29Z`.
+- zero public metric observations; expected `https://atlas.techecho.org`
+  CORS was separately verified at `00:16:29Z`.
 
 Railway production data, update history, and release tags have not been
 modified by the current validation work. Backup/restore evidence, restart and
@@ -158,6 +158,15 @@ isolated restore are unvalidated. No production payload was migrated or deleted.
 Full Physics still requires both gates. See the
 [bounded storage investigation](validation/storage-amplification-2026-09-05.md)
 and the historical [initial sizing](validation/storage-sizing-2026-09-04.md).
+
+The subsequent one-batch [payload-reference recovery pilot](validation/payload-reference-recovery-2026-09-05.md)
+restores all existing paired source/authority bytes and reproduces the unchanged
+certification manifest and ten artifacts. A local current-layout replica retains
+all hot metadata/indexes while reducing its raw/snapshot component from 14.156
+to 6.373 MB (54.98%); sampled scaling is 298.645 to 134.459 MB per 10k papers,
+not whole-Atlas storage or approved capacity. Production still stores inline
+payloads. Durable dual-read integration, cursor-failure checks and isolated
+restore require a separately bounded staging rehearsal before any retirement.
 
 ## Track A — `hep-th-v1` evidence
 
@@ -268,6 +277,12 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
+- The one-batch payload-reference pilot passes 123 focused tests (2.82s), Ruff
+  over 11 changed/storage files, and strict mypy over 79 source files. Native
+  PostgreSQL SQL-to-cold recovery verifies all 3,179 paper/author-fragment
+  locators and unchanged hot metadata; independent restored sources reproduce
+  all certification artifacts exactly. CI is pending push. Exact measurements
+  and limitations are in the [payload recovery report](validation/payload-reference-recovery-2026-09-05.md).
 - The bounded storage investigation passes all 398 backend tests, strict mypy
   (78 source files), and Ruff format/lint (119 files, including tools). Native
   PostgreSQL SQL/archive recovery and bounded local provenance verification
@@ -294,7 +309,8 @@ authorized**. The exact gate input and output are preserved in the
 Perform only reviewed evidence work for canonical dates, researcher identities, fields,
 institution targets/rollups, common-cutoff cohort populations, and complete
 historical windows. The smallest capacity action is an additive verified
-artifact-reference/dual-read pilot on one existing bounded batch with isolated
-restore, preserving inline production data. A later representative final-schema
+artifact-reference/dual-read staging integration and independent restore rehearsal
+on one existing batch, building on the completed isolated payload-recovery pilot
+and preserving inline production data. A later representative final-schema
 measurement is still required. Both gates remain withheld; Full Physics loading
 and v3.1 remain unauthorized.
