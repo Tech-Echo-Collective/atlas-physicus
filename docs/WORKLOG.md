@@ -7,6 +7,25 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Verified local proof-copy cleanup
+
+- Rechecked original/restored/archive hashes, streamed archive decoding into a
+  hash only, and verified the retained proof/current certification manifest.
+  Deleted only the 3,437,302,947-byte test restore; original, archive and proof stay.
+- Of 152,976,812 bytes of older proof copies, removed eight exact SQL read-back
+  duplicates / 8,175,736 bytes with retained source twins and recovery metadata.
+  Kept 144,801,076 bytes whose historical manifests require their local paths.
+- Actual removal: nine files / 3,445,478,683 logical bytes. New evidence footprint
+  is 16,532,083,020 bytes; explicit Atlas workspace is 1,878,134,488 bytes at the
+  post-cleanup snapshot. APFS exclusive physical reclamation is not claimed.
+- No further compression, scientific replay, provider acquisition, Railway
+  access, policy change or tag change. Next candidate: unique historical decision
+  ledger `8d9ba03a…` (3,437,391,298 bytes), with separate approval and originals kept.
+- Docs-only publication; whitespace/local-link checks pass. Starting `0944968`
+  passed [CI 33940584417](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33940584417).
+  Exact removals, retained dependencies and accounting are in the
+  [cleanup report](validation/verified-local-cleanup-2026-09-05.md).
+
 ## 2026-09-05 — Local evidence inventory and one-file lossless compaction
 
 - Hash-verified 5,356 evidence files / 16.248 GB and measured an additional

@@ -28,9 +28,9 @@ documentation.
   zero, and no partial activation is allowed.
 - PA-048: the nominal **5 GB budget covers all persistent Atlas data combined**,
   including archives, history, metadata and retained copies—not PostgreSQL only.
-  Retained local evidence baseline alone is 16.248 GB, before workspace and
-  subsequent trial copies: observed total-budget
-  **FAIL**. Production migration execution is **NO-GO**; a future representative
+  After the verified local cleanup, retained evidence/archive/audit files alone
+  occupy 16.532 GB, plus approximately 1.878 GB of Atlas-only workspace: observed
+  total-budget **FAIL**. Production migration execution is **NO-GO**; a future representative
   final-layout capacity assessment remains **WITHHELD**. No history is deleted
   or scientific policy weakened to fit the budget.
 
@@ -221,13 +221,21 @@ path sets; duplicate content is not deletion permission. Historical and correcte
 
 One corrected ledger compresses losslessly to 282.832 MB. Exact original/restored
 bytes, all 2,766,760 decisions and ordered provenance/reason/version summaries
-match; no scientific replay or recertification occurred. Original and restored
-test copy remain, so actual reclaimed bytes are zero and the pilot adds 3.720 GB
-of local files. All scoped local files now occupy approximately 21.856 GB,
-including that redundant restore copy. Even hypothetical exact deduplication plus
-only the tested compression leaves about 9.766 GB of evidence/audit state before
-other workspace or production. The [retention policy](local-evidence-retention.md)
-is a proposal, not an automatic deletion rule or production migration approval.
+match; no scientific replay or recertification occurred. The separately approved
+[verified cleanup](validation/verified-local-cleanup-2026-09-05.md) removes only
+the 3,437,302,947-byte restored test output and eight redundant SQL read-back
+files / 8,175,736 bytes. Original ledgers, archive, manifests, proof and all source
+twins remain. Historical manifest paths require retaining the other 144,801,076
+bytes of reviewed older proof copies; neither historical manifests nor scientific
+evidence were rewritten.
+
+Gross logical bytes removed are **3,445,478,683**. The post-cleanup snapshot is
+**16,532,083,020 evidence bytes / 5,367 files**, plus **1,878,134,488 workspace
+bytes**, approximately **18.410 GB combined**; subsequent documentation/Git
+metadata can change the workspace slightly. APFS exclusive block reclamation is
+not measured. The [retention policy](local-evidence-retention.md) remains a
+proposal, not automatic deletion or production migration approval. Total-budget
+FAIL remains; moving or deduplicating required evidence paths is not authorized.
 
 ## Track A — `hep-th-v1` evidence
 
@@ -338,6 +346,12 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
+- The verified local cleanup changes documentation only. Nine removed paths
+  have fresh checksum/retained-source checks and explicit receipts; original
+  evidence, archive and historical manifest hashes are preserved. Baseline
+  `0944968` passed [CI 33940584417](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33940584417).
+  Documentation whitespace/link checks pass. No Railway access, scientific replay,
+  new compression trial, application/schema change or tag change occurred.
 - The local retention review adds only a bounded standalone archival helper,
   fixture tests and documentation. 97 focused tests and changed-file Ruff pass;
   the real one-file lossless restore passes. Baseline `32b3f4b` passed
@@ -397,11 +411,12 @@ Perform only reviewed evidence work for canonical dates, researcher identities, 
 institution targets/rollups, common-cutoff cohort populations, and complete
 historical windows. The production-compatible reader/schema and twelve-stage
 one-batch pilot plan are now documented, not implemented or approved to execute.
-The one-file lossless history compaction proof now passes. The smallest local
-cleanup is separate approval to remove only its new 3.437 GB verified restored
-test copy while keeping the original, archive and proof report; then review
-152.977 MB of older redundant proof/restore copies and manifest path contracts.
-No deletion happened during the investigation. A production JSONB representation,
+The one-file lossless history compaction proof and its bounded verified cleanup
+are complete. No further unlink is cleared: historical manifest-bound copies
+remain retained. The next local compression candidate, requiring separate
+approval, is the unique 3,437,391,298-byte historical certification decision
+ledger `8d9ba03a…`; it is the same artifact class as the proven corrected-ledger
+archive, not duplicate evidence. No new trial was run. A production JSONB representation,
 independent operational restore and full archive/backup peak still need isolated
 rehearsal and separate approval.
 Production inline data stays intact. The observed retained total-budget result

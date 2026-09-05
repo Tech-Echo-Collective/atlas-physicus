@@ -138,10 +138,14 @@ now pass. The [production schema/reader plan and total-budget review](validation
 remain design-only: no production migration is ready. PA-048 counts all persistent
 Atlas data within the nominal 5 GB budget; retained local history already exceeds
 it. A [one-file local lossless compaction proof](validation/local-evidence-retention-2026-09-05.md)
-now passes with originals retained. Next is explicitly approved redundant-proof
-cleanup with historical path preservation, followed by isolated testing of the
-proposed production representation, durable restore and complete peak costs—not
-production payload deletion or a broader load.
+now passes with originals retained. The separately approved
+[bounded proof cleanup](validation/verified-local-cleanup-2026-09-05.md) removes
+3.445 GB of verified test copies while preserving historical manifest paths.
+The next local candidate is the unique historical certification ledger, requiring
+separate approval; no further compression or deletion is implied. Production
+readiness still requires isolated testing of the proposed representation, durable
+restore and complete peak costs. Production payload deletion and broader loading
+remain unauthorized.
 
 Remaining scientific and operational gates are:
 
