@@ -31,8 +31,11 @@ reports.
   strict mypy passes 79 source files. Native SQL-to-cold recovery independently
   verifies all 3,179 paper/author-fragment locators. At `01:34:34Z`, production
   API/database/providers remain healthy with zero provider failure streaks and
-  zero public observations; one existing resource-check failure remains. CI is
-  pending push; no deployment change is claimed.
+  zero public observations; one existing resource-check failure remains.
+  Pilot commit `7c1f34c` is pushed and passed
+  [CI 33936700018](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33936700018),
+  including frontend, backend/PostgreSQL and containerized API/worker checks.
+  The private benchmark server is stopped; production inline data is unchanged.
 
 ## 2026-09-05 — Bounded storage amplification investigation
 

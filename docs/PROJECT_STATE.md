@@ -281,7 +281,9 @@ authorized**. The exact gate input and output are preserved in the
   over 11 changed/storage files, and strict mypy over 79 source files. Native
   PostgreSQL SQL-to-cold recovery verifies all 3,179 paper/author-fragment
   locators and unchanged hot metadata; independent restored sources reproduce
-  all certification artifacts exactly. CI is pending push. Exact measurements
+  all certification artifacts exactly. Commit `7c1f34c` is pushed and passed
+  [CI 33936700018](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33936700018)
+  (frontend, backend/PostgreSQL and containers). Exact measurements
   and limitations are in the [payload recovery report](validation/payload-reference-recovery-2026-09-05.md).
 - The bounded storage investigation passes all 398 backend tests, strict mypy
   (78 source files), and Ruff format/lint (119 files, including tools). Native
