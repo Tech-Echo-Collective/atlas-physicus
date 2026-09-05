@@ -64,13 +64,14 @@ documentation.
 
 ## Production health
 
-Read-only verification on 2026-09-05 at `00:14:15Z` found:
+Read-only verification on 2026-09-05 at `00:56:21Z` found:
 
 - runtime `3.0.5-alpha` and database health both healthy;
-- INSPIRE and arXiv healthy with zero consecutive failures;
+- INSPIRE and arXiv healthy with zero consecutive failures and September 4
+  latest successes;
 - metric recalculation idle;
-- 440 unresolved entities and two existing resource-check failures reported
-  for follow-up, with no current provider failure;
+- 440 unresolved entities remain recorded for review; one resource-check
+  failure is reported for follow-up, with no current provider failure;
 - zero public metric observations and expected `https://atlas.techecho.org`
   CORS, verified at `00:16:29Z`.
 
@@ -144,16 +145,19 @@ fitted parameters, cutoff, coverage, and missing reasons. These certification
 and Atlas artifacts are staging-only; production has no deployed certification
 schema and still publishes zero live metric observations.
 
-The read-only PostgreSQL audit measured a 306.5 MB database and 499.1 MB total
-use on an actual 4.364 GiB volume. Raw snapshot/record relations occupy 52.35%
-of public relations. The **Storage Budget Gate is WITHHELD**: the 823-paper
-sample is unrepresentative, final hot evidence rows are unmeasured, the Full
-Physics target population is unreviewed, and isolated restore evidence is
-incomplete. A checksum-verifiable local artifact-store abstraction supports
-future warm/cold storage without migrating current production payloads.
-Full Physics loading requires both this gate and the Joint Gate; ordinary
-bounded map/API reads do not require a Full Load gate. See
-[storage sizing](validation/storage-sizing-2026-09-04.md).
+The September 5 read-only audit measured a 306.8 MB database and 482.5 MB volume
+use on actual 4.364 GiB capacity. Raw snapshot/record relations occupy 52.31%
+of public relations, but required normalized attributes/metadata are not cold.
+A local 474-paper/9,999-decision PostgreSQL prototype preserves exact decisions
+while reducing hypothetical expanded certification storage by 83.45%, from
+391.626 to 64.810 MB per 10k papers; this is not a whole-database saving.
+The retained-layout estimate supports only an illustrative 5,616 total-paper
+steady ceiling, not certified capacity. The **Storage Budget Gate remains
+WITHHELD**: representative final-state rows, target population, peak usage and
+isolated restore are unvalidated. No production payload was migrated or deleted.
+Full Physics still requires both gates. See the
+[bounded storage investigation](validation/storage-amplification-2026-09-05.md)
+and the historical [initial sizing](validation/storage-sizing-2026-09-04.md).
 
 ## Track A — `hep-th-v1` evidence
 
@@ -264,6 +268,11 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
+- The bounded storage investigation passes all 398 backend tests, strict mypy
+  (78 source files), and Ruff format/lint (119 files, including tools). Native
+  PostgreSQL SQL/archive recovery and bounded local provenance verification
+  pass. No frontend code changed; post-push CI is pending. Exact results and
+  limits are in the [storage report](validation/storage-amplification-2026-09-05.md).
 - Certification/capacity result commit `be5e304` is pushed to `main` and passed
   [CI 33932839622](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33932839622),
   including frontend, backend/PostgreSQL, and containerized API/worker checks.
@@ -282,6 +291,8 @@ authorized**. The exact gate input and output are preserved in the
 
 Perform only reviewed evidence work for canonical dates, researcher identities, fields,
 institution targets/rollups, common-cutoff cohort populations, and complete
-historical windows. The separate capacity task is a representative final-schema
-staging measurement with a reviewed target and isolated restore. Both gates
-remain withheld; Full Physics loading and v3.1 remain unauthorized.
+historical windows. The smallest capacity action is an additive verified
+artifact-reference/dual-read pilot on one existing bounded batch with isolated
+restore, preserving inline production data. A later representative final-schema
+measurement is still required. Both gates remain withheld; Full Physics loading
+and v3.1 remain unauthorized.

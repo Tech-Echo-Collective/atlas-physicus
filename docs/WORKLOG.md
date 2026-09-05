@@ -7,6 +7,32 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Bounded storage amplification investigation
+
+- Read-only PostgreSQL-native accounting separates heap, auxiliary forks,
+  TOAST and indexes. Raw payload duplication, search/authority fan-out and
+  repeated affiliation/field provenance dominate; current hot attributes and
+  historical audit payloads must not be treated as interchangeable.
+- Reused only the existing 474-paper/9,999-decision sample in private local
+  PostgreSQL. Complete SQL/archive recovery preserves decisions and the typed
+  calculator boundary; compact certification uses 3.072 MB versus hypothetical
+  expanded 18.563 MB, including dictionaries and indexes. This is an 83.45%
+  component saving, not measured production compaction.
+- Current-state-plus-compact-certification capacity remains insufficient for
+  10k papers with required headroom. The illustrative steady ceiling is 5,616
+  total papers, not approved safe capacity; both gates remain withheld.
+  No acquisition, broad replay, production migration, history deletion, metric
+  activation or tag change occurred. Exact bytes, hashes, limitations and the
+  additive dual-read pilot plan are in the
+  [storage report](validation/storage-amplification-2026-09-05.md).
+- Exact SQL/archive recovery plus 1,033 unique provenance links pass with zero
+  unresolved references and 447 local manifest files verified. All 398 backend
+  tests pass (9.28s), strict mypy passes 78 source files, and Ruff format/lint
+  passes 119 files including tools; one existing dependency warning remains.
+  At `00:56:21Z`, production API/database/providers remain healthy with zero
+  provider failure streaks; one resource-check failure remains. No frontend
+  change was made. Post-push CI is pending.
+
 ## 2026-09-05 — Scientific certification, paired evidence, and capacity
 
 - Implemented explicit certification states, per-kind formula-input binding,

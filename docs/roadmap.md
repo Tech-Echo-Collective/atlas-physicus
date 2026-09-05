@@ -35,8 +35,8 @@ The release tag remains the architectural baseline. The follow-up Production Act
 
 ## Current milestone — v3.0.5-alpha Stabilization & Scientific Validation
 
-Status: **released baseline; scientific certification and capacity foundation
-under final validation**.
+Status: **released baseline; scientific certification/capacity foundation
+validated; scientific and storage activation remain withheld**.
 This milestone stabilizes the live v3.0.4 system; it does not
 expand beyond the bounded Physics scope or redesign the production
 architecture.
@@ -130,8 +130,11 @@ A read-only production PostgreSQL audit and hot/warm/cold artifact abstraction
 establish the storage boundary. Full Physics loading requires **both** the
 Joint Metric Gate and Storage Budget Gate. The present sample and capacity
 projections do not pass the latter; no object-store deployment, production
-payload migration, or wider load is implied. Next capacity work is a
-representative final-schema staging sample and reviewed isolated restore.
+payload migration, or wider load is implied. The bounded September 5
+[storage investigation](validation/storage-amplification-2026-09-05.md) validates
+compact decision storage, not production compaction or a safe larger capacity.
+Next is a one-batch additive artifact-reference/dual-read and isolated-restore
+pilot before any representative final-schema staging load is considered.
 
 Remaining scientific and operational gates are:
 
