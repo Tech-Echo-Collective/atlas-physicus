@@ -133,8 +133,9 @@ would improve I/O, not by itself reduce stored bytes.
 
 The private benchmark used PostgreSQL 17.11 on local arm64, not Railway, and
 only the existing **9,999 decisions for 474 papers**. The scratch runtime was
-installed for this benchmark, not registered as a background service. No scientific rules were
-rerun. Expanded JSONB is a hypothetical baseline, not a deployed certification
+installed for this benchmark, not registered as a background service, and
+stopped after measurement. No scientific rules were rerun. Expanded JSONB is a
+hypothetical baseline, not a deployed certification
 schema. Both alternatives retain equivalent paper/subject lookup indexes.
 
 Compact storage keeps queryable status, kind, reason, version, IDs, per-decision
@@ -251,5 +252,7 @@ regressions; strict mypy passes 78 source files and Ruff formatting/lint passes
 119 files including benchmark tools. The existing Starlette/httpx deprecation
 warning remains. At `2026-09-05T00:56:21.780483Z`, production API/database were
 healthy; INSPIRE/arXiv had zero consecutive failures and September 4 latest
-successes. One resource-check failure remains. Post-push CI is pending; no
-frontend changes were made.
+successes. One resource-check failure remains. Commit `c88f9b9` is pushed and
+passed [CI 33935510006](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33935510006):
+frontend lint/tests/build, backend tests/PostgreSQL migrations/ingestion/API,
+and containerized API/worker checks. No frontend changes were made.

@@ -271,7 +271,9 @@ authorized**. The exact gate input and output are preserved in the
 - The bounded storage investigation passes all 398 backend tests, strict mypy
   (78 source files), and Ruff format/lint (119 files, including tools). Native
   PostgreSQL SQL/archive recovery and bounded local provenance verification
-  pass. No frontend code changed; post-push CI is pending. Exact results and
+  pass. Commit `c88f9b9` is pushed and passed
+  [CI 33935510006](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33935510006)
+  (frontend, backend/PostgreSQL and containers). No frontend code changed. Exact results and
   limits are in the [storage report](validation/storage-amplification-2026-09-05.md).
 - Certification/capacity result commit `be5e304` is pushed to `main` and passed
   [CI 33932839622](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33932839622),
