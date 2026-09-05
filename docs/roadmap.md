@@ -137,9 +137,11 @@ One-batch private dual-read/rollback and same-host archive-only dependency proof
 now pass. The [production schema/reader plan and total-budget review](validation/production-storage-design-review-2026-09-05.md)
 remain design-only: no production migration is ready. PA-048 counts all persistent
 Atlas data within the nominal 5 GB budget; retained local history already exceeds
-it. Next is reviewed lossless history compaction/retention and isolated testing
-of the proposed production representation, durable restore and complete peak
-costs—not payload deletion or a broader load.
+it. A [one-file local lossless compaction proof](validation/local-evidence-retention-2026-09-05.md)
+now passes with originals retained. Next is explicitly approved redundant-proof
+cleanup with historical path preservation, followed by isolated testing of the
+proposed production representation, durable restore and complete peak costs—not
+production payload deletion or a broader load.
 
 Remaining scientific and operational gates are:
 

@@ -28,7 +28,8 @@ documentation.
   zero, and no partial activation is allowed.
 - PA-048: the nominal **5 GB budget covers all persistent Atlas data combined**,
   including archives, history, metadata and retained copies—not PostgreSQL only.
-  Current retained local evidence alone is 16.248 GB: observed total-budget
+  Retained local evidence baseline alone is 16.248 GB, before workspace and
+  subsequent trial copies: observed total-budget
   **FAIL**. Production migration execution is **NO-GO**; a future representative
   final-layout capacity assessment remains **WITHHELD**. No history is deleted
   or scientific policy weakened to fit the budget.
@@ -211,6 +212,23 @@ Known-component 10k-paper hybrid scaling reaches 3.333 GB with contingency,
 already above the nominal 3 GB steady limit, before unmeasured required costs.
 The total-budget FAIL does not mean the healthy Railway volume is full.
 
+The [local retention investigation](validation/local-evidence-retention-2026-09-05.md)
+confirms 5,356 retained evidence files / 16,247,746,809 bytes, plus 1.878 GB of
+explicit Atlas-only repository/cache/private-test workspace. Exact hashes find
+3.336 GB of redundant bytes, but 3.178 GB belong to distinct required replay
+path sets; duplicate content is not deletion permission. Historical and corrected
+3.437 GB certification ledgers differ and both retain unique scientific history.
+
+One corrected ledger compresses losslessly to 282.832 MB. Exact original/restored
+bytes, all 2,766,760 decisions and ordered provenance/reason/version summaries
+match; no scientific replay or recertification occurred. Original and restored
+test copy remain, so actual reclaimed bytes are zero and the pilot adds 3.720 GB
+of local files. All scoped local files now occupy approximately 21.856 GB,
+including that redundant restore copy. Even hypothetical exact deduplication plus
+only the tested compression leaves about 9.766 GB of evidence/audit state before
+other workspace or production. The [retention policy](local-evidence-retention.md)
+is a proposal, not an automatic deletion rule or production migration approval.
+
 ## Track A — `hep-th-v1` evidence
 
 The immutable 2026-08-31 source and canonical-replay reports remain the source
@@ -320,6 +338,13 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
+- The local retention review adds only a bounded standalone archival helper,
+  fixture tests and documentation. 97 focused tests and changed-file Ruff pass;
+  the real one-file lossless restore passes. Baseline `32b3f4b` passed
+  [CI 33939682265](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33939682265).
+  Complete hashes, accounting and limitations are in the
+  [local report](validation/local-evidence-retention-2026-09-05.md). Railway was
+  not contacted in this local-only task; production code/schema remain unchanged.
 - The production storage design review changes documentation only. 85 focused
   existing storage/budget/recovery tests pass (1.02s); OS-isolated archive-only
   recovery and the separate post-recovery hash comparison pass. Baseline source
@@ -372,10 +397,13 @@ Perform only reviewed evidence work for canonical dates, researcher identities, 
 institution targets/rollups, common-cutoff cohort populations, and complete
 historical windows. The production-compatible reader/schema and twelve-stage
 one-batch pilot plan are now documented, not implemented or approved to execute.
-First review lossless history compaction/retention against the combined budget,
-starting with one existing artifact and exact original-hash restore proof; do
-not delete originals. Then rehearse the proposed production JSONB representation,
-independent operational restore and full archive/backup peak in isolation.
+The one-file lossless history compaction proof now passes. The smallest local
+cleanup is separate approval to remove only its new 3.437 GB verified restored
+test copy while keeping the original, archive and proof report; then review
+152.977 MB of older redundant proof/restore copies and manifest path contracts.
+No deletion happened during the investigation. A production JSONB representation,
+independent operational restore and full archive/backup peak still need isolated
+rehearsal and separate approval.
 Production inline data stays intact. The observed retained total-budget result
 is FAIL; future final-layout and scientific activation evidence remain withheld.
 Full Physics loading and v3.1 remain unauthorized.

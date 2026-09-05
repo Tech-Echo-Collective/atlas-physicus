@@ -7,6 +7,26 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Local evidence inventory and one-file lossless compaction
+
+- Hash-verified 5,356 evidence files / 16.248 GB and measured an additional
+  1.878 GB Atlas-only workspace. Exact redundancy is 3.336 GB; required historical
+  and corrected manifest paths prevent treating that as immediate reclaimability.
+  Disjoint retention classes and full mappings are in the
+  [local review](validation/local-evidence-retention-2026-09-05.md).
+- One 3.437 GB corrected certification ledger compresses to 282.832 MB; exact
+  restored bytes, 2,766,760 decisions and ordered scientific/provenance summaries
+  match. Original and new restore copy are retained. No deletion, acquisition,
+  broad replay, Railway access, metric/scientific change or tag change occurred.
+- Added a bounded create-exclusive archival helper and 12 safety fixtures;
+  97 focused tests plus changed-file Ruff pass. Baseline `32b3f4b` passed
+  [CI 33939682265](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33939682265).
+- Proposed a concise [retention policy](local-evidence-retention.md), not automatic
+  cleanup. Actual reclaimed bytes are zero; new pilot/audit files are counted.
+  Total-budget FAIL and production migration NO-GO remain. Next: separately
+  approve removal of the verified restored test copy, then review older duplicate
+  proof trees with exact retained-copy/path mapping. Keep all original evidence.
+
 ## 2026-09-05 — Production storage design and combined 5 GB budget
 
 - PA-048 clarifies the budget includes PostgreSQL, archives, required history,
