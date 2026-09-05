@@ -7,6 +7,25 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Pinned validation retention and affiliation audit
+
+- Continued verified `main` at `338891f` ([green CI](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33949872535)).
+  Pinned 1,000 existing source-scoped references; exact reuse and all row pins pass.
+  PA-052 sets 1 GiB cumulative proof retention, counting copies/archives/history.
+- All eight evidence-root affiliation files (2.268 GB) plus the known workspace
+  copy have verified hashes/manifests. Historical twins dominate 99.54%; all
+  direct-path dependencies remain. No original was deleted or made optional.
+- Three small affiliation archives recover exact bytes, statuses, provenance and
+  conserved mass with originals/network OS-denied; 89.98–91.87% payload reduction.
+  Retained pilot inputs/metadata add 13.490 MB; this is not reclaimed storage.
+- Added production refusal for expanded replay, retention-aware pilot admission,
+  sample-manifest validation and narrow locator/integrity/scan-bound fixes.
+  No scientific policy change, acquisition, Railway, broad replay or activation.
+  277 focused tests, Ruff (138 files), mypy (82 sources), whitespace and 71 local
+  documentation links pass; independent sample/storage/production-boundary review passes.
+  Exact tests, limitations, classes, sample pins and estimates:
+  [validation report](validation/affiliation-retention-2026-09-05.md).
+
 ## 2026-09-05 — Validation-ledger scaling safety
 
 - Audited worker/import/CLI and paired/replay/recovery/rollback output boundaries.

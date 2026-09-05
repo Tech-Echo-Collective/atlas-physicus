@@ -31,8 +31,8 @@ documentation.
   zero, and no partial activation is allowed.
 - PA-048: the nominal **5 GB budget covers all persistent Atlas data combined**,
   including archives, history, metadata and retained copies—not PostgreSQL only.
-  After the bounded certification-ledger batch, retained evidence/archive/audit files
-  occupy 9.940 GB, plus approximately 1.878 GB of Atlas-only workspace: observed
+  After the bounded affiliation-retention audit, retained evidence/archive/audit files
+  occupy 9.954 GB, plus approximately 1.880 GB of Atlas-only workspace: observed
   total-budget **FAIL**. Production migration execution is **NO-GO**; a future representative
   final-layout capacity assessment remains **WITHHELD**. No scientific history is lost
   or scientific policy weakened to fit the budget.
@@ -383,6 +383,20 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
+- PA-052 pins 1,000 existing source-scoped paper references (474 paired + 526
+  corrected Condensed Matter) and a 1 GiB cumulative proof-output budget within
+  PA-048. Exact sample reuse/row recovery pass; retained proof scope is 848.393 MB,
+  including archives, old versions, copies and metadata. New affiliation pilots
+  enforce fresh admission; this is not a universal old-CLI/OS quota.
+- The [affiliation audit](validation/affiliation-retention-2026-09-05.md) verifies
+  eight original files / 2,267,637,717 bytes, plus a 1,795,148-byte workspace copy.
+  Three small pilots recover exact bytes/states/provenance and conserved mass
+  with original evidence/network OS-denied. All originals remain path-required;
+  zero pre-existing evidence bytes reclaimed. No provider/researcher processing,
+  Railway access, scientific replay, policy change or metric activation occurred.
+  Expanded offline affiliation replay now refuses production execution; ordinary
+  production attribution remains unchanged. The conditional smaller-format
+  estimate is not archive authority, capacity approval or retirement permission.
 - PA-051 now separates corpus-scaled authoritative certification from bounded
   validation traces. Installed paired/replay generators and recovery/dual-read
   runners refuse production runtime execution. Retained replay requires an
@@ -461,10 +475,12 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Immediate next action
 
-The bounded validation-scaling guard is complete. Before any separately approved
-larger processing design, pin one representative per-version proof sample and its
-retention budget; never run a paired/rollback/recovery proof per corpus batch.
-No further artifact cleanup is authorized by this work.
+The bounded affiliation audit, pinned sample and cumulative proof budget are
+complete. Reuse sample `5f520b2a…` and fresh retention admission. The smallest
+separate follow-up is a path-compatible affiliation reader review using an
+already-proven small paired archive; do not retire any affiliation file yet.
+Never run a paired/rollback/recovery proof per corpus batch. No further artifact
+cleanup or provider/researcher-class processing is authorized by this work.
 
 Perform only reviewed evidence work for canonical dates, researcher identities, fields,
 institution targets/rollups, common-cutoff cohort populations, and complete
@@ -475,8 +491,8 @@ The bounded ledger batch is complete. Corrected `459c1f40…` and historical
 are now absent. The eight paired-ledger paths remain NO-GO pending a separately
 reviewed compatibility decision. Preserve both archives, descriptors/manifests
 and validation receipts. No further unlink or other-class processing is cleared.
-Affiliation evidence is the next class to review based on the prior inventory,
-not an approved compression/deletion run.
+Affiliation files have now been audited and sampled; their unsupported direct-path
+dependencies still block archive promotion or deletion.
 A production JSONB representation,
 independent operational restore and full archive/backup peak still need isolated
 rehearsal and separate approval.

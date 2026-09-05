@@ -147,10 +147,10 @@ Enforced operational limits (not scientific thresholds):
   Summary-only offline replay remains available without retaining a decision
   ledger, but is not a production ingestion or equivalence step.
 
-These limits bound individual proof traces, not all input memory or cumulative
-operator runs. Do not schedule a proof per production batch/paper, shard a full
-corpus into proof outputs, or retain an expanding series of A/B copies. Future
-integration needs a reviewed per-version proof/retention budget. Runtime settings
+These limits bound individual proof traces, not all input memory. Do not schedule
+a proof per production batch/paper, shard a full corpus into proof outputs, or
+retain an expanding series of A/B copies. PA-052 now supplies the reviewed
+per-version proof/retention budget below. Runtime settings
 and static tests protect accidental reuse, not hostile code with application
 privileges. Existing exact single-artifact archive restoration remains governed
 by its separate pinned size/checksum/scratch contract; no archive tooling changes.
@@ -158,6 +158,39 @@ by its separate pinned size/checksum/scratch contract; no archive tooling change
 The [bounded audit](validation/validation-ledger-scaling-safety-2026-09-05.md)
 records generator paths, focused tests and a deliberately pathological storage
 scenario, not a Full Physics capacity estimate.
+
+### Reusable sample and cumulative proof admission
+
+PA-052 fixes `bounded-cross-track-validation-sample-v1` at 1,000 existing references
+(474 official paired + 526 corrected replay), retaining separate source versions.
+Sample ID, manifest checksum, selection strata and exact reuse proof are in the
+[affiliation-retention report](validation/affiliation-retention-2026-09-05.md).
+Future proof versions reuse it unless reviewed evidence/domain expansion requires
+a documented replacement; the sample is not a pooled scientific dataset.
+
+`storage/validation_retention.py` caps persistent proof outputs at **1 GiB**,
+optionally tightened. All physical files, old versions, archives, copies and
+metadata count, including REVIEW. Necessary base source/canonical bundles remain
+under PA-048's total budget even when outside this narrower proof-output scope.
+The typed inventory/admission binds sample/code/proof versions and a byte
+reservation; fresh path/size preflight rejects unlisted managed files, missing
+files, stale inventories, unsafe paths and existing output. Optional hash
+verification is separate from metadata-only accounting.
+
+The affiliation pilot uses that admission before input/output, bounds complete
+selected paper groups and reserves stream/archive/manifest bytes before publishing.
+Runs must be serialized; inventory all newly retained files before another version.
+This is not an OS quota or automatic integration into every historical CLI:
+operators must obtain admission before old standalone validation commands too.
+No auto-delete/expiry, corpus sharding, science-policy relaxation or capacity PASS.
+
+Expanded historical affiliation/replay writers are development/test only and
+refuse production before IO. Normal production attribution continues through
+`materialize_paper_time_affiliations` and authoritative ORM relationships. Only
+necessary compact paper-time state, exact shares, unresolved status and provenance
+may scale by default; verbose audit/replay artifacts remain bounded, sampled,
+ephemeral or cold retained when justified. Existing compact certification/storage
+prototypes are not deployed production authority.
 
 ## Storage Budget Gate v1
 

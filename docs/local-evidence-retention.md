@@ -60,3 +60,16 @@ After the run, record:
 No age-based expiry, automatic deletion, bulk rewrite or scientific-policy
 relaxation is proposed. Stop on missing provenance, unique unreviewed evidence,
 changing inputs, unsafe restore paths or unverified archive integrity.
+
+## Adopted bounded-proof extension
+
+PA-052 now pins a reusable 1,000-reference sample and a cumulative **1 GiB**
+proof-output budget inside PA-048, retaining existing per-trace limits. New
+version-level proof work needs a fresh inventory and reservation; old versions,
+archives, copies and uncertain files all count. There is no automatic deletion.
+The [affiliation-class audit](validation/affiliation-retention-2026-09-05.md)
+records the exact sample, accounting scope, three lossless small pilots and
+remaining direct-path dependencies. All original affiliation artifacts remain
+KEEP/REVIEW or ARCHIVE_CANDIDATE; exact duplicates are not cleared for retirement.
+Production database affiliation storage and provider/researcher artifact classes
+were not processed. The combined budget still fails despite proof-sub-budget headroom.

@@ -16,7 +16,13 @@ from unittest.mock import MagicMock
 import pytest
 from sqlalchemy.orm import Session
 
-from physics_atlas_api import certification, models, paired_trial_certification, worker
+from physics_atlas_api import (
+    certification,
+    historical_replay_materialization,
+    models,
+    paired_trial_certification,
+    worker,
+)
 from physics_atlas_api.certification import staging
 from physics_atlas_api.config import Settings
 from physics_atlas_api.connectors.base import ConnectorBatch, SourceConnector
@@ -27,6 +33,7 @@ VALIDATION_MODULES = {
     "physics_atlas_api.paired_trial_certification",
     "physics_atlas_api.replay_certification",
     "physics_atlas_api.storage.compact",
+    "physics_atlas_api.historical_replay_materialization",
 }
 REPLAY_GENERATORS = {
     "certify_replay_bundle",
@@ -46,6 +53,11 @@ FORBIDDEN_CALLS = {
     "physics_atlas_api.paired_trial_certification.run",
     "physics_atlas_api.replay_certification.run",
     "physics_atlas_api.storage.compact.compact_decisions",
+    "physics_atlas_api.historical_replay_materialization.materialize_historical_replay",
+    "physics_atlas_api.historical_replay_materialization.build_historical_replay_bundle",
+    "physics_atlas_api.historical_replay_materialization.run",
+    "physics_atlas_api.historical_replay_materialization._write_immutable",
+    "physics_atlas_api.historical_replay_materialization._write_jsonl_artifact_streaming",
     "verify_payload_recovery.run_pilot",
     "verify_staging_dual_read.run",
     "verify_staging_dual_read.scientific_result",
@@ -140,6 +152,8 @@ def test_production_import_closure_does_not_invoke_validation_generators() -> No
         "audit.certify_paired_trial()",
         "import compact_historical_artifact as archive\narchive.restore_archive()",
         "from .storage.compact import compact_decisions as compact\ncompact()",
+        "from .historical_replay_materialization import "
+        "materialize_historical_replay as replay\nreplay()",
     ],
 )
 def test_static_boundary_recognizes_aliased_generator_calls(source: str) -> None:
@@ -180,6 +194,13 @@ def test_mocked_production_worker_cycle_has_no_verbose_artifact_output(
         "verify_paired_trial_certification_manifest",
     ):
         monkeypatch.setattr(paired_trial_certification, name, forbidden)
+    for name in (
+        "materialize_historical_replay",
+        "build_historical_replay_bundle",
+        "_write_immutable",
+        "_write_jsonl_artifact_streaming",
+    ):
+        monkeypatch.setattr(historical_replay_materialization, name, forbidden)
 
     # This mock tracks ORM objects without creating a connection or executing SQL.
     objects: dict[tuple[type, str], object] = {}

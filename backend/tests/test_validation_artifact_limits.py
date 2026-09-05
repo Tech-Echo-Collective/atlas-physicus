@@ -10,6 +10,7 @@ import pytest
 from test_historical_replay_materialization import _staged_acquisition
 from test_paired_trial_certification import _fixture_bundle
 
+from physics_atlas_api import historical_replay_materialization as historical_replay
 from physics_atlas_api.certification import (
     CertificationError,
     canonical_digest,
@@ -186,7 +187,20 @@ def test_paired_refuses_oversize_trace_before_any_output(
 
 @pytest.mark.parametrize(
     "operation",
-    ["paired", "paired-verify", "replay", "summary", "writer", "recovery", "dual-read"],
+    [
+        "paired",
+        "paired-verify",
+        "replay",
+        "summary",
+        "writer",
+        "recovery",
+        "dual-read",
+        "historical-plan",
+        "historical-execute",
+        "historical-builder",
+        "historical-writer",
+        "historical-row-writer",
+    ],
 )
 def test_production_refuses_validation_before_io(
     operation: str,
@@ -221,6 +235,24 @@ def test_production_refuses_validation_before_io(
             summarize_replay_bundle(bundle_root=missing, bundle_manifest=missing)
         elif operation == "writer":
             write_replay_certification_bundle(output, None)  # type: ignore[arg-type]
+        elif operation in ("historical-plan", "historical-execute"):
+            historical_replay.materialize_historical_replay(
+                staging_root=missing,
+                source_manifest=missing,
+                output=output if operation == "historical-execute" else None,
+                execute=operation == "historical-execute",
+            )
+        elif operation == "historical-builder":
+            historical_replay.build_historical_replay_bundle(None)  # type: ignore[arg-type]
+        elif operation == "historical-writer":
+            historical_replay._write_immutable(output / "affiliations.jsonl", b"{}\n")
+        elif operation == "historical-row-writer":
+            historical_replay._write_jsonl_artifact_streaming(
+                output,
+                "paper-time-affiliation-shares",
+                "relationships/affiliations",
+                [],
+            )
         else:
             monkeypatch.syspath_prepend(
                 str(Path(__file__).resolve().parents[1] / "tools")
@@ -234,6 +266,43 @@ def test_production_refuses_validation_before_io(
                     missing, output, missing
                 )
     assert not output.exists()
+
+
+def test_development_replay_default_plan_never_writes_expanded_artifacts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PHYSICS_ATLAS_ENVIRONMENT", "development")
+    raw, source = _staged_acquisition(tmp_path)
+    before = {
+        path.relative_to(tmp_path): path.read_bytes()
+        for path in tmp_path.rglob("*")
+        if path.is_file()
+    }
+
+    def no_output(*args: object, **kwargs: object) -> None:
+        del args, kwargs
+        pytest.fail("default planning must never reach an expanded-artifact writer")
+
+    for name in (
+        "_write_immutable",
+        "_write_jsonl_artifact_streaming",
+        "_write_bundle_manifest",
+    ):
+        monkeypatch.setattr(historical_replay, name, no_output)
+    result = materialize_historical_replay(staging_root=raw, source_manifest=source)
+    assert result.mode == "plan"
+    assert result.output_manifest_path is None
+    assert result.replay_digest == (
+        "3319385dadeaa18089b6fd9340bb985f2fd8a6b32119f214be446c5a72cbf24e"
+    )
+    assert result.report["metric_observations_created"] == 0
+    after = {
+        path.relative_to(tmp_path): path.read_bytes()
+        for path in tmp_path.rglob("*")
+        if path.is_file()
+    }
+    assert before == after
 
 
 def test_dotenv_production_cannot_bypass_runtime_guard(

@@ -40,6 +40,7 @@ from .backfill import (
     repository_root,
     resolve_historical_backfill_spec,
 )
+from .certification.validation_artifacts import require_validation_runtime
 from .connectors.arxiv import ARXIV, ATOM, ArxivConnector
 from .connectors.base import (
     NormalizedRecord,
@@ -1645,6 +1646,7 @@ def build_historical_replay_bundle(
 ) -> HistoricalReplayBundle:
     """Build deterministic JSON artifacts from already verified occurrences."""
 
+    require_validation_runtime()
     ordered_occurrences = tuple(
         sorted(staging.occurrences, key=lambda item: item.evidence.occurrence_id)
     )
@@ -2097,6 +2099,7 @@ def build_historical_replay_bundle(
 
 
 def _write_immutable(path: Path, content: bytes) -> None:
+    require_validation_runtime()
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
         with path.open("xb") as stream:
@@ -2134,6 +2137,7 @@ def _write_jsonl_artifact_streaming(
 ) -> ReplayArtifact:
     """Hash then stream one re-iterable row set without retaining artifact bytes."""
 
+    require_validation_runtime()
     artifact = _jsonl_artifact_metadata(role, directory, rows)
     destination = output / artifact.relative_path
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -2172,6 +2176,9 @@ def materialize_historical_replay(
     execute: bool = False,
     repo_root: Path | None = None,
 ) -> HistoricalReplayResult:
+    # Offline replay is not the production affiliation materialization path.
+    # Refuse before path validation, provider-page reads or any artifact writes.
+    require_validation_runtime()
     resolved_staging, resolved_manifest, resolved_output = validate_replay_request(
         staging_root=staging_root,
         source_manifest=source_manifest,

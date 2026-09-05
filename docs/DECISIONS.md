@@ -98,6 +98,29 @@ exact restoration of one authoritative archive is not new trace generation.
 See the [storage contract](storage-architecture.md#validation-artifact-scaling-contract)
 and [implementation audit](validation/validation-ledger-scaling-safety-2026-09-05.md).
 
+## Reusable validation and cumulative retention — 2026-09-05
+
+**PA-052:** Reuse the pinned `bounded-cross-track-validation-sample-v1`
+(`5f520b2a…`, 1,000 source-scoped paper references) for pipeline-version proof.
+Replacement requires a documented domain/evidence expansion; do not silently
+resample, combine scientific denominators or shard the corpus into proof jobs.
+Keep PA-051's per-trace limits and cap cumulative retained validation outputs at
+**1 GiB**, optionally stricter, within PA-048's combined 5 GB budget. Count all
+physical copies, archives, prior versions, metadata and REVIEW files. Classify
+KEEP / COMPRESS-ARCHIVE / REGENERABLE / RETIRE_CANDIDATE / REVIEW without automatic
+deletion or subtracting prospective savings. Before each new proof version, bind
+a complete fresh inventory, sample, code/version, proof plan and byte reservation.
+
+Only necessary compact authoritative paper-time affiliation state may scale with
+production ingestion. Expanded affiliation validation/replay outputs must remain
+bounded, sampled, ephemeral or archived, never default per-corpus ingestion output.
+Historical schema/path dependencies remain valid: exact duplicate content alone
+does not authorize retirement. This is an operational storage policy, not a
+change to attribution, certification or activation thresholds. The new pilot
+enforces admission; old standalone validation commands still require operator
+admission, not a claimed universal filesystem quota. See the
+[audit and sample pins](validation/affiliation-retention-2026-09-05.md).
+
 ## Current activation decision
 
 The v3.0.4 production activation begins with the implemented `hep-th-v1`
