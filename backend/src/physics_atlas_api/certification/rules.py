@@ -1,12 +1,17 @@
 from dataclasses import dataclass
 
+from .automation import AUTOMATIC_FIELD_RULE_VERSION
 from .citations import CITATION_CERTIFICATION_RULE_VERSION
 from .contracts import (
     CERTIFICATION_COVERAGE_MINIMUMS_V1,
     CERTIFICATION_POLICY_VERSION,
+    EvidenceCertificationDecision,
     EvidenceKind,
 )
-from .fields import FIELD_CERTIFICATION_RULE_VERSION
+from .fields import (
+    FIELD_CERTIFICATION_RULE_VERSION,
+    AutomaticFieldDecision,
+)
 from .institutions import INSTITUTION_CERTIFICATION_RULE_VERSION
 
 _BASE_PAPER_EVIDENCE: tuple[EvidenceKind, ...] = (
@@ -35,6 +40,24 @@ def evidence_rule_version(evidence_kind: EvidenceKind) -> str:
         "citation-observation": CITATION_CERTIFICATION_RULE_VERSION,
         "citation-cutoff-compatibility": CITATION_CERTIFICATION_RULE_VERSION,
     }.get(evidence_kind, CERTIFICATION_POLICY_VERSION)
+
+
+def evidence_decision_is_current(decision: EvidenceCertificationDecision) -> bool:
+    """Accept legacy rules or a re-evaluated typed exact-field proof, never a flag."""
+    if decision.rule_version == evidence_rule_version(decision.evidence_kind):
+        return not isinstance(decision, AutomaticFieldDecision)
+    if (
+        decision.evidence_kind
+        not in {"field-classification", "field-weight-conservation"}
+        or decision.rule_version != AUTOMATIC_FIELD_RULE_VERSION
+        or not isinstance(decision, AutomaticFieldDecision)
+    ):
+        return False
+    try:
+        decision.__post_init__()
+    except ValueError:
+        return False
+    return True
 
 
 @dataclass(frozen=True)

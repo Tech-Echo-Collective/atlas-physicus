@@ -150,6 +150,37 @@ remain unchanged; local archive authority is not independent-backup durability,
 scientific certification, production migration or Full Physics authorization.
 See the [affiliation batch](validation/affiliation-archive-batch-2026-09-05.md).
 
+## Evidence-derived automatic certification — 2026-09-05
+
+**PA-054:** The owner explicitly removed mandatory human review for the
+lightweight launch. A versioned deterministic assessment may certify evidence
+when it reconstructs the decision from explicit source facts and the existing
+scientific requirements. It must not invent a reviewer, replace an assessment
+with an approval boolean, treat a name match as identity, or infer missing facts.
+Human review remains optional for genuine ambiguity, not a prerequisite for
+mechanically verifiable evidence. Legacy `needs_review` may still describe an
+unresolved machine assessment; it does not create an obligation to hire a reviewer.
+
+This supersedes only the mandatory-human portions of PA-037/038/040/046 and
+related methodology prose. It does not supersede broad-versus-conditioned
+acquisition semantics, authority requirements, formulas, numerical thresholds,
+complete denominators, conservation, citation maturity/cutoff, or exact-five
+activation. Historical decisions and digests remain unchanged. Unsupported
+automatic paths fail closed; this decision is not itself a passed activation gate.
+
+Metric dates have an explicit source-field basis: preprint submission, journal
+online publication and print publication are distinct. Mixed provider
+`earliest_date`, record update times, and invented days cannot establish exact
+publication timing. Historical citation impact measured now is retrospective,
+not a reconstruction of citations known in the historical year. Separate response
+times may not be relabeled as one cutoff. Keep compact observed counts, source
+references, population membership, actual acquisition time and rule versions;
+no new provider mirror or verbose decision ledger is required.
+
+Implementation and primary-source rationale:
+[automatic certification](automatic-certification.md). All public metrics remain
+withheld until the complete certified calculation and activation chain passes.
+
 ## Current activation decision
 
 The v3.0.4 production activation begins with the implemented `hep-th-v1`

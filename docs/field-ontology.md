@@ -172,6 +172,14 @@ free text, author affiliations, or citation networks.
 
 ## Certification overlay
 
+PA-054 adds an explicit automatic path: selected provider evidence reconstructs
+the exact conserved leaf-field ledger and its consumed-value proof. No reviewer
+is fabricated and legacy reviewed decisions/hashes stay unchanged. Missing,
+unknown, conflicting revisions or branch-only classifications fail closed.
+The legacy review pathway below remains available; it is no longer the sole
+permitted route for deterministically supported mappings. See
+[automatic certification](automatic-certification.md).
+
 Mapping and certification are separate. An exact mapping rule or agreement
 between providers supplies evidence but does not itself constitute scientific
 review. `scientific-evidence-certification-v1` certifies only a complete

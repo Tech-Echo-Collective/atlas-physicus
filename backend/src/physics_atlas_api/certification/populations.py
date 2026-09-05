@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from typing import Literal
 
+from ..fields import PHYSICS_FIELD_ONTOLOGY_V1, PHYSICS_FIELD_ONTOLOGY_VERSION
 from .contracts import (
     CERTIFICATION_POLICY_VERSION,
     CertificationError,
@@ -15,6 +16,14 @@ from .years import CertifiedMetricWindow
 
 METRIC_POPULATION_SUBJECT_TYPE = "metric-population"
 METRIC_POPULATION_CERTIFICATION_VERSION = "metric-population-certification-v1"
+AUTOMATIC_CATEGORY_UNIVERSE_VERSION = "ontology-category-universe-v1"
+AUTOMATIC_METRIC_POPULATION_VERSION = "source-window-metric-population-v1"
+_AUTOMATIC_UNRESOLVED_REASON = (
+    "source-window affiliation or field mass remains unresolved"
+)
+_AUTOMATIC_EXCLUDED_REASON = (
+    "source-window paper has no attribution to this entity and field"
+)
 MetricPopulationStatus = Literal["included", "excluded", "unresolved"]
 MetricPopulationCoverageStatus = Literal["known", "unresolved"]
 
@@ -46,9 +55,69 @@ class CategoryUniverseEvidence:
         )
 
 
+def _ontology_category_ids(field_id: str) -> tuple[str, ...]:
+    ontology = PHYSICS_FIELD_ONTOLOGY_V1
+    if field_id == ontology.domain_id:
+        return tuple(
+            sorted(item.id for item in ontology.fields if item.node_kind == "field")
+        )
+    if not ontology.contains(field_id):
+        raise CertificationError(
+            "automatic category universe has an unknown ontology root"
+        )
+    categories = tuple(
+        sorted(
+            item.id
+            for item in ontology.fields
+            if item.node_kind == "field"
+            and any(parent.id == field_id for parent in ontology.ancestors_of(item.id))
+        )
+    )
+    if len(categories) < 2:
+        raise CertificationError(
+            "automatic Diversity needs at least two frozen ontology subfields; "
+            "leaf-field subcategories cannot be invented"
+        )
+    return categories
+
+
+@dataclass(frozen=True)
+class AutomaticCategoryUniverseEvidence:
+    """Exact frozen ontology membership, never a caller-selected category subset.
+
+    This removes a human-signature requirement for catalog enumeration only.
+    It does not certify acquisition breadth or supply absent leaf subfields.
+    """
+
+    field_id: str
+    dataset_version: str
+    acquisition_scope: str
+    category_ids: tuple[str, ...]
+    source_manifest_digest: str
+    assessed_at: datetime
+    category_universe_version: str = PHYSICS_FIELD_ONTOLOGY_VERSION
+    assessment_version: str = AUTOMATIC_CATEGORY_UNIVERSE_VERSION
+
+    @property
+    def content_digest(self) -> str:
+        return canonical_digest(
+            (
+                self.field_id,
+                self.dataset_version,
+                self.acquisition_scope,
+                self.category_universe_version,
+                self.category_ids,
+                self.assessment_version,
+            )
+        )
+
+
+type CategoryEvidence = CategoryUniverseEvidence | AutomaticCategoryUniverseEvidence
+
+
 @dataclass(frozen=True)
 class CertifiedCategoryUniverse:
-    evidence: CategoryUniverseEvidence
+    evidence: CategoryEvidence
     certification_digest: str
 
     def __post_init__(self) -> None:
@@ -57,7 +126,21 @@ class CertifiedCategoryUniverse:
             raise CertificationError("category-universe proof does not reconstruct")
 
 
-def _validate_category_universe(evidence: CategoryUniverseEvidence) -> None:
+def _validate_category_universe(evidence: CategoryEvidence) -> None:
+    if isinstance(evidence, AutomaticCategoryUniverseEvidence):
+        if (
+            not evidence.dataset_version.strip()
+            or not evidence.acquisition_scope.strip()
+            or evidence.category_universe_version != PHYSICS_FIELD_ONTOLOGY_VERSION
+            or evidence.assessment_version != AUTOMATIC_CATEGORY_UNIVERSE_VERSION
+            or not isinstance(evidence.assessed_at, datetime)
+            or evidence.assessed_at.tzinfo is None
+            or evidence.assessed_at.utcoffset() is None
+            or evidence.category_ids != _ontology_category_ids(evidence.field_id)
+            or evidence.source_manifest_digest != evidence.content_digest
+        ):
+            raise CertificationError("automatic category universe does not reconstruct")
+        return
     if not isinstance(evidence, CategoryUniverseEvidence):
         raise CertificationError("category universe requires exact reviewed evidence")
     identifiers = (
@@ -91,10 +174,31 @@ def _validate_category_universe(evidence: CategoryUniverseEvidence) -> None:
 
 
 def certify_category_universe(
-    evidence: CategoryUniverseEvidence,
+    evidence: CategoryEvidence,
 ) -> CertifiedCategoryUniverse:
     _validate_category_universe(evidence)
     return CertifiedCategoryUniverse(evidence, canonical_digest(evidence))
+
+
+def derive_category_universe(
+    *,
+    field_id: str,
+    dataset_version: str,
+    acquisition_scope: str,
+    assessed_at: datetime,
+) -> CertifiedCategoryUniverse:
+    """Bind all Physics leaves or a branch's complete descendant-leaf catalog."""
+    evidence = AutomaticCategoryUniverseEvidence(
+        field_id=field_id,
+        dataset_version=dataset_version,
+        acquisition_scope=acquisition_scope,
+        category_ids=_ontology_category_ids(field_id),
+        source_manifest_digest="",
+        assessed_at=assessed_at,
+    )
+    return certify_category_universe(
+        replace(evidence, source_manifest_digest=evidence.content_digest)
+    )
 
 
 @dataclass(frozen=True)
@@ -197,9 +301,9 @@ def metric_population_coverage_unit_id(
 
 
 def metric_population_coverage_ledger(
-    evidence: MetricPopulationEvidence,
+    evidence: PopulationEvidence,
 ) -> tuple[MetricPopulationCoverageUnit, ...]:
-    """Derive the full denominator ledger from the reviewed metric population."""
+    """Derive the full denominator ledger from the exact metric population."""
 
     units: list[MetricPopulationCoverageUnit] = []
     for projection in sorted(evidence.projections, key=lambda item: item.paper_id):
@@ -284,8 +388,79 @@ class MetricPopulationEvidence:
 
 
 @dataclass(frozen=True)
+class AutomaticMetricPopulationEvidence:
+    """Mechanically derived eligibility over one exact certified source window.
+
+    No review fields or success flag are serialized. Certification below repeats
+    all existing inclusion, exclusion, conservation and provenance checks.
+    """
+
+    metric_id: str
+    terminal_year: int
+    dataset_version: str
+    acquisition_scope: str
+    entity_type: str
+    entity_id: str
+    field_id: str
+    source_manifest_digest: str
+    source_window_certification_id: str
+    source_year_certification_ids: tuple[str, ...]
+    projections: tuple[MetricPopulationProjection, ...]
+    decisions: tuple[EvidenceCertificationDecision, ...]
+    assessed_at: datetime
+    category_universe: CertifiedCategoryUniverse | None = None
+    assessment_version: str = AUTOMATIC_METRIC_POPULATION_VERSION
+
+    def __post_init__(self) -> None:
+        if (
+            self.assessment_version != AUTOMATIC_METRIC_POPULATION_VERSION
+            or not isinstance(self.assessed_at, datetime)
+            or self.assessed_at.tzinfo is None
+            or self.assessed_at.utcoffset() is None
+            or not self.source_window_certification_id.strip()
+            or not isinstance(self.projections, tuple)
+            or any(
+                not isinstance(item, MetricPopulationProjection)
+                for item in self.projections
+            )
+            or not isinstance(self.decisions, tuple)
+            or any(
+                not isinstance(item, EvidenceCertificationDecision)
+                for item in self.decisions
+            )
+        ):
+            raise CertificationError(
+                "automatic metric population requires exact typed evidence"
+            )
+        if self.metric_id == "research_diversity":
+            if not isinstance(
+                self.category_universe, CertifiedCategoryUniverse
+            ) or not isinstance(
+                self.category_universe.evidence, AutomaticCategoryUniverseEvidence
+            ):
+                raise CertificationError(
+                    "automatic Diversity requires the frozen ontology universe"
+                )
+        elif self.category_universe is not None:
+            raise CertificationError(
+                "only Diversity metric populations may carry a category universe"
+            )
+
+    @property
+    def reviewed_by(self) -> None:
+        return None
+
+    @property
+    def reviewed_at(self) -> None:
+        return None
+
+
+type PopulationEvidence = MetricPopulationEvidence | AutomaticMetricPopulationEvidence
+
+
+@dataclass(frozen=True)
 class MetricPopulationCertification:
-    evidence: MetricPopulationEvidence
+    evidence: PopulationEvidence
     state: Literal["certified"]
     projection_digest: str
     decision_ids: tuple[str, ...]
@@ -298,17 +473,35 @@ class MetricPopulationCertification:
 
 
 def certify_metric_population(
-    evidence: MetricPopulationEvidence,
+    evidence: PopulationEvidence,
     window: CertifiedMetricWindow,
 ) -> MetricPopulationCertification:
     """Bind exact entity/field inclusion and exclusion to a certified source window."""
 
-    if not isinstance(evidence, MetricPopulationEvidence):
+    if not isinstance(
+        evidence, (MetricPopulationEvidence, AutomaticMetricPopulationEvidence)
+    ):
         raise CertificationError("metric population requires exact reviewed evidence")
     if not isinstance(window, CertifiedMetricWindow):
         raise CertificationError("metric population requires a certified window proof")
     if window.state != "certified":
         raise CertificationError("metric window is not certified")
+    if isinstance(evidence, AutomaticMetricPopulationEvidence):
+        evidence.__post_init__()
+        window.__post_init__()
+        for source_year in window.source_years:
+            source_year.__post_init__()
+        for cohort in window.citation_cohorts:
+            cohort.__post_init__()
+        if (
+            evidence.source_window_certification_id
+            != window.certification.certification_id
+            or evidence.assessed_at < window.cutoff
+        ):
+            raise CertificationError(
+                "automatic metric population targets another window or cutoff"
+            )
+        _validate_automatic_population_field(evidence.field_id)
     identifiers = (
         evidence.metric_id,
         evidence.dataset_version,
@@ -439,6 +632,18 @@ def certify_metric_population(
                 "metric population eligibility does not derive from the conserved "
                 "source field/entity ledger"
             )
+        if isinstance(evidence, AutomaticMetricPopulationEvidence):
+            expected_reason = (
+                None
+                if expected_status == "included"
+                else _AUTOMATIC_UNRESOLVED_REASON
+                if expected_status == "unresolved"
+                else _AUTOMATIC_EXCLUDED_REASON
+            )
+            if item.reason != expected_reason:
+                raise CertificationError(
+                    "automatic population reason does not derive from source evidence"
+                )
 
     decisions = {item.subject_id: item for item in evidence.decisions}
     if len(decisions) != len(evidence.decisions) or set(decisions) != set(projections):
@@ -463,6 +668,19 @@ def certify_metric_population(
             raise CertificationError(
                 "metric population decision does not bind its eligibility projection"
             )
+        if isinstance(evidence, AutomaticMetricPopulationEvidence) and (
+            decision.evidence != source_projections[paper_id].occurrence_references
+            or decision.reasons
+            != (
+                (_AUTOMATIC_UNRESOLVED_REASON,)
+                if projection.status == "unresolved"
+                else ()
+            )
+            or decision.supersedes_decision_id is not None
+        ):
+            raise CertificationError(
+                "automatic population decision loses source provenance"
+            )
 
     return MetricPopulationCertification(
         evidence=evidence,
@@ -481,6 +699,11 @@ def certify_metric_population(
                     for item in source_year.evidence.paper_projections
                 )
             )
+        ),
+        rule_version=(
+            AUTOMATIC_METRIC_POPULATION_VERSION
+            if isinstance(evidence, AutomaticMetricPopulationEvidence)
+            else METRIC_POPULATION_CERTIFICATION_VERSION
         ),
     )
 
@@ -501,9 +724,138 @@ class CertifiedMetricPopulation:
 
 
 def wrap_certified_metric_population(
-    evidence: MetricPopulationEvidence,
+    evidence: PopulationEvidence,
     window: CertifiedMetricWindow,
 ) -> CertifiedMetricPopulation:
     return CertifiedMetricPopulation(
         certify_metric_population(evidence, window), window
     )
+
+
+def derive_metric_population(
+    window: CertifiedMetricWindow,
+    *,
+    entity_id: str,
+    field_id: str,
+    assessed_at: datetime,
+) -> CertifiedMetricPopulation:
+    """Derive every source-paper decision; never accept a favorable subset.
+
+    Source windows still need their existing scientific certifications. This
+    factory does not acquire, certify or modify their underlying facts.
+    """
+    if not isinstance(window, CertifiedMetricWindow) or window.state != "certified":
+        raise CertificationError(
+            "automatic population requires a certified source window"
+        )
+    if not isinstance(entity_id, str) or not entity_id.strip():
+        raise CertificationError("automatic population entity identifier is invalid")
+    _validate_automatic_population_field(field_id)
+    context = window.certification
+    projections: list[MetricPopulationProjection] = []
+    decisions: list[EvidenceCertificationDecision] = []
+    for year in window.source_years:
+        for source in year.evidence.paper_projections:
+            entity_weight = math.fsum(
+                weight
+                for entity_type, source_entity_id, weight in source.entity_shares
+                if entity_type == context.entity_type and source_entity_id == entity_id
+            )
+            field_weight = dict(source.field_weights).get(field_id, 0.0)
+            weight = entity_weight * field_weight
+            unresolved = math.fsum(
+                mass
+                for entity_type, mass in source.unresolved_entity_mass
+                if entity_type == context.entity_type
+            )
+            possible = (entity_weight + unresolved) * (
+                field_weight + source.unmapped_field_mass
+            )
+            status: MetricPopulationStatus = (
+                "included"
+                if weight > 0
+                else "unresolved"
+                if possible > 0
+                else "excluded"
+            )
+            projection = MetricPopulationProjection(
+                paper_id=source.paper_id,
+                publication_date=source.publication_date,
+                entity_type=context.entity_type,
+                entity_id=entity_id,
+                field_id=field_id,
+                status=status,
+                entity_attribution_weight=entity_weight,
+                field_weight=field_weight,
+                attribution_weight=weight,
+                coverage_weight=possible,
+                reason=(
+                    None
+                    if status == "included"
+                    else _AUTOMATIC_UNRESOLVED_REASON
+                    if status == "unresolved"
+                    else _AUTOMATIC_EXCLUDED_REASON
+                ),
+            )
+            projections.append(projection)
+            decisions.append(
+                EvidenceCertificationDecision(
+                    subject_type=METRIC_POPULATION_SUBJECT_TYPE,
+                    subject_id=source.paper_id,
+                    evidence_kind="provenance-completeness",
+                    state=(
+                        "insufficient_evidence"
+                        if status == "unresolved"
+                        else "certified"
+                    ),
+                    rule_version=CERTIFICATION_POLICY_VERSION,
+                    dataset_version=context.dataset_version,
+                    acquisition_scope=context.acquisition_scope,
+                    evidence=source.occurrence_references,
+                    certified_value_digest=projection.value_digest,
+                    reasons=(
+                        (_AUTOMATIC_UNRESOLVED_REASON,)
+                        if status == "unresolved"
+                        else ()
+                    ),
+                )
+            )
+    ordered = tuple(sorted(projections, key=lambda item: item.paper_id))
+    category = (
+        derive_category_universe(
+            field_id=field_id,
+            dataset_version=context.dataset_version,
+            acquisition_scope=context.acquisition_scope,
+            assessed_at=assessed_at,
+        )
+        if context.metric_id == "research_diversity"
+        else None
+    )
+    return wrap_certified_metric_population(
+        AutomaticMetricPopulationEvidence(
+            metric_id=context.metric_id,
+            terminal_year=context.terminal_year,
+            dataset_version=context.dataset_version,
+            acquisition_scope=context.acquisition_scope,
+            entity_type=context.entity_type,
+            entity_id=entity_id,
+            field_id=field_id,
+            source_manifest_digest=canonical_digest(ordered),
+            source_window_certification_id=context.certification_id,
+            source_year_certification_ids=context.source_year_certification_ids,
+            projections=ordered,
+            decisions=tuple(sorted(decisions, key=lambda item: item.subject_id)),
+            assessed_at=assessed_at,
+            category_universe=category,
+        ),
+        window,
+    )
+
+
+def _validate_automatic_population_field(field_id: str) -> None:
+    if not PHYSICS_FIELD_ONTOLOGY_V1.contains(field_id):
+        raise CertificationError("automatic population canonical field is invalid")
+    if PHYSICS_FIELD_ONTOLOGY_V1.get(field_id).node_kind != "field":
+        raise CertificationError(
+            "metric populations require canonical leaf-field weights"
+        )

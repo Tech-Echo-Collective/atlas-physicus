@@ -1,6 +1,7 @@
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import datetime
+from typing import Literal
 
 from ..fields import (
     FIELD_WEIGHTING_POLICY_VERSION,
@@ -8,7 +9,18 @@ from ..fields import (
     PHYSICS_FIELD_ONTOLOGY_VERSION,
     PROVIDER_FIELD_MAPPING_VERSION,
 )
-from .contracts import CertificationState
+from .automation import (
+    AUTOMATIC_FIELD_RULE_VERSION,
+    AutomaticCertification,
+    AutomaticFieldEvidence,
+)
+from .contracts import (
+    CertificationError,
+    CertificationState,
+    EvidenceCertificationDecision,
+    EvidenceKind,
+    canonical_digest,
+)
 
 FIELD_CERTIFICATION_RULE_VERSION = "reviewed-field-ledger-certification-v1"
 FIELD_CONSERVATION_TOLERANCE = 1e-9
@@ -101,9 +113,96 @@ class FieldCertificationResult:
     rule_version: str = FIELD_CERTIFICATION_RULE_VERSION
 
 
+def _automatic_ledger_view(evidence: AutomaticFieldEvidence) -> FieldLedgerEvidence:
+    from ..fields.mapping import CrossProviderFieldLedger
+
+    assessment = AutomaticCertification(evidence)
+    value = assessment.value
+    if not isinstance(value, CrossProviderFieldLedger):
+        raise CertificationError("automatic field assessment requires field evidence")
+    provider_fields: dict[str, set[str]] = {}
+    for category in value.category_mappings:
+        provider_fields.setdefault(category.provider, set()).update(
+            category.atlas_field_ids
+        )
+    return FieldLedgerEvidence(
+        paper_id=evidence.context.paper_id,
+        assignments=tuple(
+            FieldWeight(item.field_id, item.weight) for item in value.assignments
+        ),
+        unmapped_mass=value.unmapped_field_mass,
+        review_state="machine-assessed",
+        ontology_version=value.ontology_version,
+        mapping_policy_version=value.mapping_version,
+        weighting_policy_version=value.weighting_policy_version,
+        source_evidence_ids=tuple(
+            sorted(
+                f"{item.provider}:{item.source_record_id}"
+                for item in evidence.references
+            )
+        ),
+        source_manifest_digest=assessment.input_digest,
+        provider_disagreement=len(
+            {tuple(sorted(items)) for items in provider_fields.values()}
+        )
+        > 1,
+    )
+
+
+@dataclass(frozen=True, kw_only=True)
+class AutomaticFieldLedgerEvidence(FieldLedgerEvidence):
+    """Opt-in derived ledger; the legacy reviewed type and its digest stay intact."""
+
+    automatic_evidence: AutomaticFieldEvidence
+
+    def __post_init__(self) -> None:
+        FieldLedgerEvidence.__post_init__(self)
+        expected = _automatic_ledger_view(self.automatic_evidence)
+        if any(
+            getattr(self, item.name) != getattr(expected, item.name)
+            for item in fields(FieldLedgerEvidence)
+        ):
+            raise CertificationError(
+                "automatic field ledger differs from exact provider evidence"
+            )
+
+
+def automatic_field_ledger(
+    evidence: AutomaticFieldEvidence,
+) -> AutomaticFieldLedgerEvidence:
+    value = _automatic_ledger_view(evidence)
+    return AutomaticFieldLedgerEvidence(
+        paper_id=value.paper_id,
+        assignments=value.assignments,
+        unmapped_mass=value.unmapped_mass,
+        review_state=value.review_state,
+        ontology_version=value.ontology_version,
+        mapping_policy_version=value.mapping_policy_version,
+        weighting_policy_version=value.weighting_policy_version,
+        source_evidence_ids=value.source_evidence_ids,
+        source_manifest_digest=value.source_manifest_digest,
+        provider_disagreement=value.provider_disagreement,
+        automatic_evidence=evidence,
+    )
+
+
 def certify_field_ledger(ledger: FieldLedgerEvidence) -> FieldCertificationResult:
     """Certify a reviewed ledger without interpreting mapping as human review."""
 
+    if isinstance(ledger, AutomaticFieldLedgerEvidence):
+        ledger.__post_init__()
+        assessment = AutomaticCertification(ledger.automatic_evidence)
+        return FieldCertificationResult(
+            evidence=ledger,
+            paper_id=ledger.paper_id,
+            state=assessment.decision.state,
+            assignments=ledger.assignments,
+            unmapped_mass=ledger.unmapped_mass,
+            conservation_total=ledger.conservation_total,
+            source_evidence_ids=ledger.source_evidence_ids,
+            reasons=assessment.decision.reasons,
+            rule_version=AUTOMATIC_FIELD_RULE_VERSION,
+        )
     reasons: list[str] = []
     state: CertificationState = "certified"
     if (
@@ -154,4 +253,131 @@ def certify_field_ledger(ledger: FieldLedgerEvidence) -> FieldCertificationResul
         conservation_total=ledger.conservation_total,
         source_evidence_ids=ledger.source_evidence_ids,
         reasons=tuple(reasons),
+    )
+
+
+@dataclass(frozen=True)
+class AutomaticFieldBinding:
+    """Exact consumer projection, distinct from the raw provider ledger."""
+
+    purpose: Literal["source-year-ledger", "coverage", "metric-paper"]
+    field_id: str | None = None
+    entity_attribution_weight: float | None = None
+    include_category_weights: bool = False
+
+
+def _automatic_field_value(
+    ledger: AutomaticFieldLedgerEvidence,
+    binding: AutomaticFieldBinding,
+) -> object:
+    if binding.purpose in {"source-year-ledger", "coverage"}:
+        if (
+            binding.field_id is not None
+            or binding.entity_attribution_weight is not None
+            or binding.include_category_weights
+        ):
+            raise CertificationError(
+                "source-ledger binding cannot carry metric field overrides"
+            )
+        return {
+            "paper_id": ledger.paper_id,
+            "field_weights": tuple(
+                sorted((item.field_id, item.weight) for item in ledger.assignments)
+            ),
+            "unmapped_field_mass": ledger.unmapped_mass,
+            "field_weight_total": ledger.conservation_total,
+            "field_weighting_policy_version": ledger.weighting_policy_version,
+        }
+    if binding.purpose != "metric-paper":
+        raise CertificationError("unsupported automatic field binding purpose")
+    weights = {item.field_id: item.weight for item in ledger.assignments}
+    share = binding.entity_attribution_weight
+    field_id = binding.field_id
+    if (
+        field_id is None
+        or field_id not in weights
+        or share is None
+        or not math.isfinite(share)
+        or not 0 <= share <= 1
+    ):
+        raise CertificationError(
+            "automatic metric field binding lacks an exact supported share"
+        )
+    return {
+        "paper_id": ledger.paper_id,
+        "field_id": field_id,
+        "attribution_weight": share * weights[field_id],
+        "category_weights": tuple(sorted(weights.items()))
+        if binding.include_category_weights
+        else (),
+    }
+
+
+@dataclass(frozen=True, kw_only=True)
+class AutomaticFieldDecision(EvidenceCertificationDecision):
+    """Known automatic rule with reconstructable evidence and consumed-value binding."""
+
+    automatic_field_evidence: AutomaticFieldEvidence
+    field_binding: AutomaticFieldBinding
+
+    def __post_init__(self) -> None:
+        EvidenceCertificationDecision.__post_init__(self)
+        ledger = automatic_field_ledger(self.automatic_field_evidence)
+        assessment = AutomaticCertification(self.automatic_field_evidence)
+        expected_type = (
+            "coverage-unit" if self.field_binding.purpose == "coverage" else "paper"
+        )
+        allowed_kinds: set[EvidenceKind] = {
+            "field-classification",
+            "field-weight-conservation",
+        }
+        if self.field_binding.purpose == "source-year-ledger":
+            allowed_kinds = {"field-weight-conservation"}
+        elif self.field_binding.purpose == "coverage":
+            allowed_kinds = {"field-classification"}
+        context = self.automatic_field_evidence.context
+        if (
+            self.subject_type != expected_type
+            or self.subject_id != context.paper_id
+            or self.evidence_kind not in allowed_kinds
+            or self.rule_version != AUTOMATIC_FIELD_RULE_VERSION
+            or self.dataset_version != context.dataset_version
+            or self.acquisition_scope != context.acquisition_scope
+            or self.state != assessment.decision.state
+            or self.reasons != assessment.decision.reasons
+            or self.evidence != assessment.decision.evidence
+            or self.reviewed_by is not None
+            or self.reviewed_at is not None
+            or self.supersedes_decision_id is not None
+            or self.certified_value_digest
+            != canonical_digest(_automatic_field_value(ledger, self.field_binding))
+        ):
+            raise CertificationError(
+                "automatic field decision does not reconstruct its consumed evidence"
+            )
+
+
+def automatic_field_decision(
+    evidence: AutomaticFieldEvidence,
+    *,
+    binding: AutomaticFieldBinding,
+    evidence_kind: EvidenceKind,
+) -> AutomaticFieldDecision:
+    ledger = automatic_field_ledger(evidence)
+    assessment = AutomaticCertification(evidence)
+    return AutomaticFieldDecision(
+        subject_type="coverage-unit" if binding.purpose == "coverage" else "paper",
+        subject_id=evidence.context.paper_id,
+        evidence_kind=evidence_kind,
+        state=assessment.decision.state,
+        rule_version=AUTOMATIC_FIELD_RULE_VERSION,
+        dataset_version=evidence.context.dataset_version,
+        acquisition_scope=evidence.context.acquisition_scope,
+        evidence=assessment.decision.evidence,
+        certified_value_digest=canonical_digest(
+            _automatic_field_value(ledger, binding)
+        ),
+        reasons=assessment.decision.reasons,
+        automatic_field_evidence=evidence,
+        field_binding=binding,
     )

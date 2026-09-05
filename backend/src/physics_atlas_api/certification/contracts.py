@@ -655,7 +655,7 @@ class CertifiedMetricPartition[PartitionT]:
         )
         from .projections import paper_evidence_value_digest
         from .rules import (
-            evidence_rule_version,
+            evidence_decision_is_current,
             required_coverage_evidence,
             required_paper_evidence,
         )
@@ -830,7 +830,7 @@ class CertifiedMetricPartition[PartitionT]:
             )
         decisions = self.certification.evidence_decisions
         if any(
-            item.rule_version != evidence_rule_version(item.evidence_kind)
+            not evidence_decision_is_current(item)
             or item.dataset_version != self.certification.dataset_version
             or item.acquisition_scope != self.certification.acquisition_scope
             for item in decisions

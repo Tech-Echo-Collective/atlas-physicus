@@ -40,8 +40,8 @@ class NormalizationPopulationEvidence:
     calculation_certification_digests: tuple[tuple[str, str], ...]
     source_manifest_digest: str
     review_state: str
-    reviewed_by: str
-    reviewed_at: datetime
+    reviewed_by: str | None
+    reviewed_at: datetime | None
 
     @property
     def content_digest(self) -> str:
@@ -82,6 +82,14 @@ def _normalization_population_content_digest(
 def _validate_normalization_population(
     evidence: NormalizationPopulationEvidence,
 ) -> None:
+    from .automatic_normalization import (
+        AutomaticNormalizationPopulationEvidence,
+        validate_automatic_normalization_population,
+    )
+
+    if isinstance(evidence, AutomaticNormalizationPopulationEvidence):
+        validate_automatic_normalization_population(evidence)
+        return
     if len(evidence.cohort_key) != 15 or any(
         not item.strip() for item in evidence.cohort_key
     ):
@@ -109,7 +117,9 @@ def _validate_normalization_population(
         )
     if (
         evidence.review_state != "reviewed-approved"
+        or not evidence.reviewed_by
         or not evidence.reviewed_by.strip()
+        or evidence.reviewed_at is None
         or evidence.reviewed_at.tzinfo is None
         or evidence.reviewed_at.utcoffset() is None
     ):

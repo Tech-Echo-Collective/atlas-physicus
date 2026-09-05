@@ -35,6 +35,14 @@ The release tag remains the architectural baseline. The follow-up Production Act
 
 ## Current milestone — v3.0.5-alpha Stabilization & Scientific Validation
 
+September 5 PA-054 removes mandatory human approval for supported evidence-derived
+automatic rules. The new record/population/normalization adapters and public
+no-synthetic-fallback fix are validated, not a five-metric production launch.
+Next work is exact source-bound date/identity admission and real comparable
+historical populations followed by the compact v1 export/activation producer.
+No Full Physics load, storage investigation, threshold relaxation or v3.1 is
+authorized by this step. See [current automatic-certification status](automatic-certification.md).
+
 Status: **released baseline; scientific certification/capacity foundation
 validated; scientific and storage activation remain withheld**.
 This milestone stabilizes the live v3.0.4 system; it does not

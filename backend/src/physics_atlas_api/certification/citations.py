@@ -36,8 +36,8 @@ class CitationCohortPopulationEvidence:
     eligible_paper_ids: tuple[str, ...]
     source_manifest_digest: str
     review_state: str
-    reviewed_by: str
-    reviewed_at: datetime
+    reviewed_by: str | None
+    reviewed_at: datetime | None
 
     @property
     def content_digest(self) -> str:
@@ -55,6 +55,14 @@ class CitationCohortPopulationEvidence:
 def _validate_citation_cohort_population(
     evidence: CitationCohortPopulationEvidence,
 ) -> None:
+    from .automatic_citations import (
+        AutomaticCitationCohortPopulationEvidence,
+        validate_automatic_citation_population,
+    )
+
+    if isinstance(evidence, AutomaticCitationCohortPopulationEvidence):
+        validate_automatic_citation_population(evidence)
+        return
     field_id, publication_year, document_type = evidence.cohort_key
     if (
         not PHYSICS_FIELD_ONTOLOGY_V1.contains(field_id)
@@ -63,12 +71,14 @@ def _validate_citation_cohort_population(
         or not document_type.strip()
         or not evidence.dataset_version.strip()
         or not evidence.acquisition_scope.strip()
+        or evidence.reviewed_by is None
         or not evidence.reviewed_by.strip()
     ):
         raise CertificationError("citation cohort population identifiers are invalid")
     if (
         evidence.cutoff.tzinfo is None
         or evidence.cutoff.utcoffset() is None
+        or evidence.reviewed_at is None
         or evidence.reviewed_at.tzinfo is None
         or evidence.reviewed_at.utcoffset() is None
         or evidence.review_state != "reviewed-approved"
@@ -361,6 +371,21 @@ class CitationCohortCertification:
             raise ValueError("citation cohort certification rule is stale")
         if self.population_evidence is not None:
             _validate_citation_cohort_population(self.population_evidence)
+            from .automatic_citations import (
+                AutomaticCitationCohortPopulationEvidence,
+                validate_automatic_citation_observations,
+            )
+
+            if isinstance(
+                self.population_evidence, AutomaticCitationCohortPopulationEvidence
+            ):
+                validate_automatic_citation_observations(
+                    self.population_evidence, self.observations
+                )
+                if self.minimum_paper_count != IMPACT_REFERENCE_COHORT_MINIMUM_V1:
+                    raise CertificationError(
+                        "automatic citation cohorts require the exact v1 minimum"
+                    )
         if self.minimum_paper_count < 2:
             raise ValueError("citation cohort minimum must be at least two")
         if len(set(self.observation_certification_ids)) != len(

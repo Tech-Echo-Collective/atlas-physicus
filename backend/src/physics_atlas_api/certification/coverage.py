@@ -9,7 +9,7 @@ from .contracts import (
     EvidenceCertificationDecision,
     EvidenceKind,
 )
-from .rules import coverage_minimum, evidence_rule_version
+from .rules import coverage_minimum, evidence_decision_is_current
 
 COVERAGE_SUBJECT_TYPE = "coverage-unit"
 
@@ -42,9 +42,7 @@ def certify_coverage(
         )
     if any(item.evidence_kind != evidence_kind for item in decisions):
         raise CertificationError("coverage decisions must share one evidence kind")
-    if any(
-        item.rule_version != evidence_rule_version(evidence_kind) for item in decisions
-    ):
+    if any(not evidence_decision_is_current(item) for item in decisions):
         raise CertificationError("coverage contains a stale evidence rule")
 
     measurements = tuple(

@@ -7,6 +7,27 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Evidence-derived automatic certification
+
+- PA-054 records explicit owner cancellation of mandatory human review. Added
+  typed deterministic adapters with no fake reviewers: exact fields/consumed
+  values, declared date basis, paper-native IDs, complete-response citation
+  populations, fixed plans, exact metric populations and normalization peers.
+  Legacy hashes, formulas, numeric thresholds and joint withholding remain.
+- Fixed citation admission's mixed-earliest-date risk and missing document-type
+  default; new path retains explicit source basis. Source normalizer/history is
+  unchanged. Condensed Matter 2020–2022 query count is 16,815, over the single-
+  response bound; no corpus was fetched or retained and no cutoff invented.
+- 254 focused tests pass; backend Ruff/format and strict mypy pass. Web app/node
+  type checking, lint, 16 tests and production build pass. Web `63fc454` shipped
+  fail-closed public source behavior and repaired ineffective type checking;
+  [Pages 33967823884](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33967823884)
+  is green. Source pin and all tags retained.
+- Real metric observations remain zero; API/database/providers and public-origin
+  CORS healthy at 13:06 UTC. Complete end-to-end automatic admission, historical
+  evidence and production dataset activation remain unfinished—not a completed
+  launch. [Exact validation and cleanup](validation/automatic-certification-2026-09-05.md).
+
 ## 2026-09-05 — Lightweight launch scientific readiness
 
 - Checked source `8571c21` and current public API before generating any dataset.

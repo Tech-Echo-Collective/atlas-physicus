@@ -9,22 +9,32 @@ recent [worklog](WORKLOG.md). Exact scientific measurements belong in the
 linked validation reports rather than being repeated throughout the project
 documentation.
 
-## Current task: lightweight scientific launch
+## Current task: evidence-derived automatic certification
 
-The requested compact, historical five-metric launch was checked on September 5
-from source `8571c21`. **Scientific NO-GO:** existing real evidence has no
-reviewed field/date/researcher certification populations, eligible citation
-cohorts or certified historical windows. Current rules require those approvals;
-provider presence cannot substitute. A bounded certified population is allowed:
-neither Full Physics completeness nor legacy storage consolidation blocks this
-launch. No new acquisition, dataset generation, migration or activation occurred.
+The owner removed mandatory human review (PA-054), superseding that blocker in
+the earlier [launch readiness review](validation/lightweight-launch-readiness-2026-09-05.md).
+New opt-in adapters reconstruct exact provider-field decisions, explicit date
+bases, paper-native researcher IDs, complete single-response citation cohorts,
+fixed acquisition plans, source-window populations and normalization peer sets.
+They do not fabricate reviewer identities or relax scientific thresholds.
 
-Read-only live checks at 12:22 UTC found healthy API/database/providers and
-zero exposed metric observations. Fifty-five focused scientific/gate tests pass;
-the one temporary test directory was removed. **LOCAL BUILD CLEANUP = PASS.**
-The next action is authenticated scientific review of an eligible bounded
-population, not another storage project. Exact blockers, deployment limitations
-and cleanup accounting: [launch readiness](validation/lightweight-launch-readiness-2026-09-05.md).
+**The five-metric launch remains incomplete.** Record-level date/researcher
+assessments still need exact calculator-input admission; real complete-year
+populations, mature common-cutoff cohorts and the production export/activation
+producer are not supplied by these adapters. A read-only INSPIRE count found
+16,815 Condensed Matter articles in the 2020–2022 declared query, exceeding the
+1,000-record single-response path. Multi-response snapshot semantics remain an
+actual evidence limitation, not a reason to invent one shared timestamp.
+
+254 focused tests, full backend lint/format and strict type checking pass. Web
+`63fc454` removes public synthetic fallback and fixes previously ineffective
+root-project type checking; its Pages build/deploy is green. At 13:06 UTC the
+API/database/providers were healthy with zero exposed metric observations.
+No legacy evidence, production rows, release tags or provider corpus were changed.
+Next: complete source-bound automatic date/identity admission and a defensible
+citation population/cutoff before generating a bounded v1 dataset—not human
+sign-off, storage research or Full Physics acquisition. Implementation limits,
+sources, checks and cleanup: [automatic certification report](validation/automatic-certification-2026-09-05.md).
 
 ## Release and scope
 
@@ -63,9 +73,9 @@ and cleanup accounting: [launch readiness](validation/lightweight-launch-readine
   exploration path.
 - The normal public source is `APIRepository`. Synthetic fixtures and the
   historical pilot remain separate sources for tests and reproducibility.
-  The current Web wrapper also allows automatic synthetic fallback on initial
-  API failure; this must be removed before the requested no-synthetic production
-  launch. Hiding fixture choices alone does not enforce that requirement.
+  Web `63fc454` prevents automatic synthetic fallback on initial API failure or
+  missing production configuration. Explicit internal fixture routes remain
+  isolated for reproducibility; normal public failure stays unavailable/neutral.
 - Repository and dataset-kind checks prevent live/static data mixing.
   Missing observations render as a neutral state.
 - The public Pages project is
@@ -76,10 +86,11 @@ and cleanup accounting: [launch readiness](validation/lightweight-launch-readine
   changed by the rename. Root and direct Atlas route loading, HTTPS, current
   branding, Live API mode and public-origin CORS were verified on September 5.
   Legacy-origin retirement/redirect policy still requires separate review.
-- Current Web commit `bf39f192` pins source `21bfcdb8` and passed
-  [Pages build/deploy 33947886469](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33947886469).
+- Current Web commit `63fc454` preserves source pin `21bfcdb8` and passed
+  [Pages build/deploy 33967823884](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33967823884).
   Public page metadata displays Atlas Physicus; unvalidated observations remain
-  absent. The lightweight-launch check did not change this pin or deployment.
+  absent. The new fail-closed wrapper does not deploy backend certification code
+  or activate metrics through a submodule upgrade.
 
 ### Backend and evidence platform
 

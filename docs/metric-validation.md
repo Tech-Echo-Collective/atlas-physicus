@@ -12,6 +12,13 @@ for scientific activation.
 
 ## Certification boundary
 
+PA-054 permits versioned evidence-derived automatic certification in place of
+mandatory human approval. It does not change the thresholds below. Exact
+provider-field, date/identifier, population and normalization adapters have
+different implementation boundaries; their tests are not a live activation
+receipt. See [automatic certification](automatic-certification.md) for the
+implemented paths and remaining scientific/engineering requirements.
+
 All readiness inputs pass through `scientific-evidence-certification-v1`.
 Canonicalization or provider presence alone is not eligibility. Each included
 paper, relationship, field ledger, and citation observation is bound to a

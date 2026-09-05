@@ -1,6 +1,7 @@
 # Scientific Evidence Certification v1
 
-Status: implemented as a staging-safe, fail-closed foundation
+Status: implemented as a staging-safe, fail-closed foundation; explicit automatic
+adapters are available under PA-054, not yet a complete live metric publisher.
 
 Policy version: `scientific-evidence-certification-v1`
 Last reviewed: 2026-09-05
@@ -25,6 +26,13 @@ Certification is an overlay on immutable evidence. It does not rewrite a
 provider row, resolve an ambiguity by optimism, or turn a downloaded partition
 into a scientific result.
 
+PA-054 removes mandatory human review where a supported deterministic rule can
+reconstruct the scientific assessment. New adapters do not impersonate reviewers
+or relabel historical approvals. The remaining review language below describes
+the legacy/manual path; use the exact supported automatic contracts described in
+[automatic certification](automatic-certification.md). Ambiguous or unsupported
+evidence stays unresolved/withheld, not automatically approved.
+
 ## States
 
 Every decision is bound to one subject and evidence dimension with its input
@@ -35,7 +43,7 @@ timezone-aware review timestamp are retained together.
 | State | Meaning |
 | --- | --- |
 | `certified` | Eligible for the explicitly declared purpose under the exact rule and versions. |
-| `needs_review` | Plausible evidence exists but a reviewed decision is required. |
+| `needs_review` | Plausible evidence remains unresolved under the available rules; further evidence or optional review is needed. |
 | `withheld` | Known evidence is excluded by policy or scope, such as a partial calendar year. |
 | `conflicted` | Incompatible evidence remains unresolved. |
 | `insufficient_evidence` | A required fact is absent or cannot be verified. |
@@ -96,7 +104,8 @@ sum(mapped Atlas-field weights) + explicit unmapped mass = 1
 ```
 
 within the existing numerical tolerance. A paper counts as field-certified
-only when the whole selected ledger has a reviewed decision. Certified mapped
+only when the whole selected ledger has a reviewed or PA-054 evidence-derived
+decision. Certified mapped
 and unmapped mass remains separate in the ledger artifact and may be reported,
 so an incompletely mapped ledger cannot inflate coverage.
 
@@ -115,6 +124,9 @@ manifest-completion upper bound without page response timestamps is not a
 common-cutoff observation. No tolerance for multi-page response times has been
 approved, so a multi-page cohort remains withheld unless the provider supplies
 snapshot semantics or a future reviewed policy explicitly defines one.
+The automatic citation adapter can derive all cohort members from one complete
+bounded response; its declared date basis is mandatory. Complete provider-query
+membership is not proof of a different canonical publication-year population.
 
 ## Certified source years and metric windows
 
@@ -188,7 +200,7 @@ cohort size and fitted parameters, cutoff where relevant, evidence manifest
 digest, coverage/uncertainty flags, and missing reasons before exposing an
 Atlas value in `[0,100]`.
 
-Each fitted cohort must equal its dated, reviewed normalization-population
+Each fitted cohort must equal its dated reviewed or exact certified-window-derived normalization-population
 manifest and bind one reconstructable calculation proof per entity. Atlas
 values and metadata reconstruct from those calculations. Physics-wide
 aggregation consumes these certified field Atlas observations and a separate

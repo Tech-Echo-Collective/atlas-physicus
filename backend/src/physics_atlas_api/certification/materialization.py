@@ -23,7 +23,7 @@ from .populations import (
 from .projections import paper_evidence_value_digest
 from .rules import (
     coverage_minimum,
-    evidence_rule_version,
+    evidence_decision_is_current,
     required_coverage_evidence,
     required_paper_evidence,
 )
@@ -275,7 +275,7 @@ def build_certified_metric_partition[PartitionT](
     )
     current_by_id = {item.decision_id: item for item in current_decisions}
     for decision in current_decisions:
-        if decision.rule_version != evidence_rule_version(decision.evidence_kind):
+        if not evidence_decision_is_current(decision):
             raise CertificationError(
                 f"{decision.evidence_kind} certification rule is stale"
             )

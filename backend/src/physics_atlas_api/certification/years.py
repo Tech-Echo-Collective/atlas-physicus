@@ -4,6 +4,7 @@ from datetime import UTC, date, datetime
 from typing import Literal
 
 from ..attribution import FRACTIONAL_ATTRIBUTION_V1
+from ..backfill import HistoricalPartition, build_partitions
 from ..fields import FIELD_WEIGHTING_POLICY_VERSION, PHYSICS_FIELD_ONTOLOGY_V1
 from .citations import (
     CITATION_CERTIFICATION_RULE_VERSION,
@@ -25,7 +26,7 @@ from .contracts import (
 from .coverage import COVERAGE_SUBJECT_TYPE, validate_coverage_certification
 from .rules import (
     coverage_minimum,
-    evidence_rule_version,
+    evidence_decision_is_current,
     required_coverage_evidence,
     required_window_years,
 )
@@ -170,6 +171,73 @@ class SourceAcquisitionPlanEvidence:
                 tuple(sorted(self.partitions)),
             )
         )
+
+
+@dataclass(frozen=True)
+class AutomaticSourceAcquisitionPlanEvidence:
+    """Verify an existing fixed query recipe, not scientific completeness.
+
+    The explicit query versions retain INSPIRE earliest-record and arXiv
+    submission-year axes. No automatic publication-year equivalence is implied.
+    Separate type preserves every legacy reviewed-plan serialization/digest.
+    """
+
+    calendar_year: int
+    cutoff: datetime
+    dataset_version: str
+    acquisition_scope: str
+    query_partitions: tuple[HistoricalPartition, ...]
+    rule_version: str = "fixed-source-acquisition-plan-assessment-v1"
+
+    def __post_init__(self) -> None:
+        if self.rule_version != "fixed-source-acquisition-plan-assessment-v1":
+            raise CertificationError("automatic source acquisition rule is unsupported")
+        if self.cutoff.tzinfo is None or self.cutoff.utcoffset() is None:
+            raise ValueError("automatic source plan cutoff must include timezone")
+        if not self.dataset_version.strip() or self.calendar_year >= self.cutoff.year:
+            raise ValueError("automatic source plan requires a version and closed year")
+        expected = tuple(
+            item
+            for item in build_partitions(scope=self.acquisition_scope)
+            if item.year == self.calendar_year
+        )
+        if not expected or self.query_partitions != expected:
+            raise CertificationError(
+                "automatic source plan differs from the exact fixed query recipe"
+            )
+
+    @property
+    def partitions(self) -> tuple[tuple[str, str], ...]:
+        return tuple((item.id, item.provider) for item in self.query_partitions)
+
+    @property
+    def content_digest(self) -> str:
+        return canonical_digest(self)
+
+    @property
+    def source_manifest_digest(self) -> str:
+        return self.content_digest
+
+
+def automatic_source_acquisition_plan(
+    *,
+    calendar_year: int,
+    cutoff: datetime,
+    dataset_version: str,
+    acquisition_scope: str,
+) -> AutomaticSourceAcquisitionPlanEvidence:
+    """Derive an existing bounded plan without acquisition or approval flags."""
+    return AutomaticSourceAcquisitionPlanEvidence(
+        calendar_year=calendar_year,
+        cutoff=cutoff,
+        dataset_version=dataset_version,
+        acquisition_scope=acquisition_scope,
+        query_partitions=tuple(
+            item
+            for item in build_partitions(scope=acquisition_scope)
+            if item.year == calendar_year
+        ),
+    )
 
 
 @dataclass(frozen=True)
@@ -321,7 +389,9 @@ class SourceYearEvidence:
     cutoff: datetime
     dataset_version: str
     acquisition_scope: str
-    acquisition_plan: SourceAcquisitionPlanEvidence
+    acquisition_plan: (
+        SourceAcquisitionPlanEvidence | AutomaticSourceAcquisitionPlanEvidence
+    )
     required_partition_ids: tuple[str, ...]
     required_coverage_kinds: tuple[EvidenceKind, ...]
     paper_projections: tuple[SourceYearPaperProjection, ...]
@@ -330,8 +400,13 @@ class SourceYearEvidence:
     coverage_decisions: tuple[EvidenceCertificationDecision, ...]
 
     def __post_init__(self) -> None:
-        if not isinstance(self.acquisition_plan, SourceAcquisitionPlanEvidence):
+        if not isinstance(
+            self.acquisition_plan,
+            (SourceAcquisitionPlanEvidence, AutomaticSourceAcquisitionPlanEvidence),
+        ):
             raise ValueError("source-year evidence requires an exact acquisition plan")
+        if isinstance(self.acquisition_plan, AutomaticSourceAcquisitionPlanEvidence):
+            self.acquisition_plan.__post_init__()
         if any(
             not isinstance(item, SourceYearPaperProjection)
             for item in self.paper_projections
@@ -465,6 +540,8 @@ def _evaluate_source_year(
     evidence: SourceYearEvidence,
     coverage: tuple[CoverageCertification, ...],
 ) -> SourceYearCertification:
+    if isinstance(evidence.acquisition_plan, AutomaticSourceAcquisitionPlanEvidence):
+        evidence.acquisition_plan.__post_init__()
     reasons: list[str] = []
     state: CertificationState = "certified"
     if evidence.calendar_year >= evidence.cutoff.year:
@@ -569,8 +646,7 @@ def _evaluate_source_year(
             state = "insufficient_evidence"
         reasons.append("required structural evidence certifications are missing")
     if any(
-        item.state != "certified"
-        or item.rule_version != evidence_rule_version(item.evidence_kind)
+        item.state != "certified" or not evidence_decision_is_current(item)
         for decisions in structural_by_kind.values()
         for item in decisions
     ):
