@@ -16,6 +16,9 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
+from physics_atlas_api.certification.validation_artifacts import (
+    require_validation_runtime,
+)
 from physics_atlas_api.paired_capture import (
     validate_staging_output,
     verify_paired_capture_manifest,
@@ -160,6 +163,7 @@ def provenance_recovery(decisions, occurrences, artifact_rows):
 
 
 def run_pilot(evidence: Path, output: Path):
+    require_validation_runtime()
     roots = {key: evidence.resolve() / value for key, value in DIRECTORIES.items()}
     output = validate_staging_output(output)
     if any(

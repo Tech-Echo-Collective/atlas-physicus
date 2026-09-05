@@ -638,6 +638,7 @@ def test_cond_replay_certification_is_streamed_fail_closed_and_content_addressed
         bundle_manifest=replay.output_manifest_path,
         output_root=retained_root,
         retain_decisions=True,
+        validation_max_papers=10,
     )
     assert retained.report == certification.report
     assert retained.certification_manifest == certification.certification_manifest
@@ -649,6 +650,7 @@ def test_cond_replay_certification_is_streamed_fail_closed_and_content_addressed
         bundle_manifest=replay.output_manifest_path,
         output_root=retained_root,
         retain_decisions=True,
+        validation_max_papers=10,
     )
     assert repeated.output_manifest_path == retained.output_manifest_path
     retained_path.write_bytes(b"tampered decision stream\n")
@@ -658,6 +660,7 @@ def test_cond_replay_certification_is_streamed_fail_closed_and_content_addressed
             bundle_manifest=replay.output_manifest_path,
             output_root=retained_root,
             retain_decisions=True,
+            validation_max_papers=10,
         )
     assert retained_path.read_bytes() == b"tampered decision stream\n"
     assert not tuple(retained_root.glob(".certification-decisions-*"))
@@ -813,7 +816,11 @@ def test_replay_certification_cli_prints_and_writes_summary(
                 str(replay.output_manifest_path),
                 "--output",
                 str(output),
-                *(("--retain-decisions",) if retain_decisions else ()),
+                *(
+                    ("--retain-decisions", "--validation-max-papers", "10")
+                    if retain_decisions
+                    else ()
+                ),
             )
         )
         == 0

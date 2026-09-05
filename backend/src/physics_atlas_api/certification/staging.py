@@ -24,9 +24,16 @@ from .contracts import (
     canonical_digest,
 )
 from .rules import evidence_rule_version
+from .validation_artifacts import (
+    MAX_VALIDATION_DECISIONS,
+    MAX_VALIDATION_PAPERS,
+    check_validation_size,
+    require_validation_runtime,
+    validation_paper_limit,
+)
 
 REPLAY_CERTIFICATION_VERSION = "historical-replay-evidence-certification-v1"
-_IN_MEMORY_DECISION_LIMIT = 100_000
+_IN_MEMORY_DECISION_LIMIT = MAX_VALIDATION_DECISIONS
 _JSONL_ROLES = frozenset(
     {
         "source-occurrences",
@@ -938,6 +945,7 @@ def _verified_context(
     bundle_manifest: Path,
     *,
     in_memory_decision_limit: int | None = None,
+    validation_max_papers: int | None = None,
 ) -> tuple[
     dict[str, object],
     tuple[_ArtifactEntry, ...],
@@ -948,7 +956,7 @@ def _verified_context(
 ]:
     manifest = _load_manifest(bundle_root, bundle_manifest)
     entries = _artifact_entries(bundle_root, manifest)
-    if in_memory_decision_limit is not None:
+    if in_memory_decision_limit is not None or validation_max_papers is not None:
         row_counts = {item.role: item.row_count or 0 for item in entries}
         estimated_decisions = (
             3 * row_counts["paper-components"]
@@ -958,11 +966,19 @@ def _verified_context(
             + row_counts["institution-authority-anchors"]
             + 2 * row_counts["paper-time-affiliation-shares"]
         )
-        if estimated_decisions > in_memory_decision_limit:
+        if (
+            in_memory_decision_limit is not None
+            and estimated_decisions > in_memory_decision_limit
+        ):
             raise CertificationError(
                 "replay is too large for in-memory decisions; use "
-                "summarize_replay_bundle or the replay-certification CLI"
+                "summary-only summarize_replay_bundle (no retained decisions)"
             )
+        check_validation_size(
+            paper_count=row_counts["paper-components"],
+            paper_limit=validation_max_papers or MAX_VALIDATION_PAPERS,
+            decision_count=estimated_decisions,
+        )
     for entry in entries:
         _verify_artifact(entry)
     by_role = {entry.role: entry for entry in entries}
@@ -988,8 +1004,9 @@ def certify_replay_bundle(
     bundle_root: Path,
     bundle_manifest: Path,
 ) -> ReplayCertificationResult:
-    """Verify and summarize replay evidence without network, DB, or metric writes."""
+    """Build a bounded validation trace, never production certification state."""
 
+    require_validation_runtime()
     (
         manifest,
         entries,
@@ -1017,9 +1034,16 @@ def certify_replay_bundle(
         item.evidence_kind for item in ordered if item.state == "certified"
     )
     reason_counts = Counter(reason for item in ordered for reason in item.reasons)
-    decision_content = b"".join(
-        _canonical_json(_decision_row(item)) for item in ordered
-    )
+    decision_parts: list[bytes] = []
+    decision_bytes = 0
+    for item in ordered:
+        content = _canonical_json(_decision_row(item))
+        decision_bytes += len(content)
+        check_validation_size(
+            decision_count=len(decision_parts) + 1, decision_bytes=decision_bytes
+        )
+        decision_parts.append(content)
+    decision_content = b"".join(decision_parts)
     decision_checksum = hashlib.sha256(decision_content).hexdigest()
     report = _report(
         manifest=manifest,
@@ -1083,16 +1107,23 @@ def summarize_replay_bundle(
     bundle_manifest: Path,
     output_root: Path | None = None,
     retain_decisions: bool = False,
+    validation_max_papers: int | None = None,
 ) -> ReplayCertificationSummary:
     """Certify a large replay with bounded memory and optional decision retention.
 
     The deterministic decision stream is fully hashed and counted, but intentionally
-    not retained by default. Explicit retention streams to a temporary file in the
-    output filesystem, then publishes the complete content-addressed artifact.
+    not retained by default. Retention requires an explicit bounded sample; it
+    must never be used for duplicated full-corpus production certification.
+    No implicit sampling/truncation changes the input population or decisions.
     """
 
+    require_validation_runtime()
     if retain_decisions and output_root is None:
         raise CertificationError("retaining decisions requires an output root")
+    if retain_decisions:
+        validation_max_papers = validation_paper_limit(validation_max_papers)
+    elif validation_max_papers is not None:
+        raise CertificationError("validation_max_papers requires retained decisions")
     (
         manifest,
         entries,
@@ -1100,7 +1131,9 @@ def summarize_replay_bundle(
         source_checksum,
         dataset_version,
         acquisition_scope,
-    ) = _verified_context(bundle_root, bundle_manifest)
+    ) = _verified_context(
+        bundle_root, bundle_manifest, validation_max_papers=validation_max_papers
+    )
     digest = hashlib.sha256()
     decision_count = 0
     decision_byte_count = 0
@@ -1119,6 +1152,10 @@ def summarize_replay_bundle(
             content = _canonical_json(_decision_row(item))
             digest.update(content)
             if stream is not None:
+                check_validation_size(
+                    decision_count=decision_count + 1,
+                    decision_bytes=decision_byte_count + len(content),
+                )
                 stream.write(content)
             decision_count += 1
             decision_byte_count += len(content)
@@ -1284,8 +1321,34 @@ def write_replay_certification_bundle(
     output_root: Path,
     result: ReplayCertificationResult,
 ) -> Path:
-    """Write content-addressed files only; identical reruns are idempotent."""
+    """Write bounded validation files only; identical reruns are idempotent."""
 
+    require_validation_runtime()
+    # Recheck the public writer too: a caller may retain/construct a result object.
+    check_validation_size(
+        paper_count=len(
+            {
+                item.subject_id
+                for item in result.decisions
+                if item.evidence_kind == "canonical-paper-identity"
+            }
+        ),
+        decision_count=len(result.decisions),
+    )
+    decision_artifacts = [
+        artifact
+        for artifact in result.artifacts
+        if artifact.role == "evidence-certification-decisions"
+    ]
+    if len(decision_artifacts) != 1:
+        raise CertificationError(
+            "validation bundle requires exactly one decision trace"
+        )
+    artifact = decision_artifacts[0]
+    check_validation_size(
+        decision_count=artifact.row_count or 0,
+        decision_bytes=max(artifact.byte_count, len(artifact.content)),
+    )
     return _write_certification_artifacts(
         output_root,
         result.artifacts,

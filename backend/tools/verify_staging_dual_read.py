@@ -35,6 +35,9 @@ from verify_payload_recovery import (
     write_new,
 )
 
+from physics_atlas_api.certification.validation_artifacts import (
+    require_validation_runtime,
+)
 from physics_atlas_api.paired_capture import (
     validate_staging_output,
     verify_paired_capture_manifest,
@@ -177,6 +180,7 @@ def restore_files(rows, store, destination):
 
 
 def scientific_result(rows, store, destination, roots, original_occurrences):
+    require_validation_runtime()
     count = restore_files(rows, store, destination / "sources")
     raw_root = destination / "sources" / "raw"
     enrichment_root = destination / "sources" / "enrichment"
@@ -317,6 +321,7 @@ def fixed_inventory(roots, raw, enrichment):
 
 
 def run(evidence, output, socket):
+    require_validation_runtime()
     if not __debug__:
         raise RuntimeError(
             "proof checks require assertions; optimized Python is forbidden"

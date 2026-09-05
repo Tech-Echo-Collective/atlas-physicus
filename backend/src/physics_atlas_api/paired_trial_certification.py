@@ -55,6 +55,10 @@ from .certification.institutions import (
     certify_institution,
     institution_authority_version,
 )
+from .certification.validation_artifacts import (
+    check_validation_size,
+    require_validation_runtime,
+)
 from .connectors.arxiv import ArxivConnector
 from .connectors.base import (
     NormalizedRecord,
@@ -1296,12 +1300,14 @@ def _derive_bundle(
     enrichment_root: Path,
     enrichment_manifest: Mapping[str, Any],
 ) -> tuple[dict[str, list[dict[str, object]]], dict[str, object]]:
+    require_validation_runtime()
     official_endpoints = bool(
         raw_manifest.get("provider_endpoints_official") is True
         and enrichment_manifest.get("provider_endpoints_official") is True
     )
     occurrences = _load_occurrences(raw_root, raw_manifest)
     papers = _canonicalize(occurrences)
+    check_validation_size(paper_count=len(papers))
     authorities = _authority_bundle(enrichment_root, enrichment_manifest)
     authority_version = institution_authority_version(authorities.records)
     artifacts: dict[str, list[dict[str, object]]] = {
@@ -1971,8 +1977,20 @@ def _derive_bundle(
     return artifacts, report
 
 
-def _jsonl(rows: Sequence[Mapping[str, object]]) -> bytes:
-    return b"".join(_canonical_json(row) + b"\n" for row in rows)
+def _jsonl(
+    rows: Sequence[Mapping[str, object]], *, validation_decisions: bool = False
+) -> bytes:
+    if not validation_decisions:
+        return b"".join(_canonical_json(row) + b"\n" for row in rows)
+    check_validation_size(decision_count=len(rows))
+    parts: list[bytes] = []
+    byte_count = 0
+    for row in rows:
+        part = _canonical_json(row) + b"\n"
+        byte_count += len(part)
+        check_validation_size(decision_bytes=byte_count)
+        parts.append(part)
+    return b"".join(parts)
 
 
 def _store_bytes(
@@ -2067,6 +2085,7 @@ def certify_paired_trial(
 ) -> tuple[dict[str, object], Path]:
     """Write one deterministic, externally staged certification bundle."""
 
+    require_validation_runtime()
     output_root = validate_staging_output(output)
     try:
         raw = verify_paired_capture_manifest(raw_manifest_path, output=raw_root)
@@ -2097,8 +2116,16 @@ def certify_paired_trial(
         enrichment_root=enrichment_root.resolve(),
         enrichment_manifest=enrichment,
     )
+    # Validate the verbose trace before publishing any output artifact.
+    decisions = _jsonl(artifacts["decisions"], validation_decisions=True)
     entries = [
-        _store_bytes(output_root, role, "jsonl", _jsonl(rows), len(rows))
+        _store_bytes(
+            output_root,
+            role,
+            "jsonl",
+            decisions if role == "decisions" else _jsonl(rows),
+            len(rows),
+        )
         for role, rows in sorted(artifacts.items())
     ]
     entries.append(
@@ -2143,6 +2170,7 @@ def verify_paired_trial_certification_manifest(
 ) -> dict[str, Any]:
     """Recompute the bounded certification and compare every preserved byte."""
 
+    require_validation_runtime()
     output_root = output.resolve()
     resolved = path.resolve()
     try:
@@ -2193,7 +2221,11 @@ def verify_paired_trial_certification_manifest(
         enrichment_manifest=enrichment,
     )
     expected_payloads: dict[str, tuple[bytes, int | None, str]] = {
-        role: (_jsonl(rows), len(rows), "application/x-ndjson")
+        role: (
+            _jsonl(rows, validation_decisions=role == "decisions"),
+            len(rows),
+            "application/x-ndjson",
+        )
         for role, rows in artifacts.items()
     }
     expected_payloads["report"] = (

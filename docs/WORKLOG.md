@@ -7,6 +7,18 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Validation-ledger scaling safety
+
+- Audited worker/import/CLI and paired/replay/recovery/rollback output boundaries.
+  Normal ingestion emits no verbose comparison ledger; installed validation CLIs
+  previously lacked production refusal and replay retention was unbounded.
+- Added execution guards and bounded paper/decision/byte retention, with no
+  scientific-rule or historical-artifact change. PA-051 records authoritative
+  corpus processing plus a separately bounded per-version equivalence sample.
+- 188 focused fixture tests, strict mypy and Ruff pass; exact validation is recorded
+  in the [audit](validation/validation-ledger-scaling-safety-2026-09-05.md).
+  No Railway/data acquisition/broad replay, evidence cleanup or activation.
+
 ## 2026-09-05 — Tech Echo Physica naming alignment
 
 - Prepared Atlas Physicus public headings, metadata, citation, active documentation,

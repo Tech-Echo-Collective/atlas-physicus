@@ -8,8 +8,10 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from .certification import (
+    CertificationError,
     summarize_replay_bundle,
 )
+from .certification.validation_artifacts import MAX_VALIDATION_PAPERS
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -29,7 +31,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--retain-decisions",
         action="store_true",
-        help="stream and retain the complete decision artifact (requires --output)",
+        help="retain bounded validation decisions (never full-corpus production)",
+    )
+    parser.add_argument(
+        "--validation-max-papers",
+        type=int,
+        help=f"required with --retain-decisions; hard maximum {MAX_VALIDATION_PAPERS}",
     )
     return parser
 
@@ -38,12 +45,16 @@ def run(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.retain_decisions and args.output is None:
         _parser().error("--retain-decisions requires --output")
-    result = summarize_replay_bundle(
-        bundle_root=args.bundle_root,
-        bundle_manifest=args.bundle_manifest,
-        output_root=args.output,
-        retain_decisions=args.retain_decisions,
-    )
+    try:
+        result = summarize_replay_bundle(
+            bundle_root=args.bundle_root,
+            bundle_manifest=args.bundle_manifest,
+            output_root=args.output,
+            retain_decisions=args.retain_decisions,
+            validation_max_papers=args.validation_max_papers,
+        )
+    except CertificationError as error:
+        _parser().error(str(error))
     summary = {
         **result.report,
         "certification_manifest_checksum": result.certification_manifest[

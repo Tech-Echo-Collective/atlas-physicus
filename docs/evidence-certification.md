@@ -205,6 +205,15 @@ is an exploratory perspective, not an official score or ranking.
 
 ## Current bounded evidence
 
+Verbose paired/replay decision artifacts are validation outputs, not the
+production certification store. PA-051 forbids full-corpus paired, rollback,
+recovery, restore and comparison ledgers during full-scale ingestion. Offline
+retention requires a bounded sample and is rejected in production; pure
+certification contracts and certified-only calculator admission are unchanged.
+See the [operational limits and per-version proof policy](storage-architecture.md#validation-artifact-scaling-contract).
+Existing historical proofs and archive recovery remain valid; this changes future
+generation admission, not their bytes, scientific reasons or rule versions.
+
 The January 2020 paired capture is a record-level proof and cannot certify a
 complete calendar year or a Momentum window. Existing legacy hep-th and
 Condensed Matter replay pages did not retain response timestamps, so their

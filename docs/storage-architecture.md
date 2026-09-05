@@ -104,6 +104,61 @@ retained inline bytes and keeps the reference/provenance history without needing
 the archive. This bounded rehearsal retains both representations and does not
 prove production schema compatibility, archive durability, or storage capacity.
 
+## Validation artifact scaling contract
+
+PA-051: **Full-scale ingestion must not generate full-corpus paired, rollback,
+recovery, restore, or comparison ledgers. These are bounded validation artifacts
+only.** The ingestion worker has no verbose-validation sink or switch. Scientific
+contract imports remain valid; executing installed offline paired/replay commands
+in a configured production runtime is forbidden, before input reads/output writes.
+
+Production-scaled certification may retain identity, evidence dimension, status,
+reason code, rule/schema/data versions, compact provenance references, and required
+cutoff/evidence metadata. Necessary history and unresolved/missing states remain
+explicit. This is the target storage boundary, **not a newly deployed compact
+certification schema**. NoFormulaMetricRecalculator and metric admission stay
+unchanged; the current compact SQL/audit prototype is not production authority.
+
+Full corpus → authoritative scientific processing only. A separately approved,
+bounded representative sample → inline/reference, rollback/recovery and exact
+restore/equivalence proofs for the pipeline version. Select and pin the sample
+before the run; record acquisition/dataset and code versions, selection method,
+strata/edge cases, input manifest and hashes, outcome/reason/provenance digests,
+conservation/missing-value checks and failures. A convenient sample does not
+establish scientific coverage or authorize Full Physics. There is no automatic
+sampler and no truncation of certification input. Retain required proof metadata
+and unique evidence once; temporary duplicates may be retired only after separate
+verification/authorization. Existing historical manifests are never rewritten.
+
+Enforced operational limits (not scientific thresholds):
+
+- Paired certification retains the existing January 13–19, 2020 scope and maximum
+  2,498 source occurrences. Fixed recovery/dual-read runners still accept only the
+  checksum-pinned 635-occurrence / 474-component batch.
+- Retained replay decisions require explicit `validation_max_papers` (CLI:
+  `--retain-decisions --validation-max-papers N --output ...`), with `1 ≤ N ≤ 2,500`.
+  Manifest paper/estimated-decision counts are checked before artifact verification.
+  Actual artifact row/hash verification still follows; no sampling by omission.
+- At most 100,000 decisions and 128 MiB of decision bytes per verbose trace.
+  In-memory replay and its public writer are bounded too. Streaming retention
+  checks actual bytes/count before writing; failure cleans its unpublished temporary
+  stream. Paired generation checks its trace before publishing any artifact.
+- Development/test execution only, using existing environment/.env settings.
+  Summary-only offline replay remains available without retaining a decision
+  ledger, but is not a production ingestion or equivalence step.
+
+These limits bound individual proof traces, not all input memory or cumulative
+operator runs. Do not schedule a proof per production batch/paper, shard a full
+corpus into proof outputs, or retain an expanding series of A/B copies. Future
+integration needs a reviewed per-version proof/retention budget. Runtime settings
+and static tests protect accidental reuse, not hostile code with application
+privileges. Existing exact single-artifact archive restoration remains governed
+by its separate pinned size/checksum/scratch contract; no archive tooling changes.
+
+The [bounded audit](validation/validation-ledger-scaling-safety-2026-09-05.md)
+records generator paths, focused tests and a deliberately pathological storage
+scenario, not a Full Physics capacity estimate.
+
 ## Storage Budget Gate v1
 
 Full Physics loading requires both the existing Joint Metric Activation Gate

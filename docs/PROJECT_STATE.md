@@ -383,6 +383,19 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
+- PA-051 now separates corpus-scaled authoritative certification from bounded
+  validation traces. Installed paired/replay generators and recovery/dual-read
+  runners refuse production runtime execution. Retained replay requires an
+  explicit sample ≤2,500 papers; verbose traces are capped at 100,000 decisions
+  and 128 MiB. Existing fixed paired/pilot scope checks remain. Summary-only
+  offline replay retains no full decision ledger; no production sink was added.
+- The [scaling-safety audit](validation/validation-ledger-scaling-safety-2026-09-05.md)
+  covers production reachability, guard failure/cleanup and unchanged scientific
+  outputs using fixtures only. Existing evidence, archived authorities and release
+  tags remain untouched. No Railway access, new acquisition, corpus replay,
+  other-class processing, migration or activation occurred. These guardrails
+  do not pass the existing scientific/storage gates or establish larger capacity.
+
 - The archive resolver passes 65 focused tests, changed-file Ruff format/lint,
   independent code review and the real original-absent exact-restore proof. Prior
   NO-GO documentation is retained as accurate history alongside the new result.
@@ -447,6 +460,11 @@ authorized**. The exact gate input and output are preserved in the
   observations. Existing release tags remain unchanged.
 
 ## Immediate next action
+
+The bounded validation-scaling guard is complete. Before any separately approved
+larger processing design, pin one representative per-version proof sample and its
+retention budget; never run a paired/rollback/recovery proof per corpus batch.
+No further artifact cleanup is authorized by this work.
 
 Perform only reviewed evidence work for canonical dates, researcher identities, fields,
 institution targets/rollups, common-cutoff cohort populations, and complete

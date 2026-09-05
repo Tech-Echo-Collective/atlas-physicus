@@ -82,6 +82,22 @@ and production API URLs to avoid breaking operated integrations. The separate
 Web deployment remains independently versioned and pins an exact source commit.
 See the [deployment compatibility audit](production-deployment.md#naming-and-deployment-compatibility).
 
+## Validation artifacts do not scale with the corpus — 2026-09-05
+
+**PA-051:** Full-scale ingestion must not generate full-corpus paired, rollback,
+recovery, restore, or comparison ledgers. These are bounded validation artifacts
+only. Only necessary compact authoritative certification state may scale with
+the corpus; expanded A/B scientific traces are not production per-paper state.
+Validate each pipeline version against an explicitly bounded representative
+sample, preserving its inputs/versions, exact hashes, equivalence/failure results
+and required provenance. Do not subdivide a full corpus into repeated proof runs
+to evade this boundary. Runtime refusal and operational sample/decision/byte caps
+do not change scientific thresholds or confer activation/capacity approval.
+Existing historical artifacts remain valid and retained; separately authorized
+exact restoration of one authoritative archive is not new trace generation.
+See the [storage contract](storage-architecture.md#validation-artifact-scaling-contract)
+and [implementation audit](validation/validation-ledger-scaling-safety-2026-09-05.md).
+
 ## Current activation decision
 
 The v3.0.4 production activation begins with the implemented `hep-th-v1`
