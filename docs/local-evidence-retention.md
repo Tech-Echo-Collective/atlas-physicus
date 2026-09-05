@@ -68,8 +68,11 @@ proof-output budget inside PA-048, retaining existing per-trace limits. New
 version-level proof work needs a fresh inventory and reservation; old versions,
 archives, copies and uncertain files all count. There is no automatic deletion.
 The [affiliation-class audit](validation/affiliation-retention-2026-09-05.md)
-records the exact sample, accounting scope, three lossless small pilots and
-remaining direct-path dependencies. All original affiliation artifacts remain
-KEEP/REVIEW or ARCHIVE_CANDIDATE; exact duplicates are not cleared for retirement.
-Production database affiliation storage and provider/researcher artifact classes
-were not processed. The combined budget still fails despite proof-sub-budget headroom.
+records the exact sample and initial small pilots. The subsequent
+[authority batch](validation/affiliation-archive-batch-2026-09-05.md) retired nine
+specifically verified affiliation originals; three earlier small pilot inputs
+remain. This is not blanket retirement permission for other roles or paths.
+The [final consolidation review](validation/final-storage-consolidation-2026-09-05.md)
+leaves unsupported provider/researcher/replay originals intact. Historical reports
+remain accurate as-of records. Production database storage was not migrated.
+The combined budget still fails despite proof-sub-budget headroom.

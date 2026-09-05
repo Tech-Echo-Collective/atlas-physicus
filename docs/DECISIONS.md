@@ -95,6 +95,9 @@ to evade this boundary. Runtime refusal and operational sample/decision/byte cap
 do not change scientific thresholds or confer activation/capacity approval.
 Existing historical artifacts remain valid and retained; separately authorized
 exact restoration of one authoritative archive is not new trace generation.
+This also excludes full-corpus verbose provider comparisons and researcher
+replay A/B traces. Necessary source/history state still counts toward PA-048;
+the absence of comparison ledgers does not prove a compact production layout.
 See the [storage contract](storage-architecture.md#validation-artifact-scaling-contract)
 and [implementation audit](validation/validation-ledger-scaling-safety-2026-09-05.md).
 
@@ -131,6 +134,12 @@ immutable manifest/path/hash/size/row binding is verified independently.
 An additive local authority index selects the retained representation; it does
 not rewrite historical manifests, scientific provenance or attribution decisions.
 Missing or invalid selected authority fails closed without inline fallback.
+
+The [final bounded storage review](validation/final-storage-consolidation-2026-09-05.md)
+does not extend this whitelist. A recoverable generic artifact reference is not
+historical path authority for provider, researcher or other replay schemas.
+Unsupported bindings remain NO-GO; do not invent acquisition metadata, increase
+global payload limits or rewrite historical manifests to obtain retirement.
 
 Retirement requires original-absent recovery, exact bytes, scientific-input and
 provenance equivalence, current-reader compatibility, reviewed dependencies and

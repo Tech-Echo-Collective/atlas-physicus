@@ -284,3 +284,20 @@ must be installed externally; the runner refuses without them. This is local
 historical authority, not a production payload migration or independent backup.
 See [PA-053](DECISIONS.md#historical-affiliation-archive-authority--2026-09-05)
 and the [measured batch](validation/affiliation-archive-batch-2026-09-05.md).
+
+## Remaining local storage boundary
+
+The [final consolidation review](validation/final-storage-consolidation-2026-09-05.md)
+inventories the remaining provider, researcher and replay classes without
+extending archive authority. Generic exact recovery is a representation proof,
+not an automatically usable historical manifest binding. Current callers still
+need the unsupported originals. In particular, 102 retained INSPIRE pages exceed
+the 16 MiB payload envelope bound; some historical page manifests lack required
+acquisition metadata. Both require separately reviewed compatibility work, not
+silent truncation, fabricated timestamps or a blanket larger limit.
+
+No full-corpus provider/researcher comparison output is permitted by PA-051/052.
+Actual retained history and proof archives still count once toward PA-048, while
+the cumulative proof budget is a cross-cutting limit, not an extra storage pool.
+Future compact-component scenarios must include retained history and unknown
+backup/citation/review costs; they are not final-schema capacity measurements.

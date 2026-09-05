@@ -7,6 +7,30 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Final bounded storage consolidation
+
+- Continued verified `main` at `3b30124` (CI 33962228728 green). Classified all
+  remaining evidence before mutation: 7.799 GB evidence plus 1.879 GB workspace.
+  Provider pages, researcher appearances and expanded historical replay outputs
+  dominate; exact duplicates still have unresolved path dependencies.
+- Reused two existing provider envelopes; exact recovery, parser/normalization
+  and provenance checks pass. Four small complete researcher/paper/field/citation
+  archives preserve exact bytes and stored semantics with originals OS-denied.
+  Unsupported authority remains NO-GO for every remaining expanded group.
+- No original evidence retired, no new scientific processing or production
+  access. The two sandbox-launch refusals were operational isolation issues,
+  not codec defects; retry retained stronger original-read/network denial.
+- Fixed sample and 1 GiB proof budget remain unchanged; one shared 16 MiB
+  reservation includes all new metadata/archives. Production call-boundary
+  checks find no new comparison-trace sink. No production code was changed.
+- Final evidence 7.804 GB, combined local 9.683 GB; zero original retirement and
+  4.875 MB new retained audit/probe bytes. Corrected a legacy cold-store category
+  omission in a new receipt while retaining the first accounting record unchanged.
+- 387 focused tests and storage lint pass. Total retained-storage gate remains
+  FAIL; future final-schema capacity is WITHHELD. Exact accounting, prototype
+  limitations, pins and next boundary:
+  [final review](validation/final-storage-consolidation-2026-09-05.md).
+
 ## 2026-09-05 — Affiliation archive authority and bounded retirement
 
 - Continued verified `main` at `f32e261`; extended the same resolver to affiliation

@@ -147,8 +147,12 @@ passes an original-absent proof for the corrected ledger. The separately authori
 now removes only that corrected original after fresh checks; the archive and all
 proof metadata stay. The subsequent [bounded ledger batch](validation/certification-ledger-batch-2026-09-05.md)
 also archives and retires the distinct historical ledger after exact independent
-recovery; eight incompatible paired-ledger paths remain retained. No other-class
-processing or further cleanup is authorized. Production
+recovery; eight incompatible paired-ledger paths remain retained. The later
+affiliation authority batch retires nine verified paths. The
+[final bounded consolidation](validation/final-storage-consolidation-2026-09-05.md)
+retains the remaining unsupported provider/researcher/replay classes: local
+storage exceeds the combined budget, and future final-layout sizing is withheld.
+No further cleanup or scientific-coverage work follows automatically. Production
 readiness still requires isolated testing of the proposed representation, durable
 restore and complete peak costs. Production payload deletion and broader loading
 remain unauthorized.

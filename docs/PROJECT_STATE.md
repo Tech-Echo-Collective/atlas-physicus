@@ -31,8 +31,8 @@ documentation.
   zero, and no partial activation is allowed.
 - PA-048: the nominal **5 GB budget covers all persistent Atlas data combined**,
   including archives, history, metadata and retained copies—not PostgreSQL only.
-  After the affiliation archive-authority retirement batch, retained evidence/archive/audit files
-  occupy 7.799 GB, plus approximately 1.879 GB of Atlas-only workspace: observed
+  After the final bounded consolidation review, retained evidence/archive/audit files
+  occupy 7.804 GB, plus approximately 1.879 GB of Atlas-only workspace: observed
   total-budget **FAIL**. Production migration execution is **NO-GO**; a future representative
   final-layout capacity assessment remains **WITHHELD**. No scientific history is lost
   or scientific policy weakened to fit the budget.
@@ -383,10 +383,21 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
+- The [final storage consolidation review](validation/final-storage-consolidation-2026-09-05.md)
+  inventories all remaining classes and proves exact recovery on two existing
+  provider envelopes and four small researcher/history files. Every unsupported
+  historical authority remains NO-GO; no original evidence is retired. Large
+  provider-page limits/missing acquisition metadata and direct-path replay
+  dependencies remain blockers. 387 focused tests pass; no production/scientific
+  code changed. New proofs are bounded by one shared 16 MiB reservation, not a
+  corpus-scaled output. New retained audit/probe bytes are 4,874,681; no original
+  bytes were reclaimed. Proof retention is 954.114 MB, within 1 GiB; combined local
+  footprint is 9.683 GB. Exact snapshot accounting is in the report.
 - PA-052 pins 1,000 existing source-scoped paper references (474 paired + 526
   corrected Condensed Matter) and a 1 GiB cumulative proof-output budget within
-  PA-048. Exact sample reuse/row recovery pass; retained proof scope is now 949.239 MB,
-  including archives, old versions, copies and metadata. New affiliation pilots
+  PA-048. Exact sample reuse/row recovery pass; retained proof scope was 949.239 MB
+  after the affiliation batch, including archives, old versions, copies and metadata;
+  the final review records subsequent bounded proof growth. New affiliation pilots
   enforce fresh admission; this is not a universal old-CLI/OS quota.
 - The [affiliation archive batch](validation/affiliation-archive-batch-2026-09-05.md)
   extends the existing resolver and current affiliation readers (PA-053). All nine
@@ -479,28 +490,17 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Immediate next action
 
-The bounded affiliation reader/retirement batch is complete. Reuse sample
-`5f520b2a…` and fresh retention admission. The smallest separate follow-up is a
-read-only provider-capture dependency and payload-reference compatibility review;
-that class measures 2.811 GB in evidence, 2.819 GB including known workspace copies.
-Never run a paired/rollback/recovery proof per corpus batch. No further artifact
-cleanup or provider/researcher-class processing is authorized by this work.
+The [final bounded storage review](validation/final-storage-consolidation-2026-09-05.md)
+finds remaining provider/researcher/replay paths unsupported by current archive
+authority. In particular, 102 provider pages exceed the existing payload bound,
+and older acquisition metadata cannot be guessed. The smallest separate next
+action is a narrow provider-page authority/binding design review, not another
+corpus replay or a larger storage tier by default.
 
-Perform only reviewed evidence work for canonical dates, researcher identities, fields,
-institution targets/rollups, common-cutoff cohort populations, and complete
-historical windows. The production-compatible reader/schema and twelve-stage
-one-batch pilot plan are now documented, not implemented or approved to execute.
-The bounded ledger batch is complete. Corrected `459c1f40…` and historical
-`8d9ba03a…` retain separate exact archive authorities; both expanded originals
-are now absent. The eight paired-ledger paths remain NO-GO pending a separately
-reviewed compatibility decision. Preserve both archives, descriptors/manifests
-and validation receipts. No further unlink or other-class processing is cleared.
-The nine reviewed affiliation originals are now retired behind verified archive
-authorities. Preserve all three archives, indices, historical manifests and proofs;
-the three small prior pilot inputs remain outside this retirement decision.
-A production JSONB representation,
-independent operational restore and full archive/backup peak still need isolated
-rehearsal and separate approval.
-Production inline data stays intact. The observed retained total-budget result
-is FAIL; future final-layout and scientific activation evidence remain withheld.
-Full Physics loading and v3.1 remain unauthorized.
+Keep all remaining originals, both decision archives, three affiliation
+authorities, historical manifests and proofs. No production migration or further
+unlink is authorized. Reuse sample `5f520b2a…` and fresh proof-budget admission;
+never generate paired/recovery traces per corpus batch. Current retained storage
+fails the combined 5 GB budget; future final-schema capacity and scientific
+activation remain withheld. Production inline data stays intact. Do not begin
+scientific evidence-coverage work, Full Physics loading or v3.1 from this result.
