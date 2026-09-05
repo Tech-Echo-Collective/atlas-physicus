@@ -28,10 +28,10 @@ documentation.
   zero, and no partial activation is allowed.
 - PA-048: the nominal **5 GB budget covers all persistent Atlas data combined**,
   including archives, history, metadata and retained copies—not PostgreSQL only.
-  After the verified local cleanup, retained evidence/archive/audit files alone
-  occupy 16.532 GB, plus approximately 1.878 GB of Atlas-only workspace: observed
+  After the verified corrected-ledger retirement, retained evidence/archive/audit files
+  occupy 13.095 GB, plus approximately 1.878 GB of Atlas-only workspace: observed
   total-budget **FAIL**. Production migration execution is **NO-GO**; a future representative
-  final-layout capacity assessment remains **WITHHELD**. No history is deleted
+  final-layout capacity assessment remains **WITHHELD**. No scientific history is lost
   or scientific policy weakened to fit the budget.
 
 ## Operated system
@@ -225,11 +225,11 @@ match; no scientific replay or recertification occurred. The separately approved
 [verified cleanup](validation/verified-local-cleanup-2026-09-05.md) removes only
 the 3,437,302,947-byte restored test output and eight redundant SQL read-back
 files / 8,175,736 bytes. Original ledgers, archive, manifests, proof and all source
-twins remain. Historical manifest paths require retaining the other 144,801,076
+twins remained at that cleanup milestone. Historical manifest paths require retaining the other 144,801,076
 bytes of reviewed older proof copies; neither historical manifests nor scientific
 evidence were rewritten.
 
-Gross logical bytes removed are **3,445,478,683**. The post-cleanup snapshot is
+That earlier cleanup removed **3,445,478,683 logical bytes**. Its historical snapshot was
 **16,532,083,020 evidence bytes / 5,367 files**, plus **1,878,134,488 workspace
 bytes**, approximately **18.410 GB combined**; subsequent documentation/Git
 metadata can change the workspace slightly. APFS exclusive block reclamation is
@@ -244,11 +244,19 @@ now passes: PA-049's pinned logical identity/representation contract resolves th
 unchanged historical manifest through archive authority, with original/DB/network
 access OS-denied. Exact 3,437,302,947 bytes, all 2,766,760 decisions and complete
 scientific/provenance summaries match. Resolver-owned expanded output and the
-new isolated archive duplicate were removed; both real originals remain intact.
+new isolated archive duplicate were removed; both real originals were retained
+until the subsequent explicitly authorized single-artifact retirement.
 
-**Archive authority contract PASS; ready for a separate corrected-original
-retirement task YES**, not approval to delete now. The existing archive covers
-corrected `459c1f40…`, not historical `8d9ba03a…`. This is opt-in local tooling,
+The [single corrected-ledger retirement](validation/corrected-ledger-retirement-2026-09-05.md)
+passed all seven fresh checks: **GO / COMPLETE**. Only corrected `459c1f40…`
+was removed, reclaiming **3,437,302,947 logical bytes**. Its 282,831,800-byte
+archive remains authoritative; descriptor, manifests/checksums and proofs remain
+unchanged. Post-delete archive integrity and historical binding pass without
+another full restore. Evidence is now **13,094,800,623 bytes**, approximately
+**14.973 GB combined** with Atlas-only workspace. Observed filesystem free space
+increased by 3,276,800,000 bytes, not an exclusive APFS block claim.
+The separate historical `8d9ba03a…` ledger remains intact and is not covered by
+this archive. No other evidence was removed. This is opt-in local tooling,
 not production integration or transparent replacement of every direct-path caller.
 No scientific eligibility changed; independent durability and budget gates remain.
 
@@ -430,13 +438,12 @@ Perform only reviewed evidence work for canonical dates, researcher identities, 
 institution targets/rollups, common-cutoff cohort populations, and complete
 historical windows. The production-compatible reader/schema and twelve-stage
 one-batch pilot plan are now documented, not implemented or approved to execute.
-The one-file lossless history compaction proof and its bounded verified cleanup
-are complete. No further unlink is cleared: historical manifest-bound copies
-remain retained. The archive-authority resolver now passes the original-absent
-proof for corrected `459c1f40…`; a separately authorized retirement task may
-recheck its descriptor/manifest/proof pins and current dependencies before any
-unlink. Both real originals remain. The distinct historical `8d9ba03a…` ledger
-is outside this resolver pilot; no second-artifact compression is authorized.
+The one-file lossless history compaction, bounded proof cleanup and explicitly
+authorized corrected-original retirement are complete. The archive-authority
+resolver retains exact recoverability of corrected `459c1f40…`; its original is
+now absent. No further unlink is cleared: historical manifest-bound copies and
+the distinct historical `8d9ba03a…` ledger remain retained. Preserve the archive,
+descriptor/manifests and validation receipts. No second-artifact compression is authorized.
 A production JSONB representation,
 independent operational restore and full archive/backup peak still need isolated
 rehearsal and separate approval.

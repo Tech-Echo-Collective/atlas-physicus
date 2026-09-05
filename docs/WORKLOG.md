@@ -7,6 +7,22 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Single corrected-ledger retirement
+
+- All seven fresh dependency/integrity/proof/scratch checks pass; retirement GO.
+  Removed only corrected `459c1f40…`, reclaiming 3,437,302,947 logical bytes.
+- Archive, descriptor, manifests/checksums and proofs remain authoritative and
+  unchanged; historical `8d9ba03a…` and every other evidence file remain intact.
+  Post-delete archive hash and resolver binding pass; no new full restore.
+- Evidence is 13,094,800,623 bytes, approximately 14.973 GB with Atlas workspace.
+  Observed whole-volume free-space gain is 3,276,800,000 bytes, distinct from
+  logical reclamation. No Railway, acquisition, replay, compression or policy change.
+- Append-only receipt, exact target, retained recovery path and limitations:
+  [retirement report](validation/corrected-ledger-retirement-2026-09-05.md).
+  33 focused resolver tests, whitespace and 61 local-link checks pass. Starting
+  `d9aa5c7` passed CI 33944202529. Application code is unchanged; no further
+  cleanup is authorized.
+
 ## 2026-09-05 — Archive authority resolver and original-absent proof
 
 - Added a pinned, fail-closed local resolver separating logical artifact identity,

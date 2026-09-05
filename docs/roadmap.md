@@ -142,9 +142,11 @@ now passes with originals retained. The separately approved
 [bounded proof cleanup](validation/verified-local-cleanup-2026-09-05.md) removes
 3.445 GB of verified test copies while preserving historical manifest paths.
 The [archive authority resolver](validation/artifact-resolver-2026-09-05.md) now
-passes an original-absent proof for the corrected ledger. Both originals remain;
-the next step is a separately authorized corrected-original retirement review,
-not compression of the distinct historical ledger or automatic deletion. Production
+passes an original-absent proof for the corrected ledger. The separately authorized
+[single-artifact retirement](validation/corrected-ledger-retirement-2026-09-05.md)
+now removes only that corrected original after fresh checks; the archive and all
+proof metadata stay. The distinct historical ledger remains intact; no further
+cleanup or second-artifact compression is authorized. Production
 readiness still requires isolated testing of the proposed representation, durable
 restore and complete peak costs. Production payload deletion and broader loading
 remain unauthorized.
