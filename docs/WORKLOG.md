@@ -7,6 +7,32 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Archive authority resolver and original-absent proof
+
+- Added a pinned, fail-closed local resolver separating logical artifact identity,
+  historical recorded path and selected physical representation (PA-049). Existing
+  restore/scientific logic and historical manifests remain unchanged.
+- OS-denied original evidence/DB/network; restored corrected `459c1f40…` through
+  the descriptor. Exact 3,437,302,947 bytes / 2,766,760 decisions and all ordered
+  scientific/provenance summaries match. No recertification or new eligibility.
+- Temporary expanded file and new isolated archive duplicate removed; both real
+  ledgers stay. Authority contract PASS; ready for a **separate retirement review**
+  YES, not deletion approval. Historical `8d9ba03a…` remains outside this pilot.
+- 65 focused tests, changed-file Ruff and independent review pass. Preserved the
+  preceding uncommitted NO-GO record as accurate history. Exact pins, scope,
+  storage peaks and limitations: [resolver proof](validation/artifact-resolver-2026-09-05.md).
+
+## 2026-09-05 — Archive promotion stopped at dependency review
+
+- Fresh hashes confirm the 282,831,800-byte archive covers corrected ledger
+  `459c1f40…` (3,437,302,947 bytes), not historical `8d9ba03a…` (3,437,391,298).
+- Promotion FAIL / retirement NO-GO: current certification authority still binds
+  the uncompressed path; standalone restore is not a verified authority resolver.
+  Honored the stop condition before any fresh restore, deletion or compression.
+- Zero bytes reclaimed; evidence remains 16,532,083,020 bytes. All originals,
+  archive/proof files and historical manifests stay unchanged. No Railway access.
+  [Exact identities, dependencies and next boundary](validation/archive-promotion-review-2026-09-05.md).
+
 ## 2026-09-05 — Verified local proof-copy cleanup
 
 - Rechecked original/restored/archive hashes, streamed archive decoding into a

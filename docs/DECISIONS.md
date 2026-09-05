@@ -58,6 +58,18 @@ architectural constraints continue to apply to Atlas Physica.
 | PA-047 | From 2026-09-05, Atlas Physica is the canonical public/product name, formerly Physics Atlas. Atlas Physica is developed and maintained by Tech Echo Collective. | Update current product text and display metadata without changing scientific semantics. Preserve historical release names/records, GitHub repositories, package/import/schema IDs, Railway services/databases, environment variables, deployment URLs/domains, serialized provenance, and existing release tags. Any technical rename requires separate authorization and compatibility review. |
 | PA-048 | From 2026-09-05, the nominal approximately 5 GB budget applies to all persistent Atlas Physica data combined, not PostgreSQL alone. | Count hot DB, warm/cold archives, required historical/citation state, provenance/restore metadata and retained backups/replicas/copies once each. Moving bytes is not total savings without a smaller recoverable representation. External-store capacity/cost is separate, not free or an implied budget increase. Distinguish ephemeral processing/peaks from retained history. Preserve PA-044's 25% contingency and 60% steady/80% peak headroom alongside actual per-volume constraints; unknown required costs withhold a future capacity approval. Existing volume-only reports remain historical evidence and cannot establish a total-storage PASS. No data deletion or policy relaxation follows from this budget rule. |
 
+## Local artifact identity and authority — 2026-09-05
+
+**PA-049:** Local certification artifact identity binds type, schema version and
+original-content SHA-256 independently of storage location. A separately pinned,
+versioned descriptor selects one exact authoritative representation. Historical
+manifests remain immutable and resolve through an explicit compatibility adapter;
+missing/corrupt selected authority fails closed without silent fallback. Verified
+archive recovery does not grant scientific certification, production migration or
+automatic original-retirement permission. The initial implementation is limited
+to the corrected decision-ledger contract; see the
+[resolver proof](validation/artifact-resolver-2026-09-05.md).
+
 ## Current activation decision
 
 The v3.0.4 production activation begins with the implemented `hep-th-v1`

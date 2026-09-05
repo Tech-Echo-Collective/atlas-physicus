@@ -237,6 +237,21 @@ not measured. The [retention policy](local-evidence-retention.md) remains a
 proposal, not automatic deletion or production migration approval. Total-budget
 FAIL remains; moving or deduplicating required evidence paths is not authorized.
 
+The [archive-promotion review](validation/archive-promotion-review-2026-09-05.md)
+initially returned **FAIL / retirement NO-GO** because no authority adapter existed.
+The subsequent [bounded resolver proof](validation/artifact-resolver-2026-09-05.md)
+now passes: PA-049's pinned logical identity/representation contract resolves the
+unchanged historical manifest through archive authority, with original/DB/network
+access OS-denied. Exact 3,437,302,947 bytes, all 2,766,760 decisions and complete
+scientific/provenance summaries match. Resolver-owned expanded output and the
+new isolated archive duplicate were removed; both real originals remain intact.
+
+**Archive authority contract PASS; ready for a separate corrected-original
+retirement task YES**, not approval to delete now. The existing archive covers
+corrected `459c1f40…`, not historical `8d9ba03a…`. This is opt-in local tooling,
+not production integration or transparent replacement of every direct-path caller.
+No scientific eligibility changed; independent durability and budget gates remain.
+
 ## Track A — `hep-th-v1` evidence
 
 The immutable 2026-08-31 source and canonical-replay reports remain the source
@@ -346,6 +361,10 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
+- The archive resolver passes 65 focused tests, changed-file Ruff format/lint,
+  independent code review and the real original-absent exact-restore proof. Prior
+  NO-GO documentation is retained as accurate history alongside the new result.
+  No original ledger, historical manifest, scientific policy or release tag changed.
 - The verified local cleanup changes documentation only. Nine removed paths
   have fresh checksum/retained-source checks and explicit receipts; original
   evidence, archive and historical manifest hashes are preserved. Baseline
@@ -413,10 +432,12 @@ historical windows. The production-compatible reader/schema and twelve-stage
 one-batch pilot plan are now documented, not implemented or approved to execute.
 The one-file lossless history compaction proof and its bounded verified cleanup
 are complete. No further unlink is cleared: historical manifest-bound copies
-remain retained. The next local compression candidate, requiring separate
-approval, is the unique 3,437,391,298-byte historical certification decision
-ledger `8d9ba03a…`; it is the same artifact class as the proven corrected-ledger
-archive, not duplicate evidence. No new trial was run. A production JSONB representation,
+remain retained. The archive-authority resolver now passes the original-absent
+proof for corrected `459c1f40…`; a separately authorized retirement task may
+recheck its descriptor/manifest/proof pins and current dependencies before any
+unlink. Both real originals remain. The distinct historical `8d9ba03a…` ledger
+is outside this resolver pilot; no second-artifact compression is authorized.
+A production JSONB representation,
 independent operational restore and full archive/backup peak still need isolated
 rehearsal and separate approval.
 Production inline data stays intact. The observed retained total-budget result
