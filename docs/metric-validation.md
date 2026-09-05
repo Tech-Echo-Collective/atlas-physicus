@@ -67,6 +67,15 @@ evidence was observable by the common cutoff and whose field,
 publication-year, age, and document-type cohort is comparable may enter a
 reference cohort.
 
+PA-055 adds the opt-in `non-self-citation-measurement-window-v1` variant: actual
+per-response timestamps and one explicitly retrospective interval replace the
+single-cutoff assertion. It requires frozen independently certified membership,
+exact-ID coverage and one common session across comparisons/normalization.
+The 24-month minimum applies at each actual observation; all numerical thresholds
+above remain unchanged. No point-cutoff/session mixing is allowed. The operational
+30-minute bound is not a claim of simultaneous or negligibly changing counts.
+See [automatic certification](automatic-certification.md#versioned-measurement-window-pa-055).
+
 An acquisition-manifest completion timestamp is only an upper bound when
 individual source-page capture times are unavailable. It must not be represented
 as a simultaneous observation or used to reconstruct historical

@@ -118,12 +118,16 @@ year, document type, field/year/age cohort, maturity result, policy versions,
 and provenance digest.
 
 A raw count never substitutes for a missing provider-reported non-self count.
-Impact compares only compatible observations at one demonstrable common cutoff
-with the existing minimum cohort and 24-month maturity rules. A legacy
+Impact compares only compatible observations under one explicit policy: a
+demonstrable common cutoff, or the authorized PA-055 retrospective measurement
+session bound to frozen certified membership. Existing minimum cohort and
+24-month maturity rules remain. A legacy
 manifest-completion upper bound without page response timestamps is not a
-common-cutoff observation. No tolerance for multi-page response times has been
-approved, so a multi-page cohort remains withheld unless the provider supplies
-snapshot semantics or a future reviewed policy explicitly defines one.
+common-cutoff observation or a valid session. PA-055 retains actual page times,
+checks maturity per response, rejects cross-session comparisons and never
+represents its interval as a provider snapshot. Its 30-minute operational bound
+is not a calibrated scientific tolerance; see
+[the exact contract](automatic-certification.md#versioned-measurement-window-pa-055).
 The automatic citation adapter can derive all cohort members from one complete
 bounded response; its declared date basis is mandatory. Complete provider-query
 membership is not proof of a different canonical publication-year population.

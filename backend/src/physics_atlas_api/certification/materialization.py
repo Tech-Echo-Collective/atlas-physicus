@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from ..attribution import FRACTIONAL_ATTRIBUTION_V1
 from ..fields import PHYSICS_FIELD_ONTOLOGY_VERSION, PROVIDER_FIELD_MAPPING_VERSION
-from .citations import CITATION_POLICY_VERSION, impact_comparable_paper_ids
+from .citations import impact_comparable_paper_ids
 from .contracts import (
     CERTIFICATION_POLICY_VERSION,
     CertificationError,
@@ -16,6 +16,7 @@ from .contracts import (
     canonical_digest,
 )
 from .coverage import COVERAGE_SUBJECT_TYPE, validate_coverage_certification
+from .measurement_windows import partition_citation_policy_is_current
 from .populations import (
     CertifiedMetricPopulation,
     metric_population_coverage_ledger,
@@ -166,8 +167,9 @@ def build_certified_metric_partition[PartitionT](
         != PHYSICS_FIELD_ONTOLOGY_VERSION
         or getattr(partition, "mapping_policy_version", None)
         != PROVIDER_FIELD_MAPPING_VERSION
-        or getattr(partition, "citation_policy_version", None)
-        != CITATION_POLICY_VERSION
+        or not partition_citation_policy_is_current(
+            partition, metric_id, getattr(window, "citation_cohorts", ())
+        )
     ):
         raise CertificationError(
             "metric partition uses an unapproved scientific policy version"

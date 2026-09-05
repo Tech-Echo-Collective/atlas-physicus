@@ -12,12 +12,12 @@ No network access, payload persistence, human reviewer or metric activation occu
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 
 from ..connectors.acquisition import COND_MAT_HISTORICAL_VALIDATION_V1, HEP_TH_V1
-from ..connectors.base import normalize_external_id
+from ..connectors.base import SourceRecord, normalize_external_id
 from ..connectors.inspire import InspireConnector
 from ..fields import PHYSICS_FIELD_ONTOLOGY_V1
 from .automation import (
@@ -141,13 +141,28 @@ def validate_single_response_receipt(receipt: SingleResponseCitationReceipt) -> 
         raise CertificationError(
             "citation query is not complete in one bounded response"
         )
-    if len({row.source_record_id for row in receipt.records}) != len(
-        receipt.records
-    ) or len({row.paper_id for row in receipt.records}) != len(receipt.records):
+    _validate_compact_citation_records(
+        receipt.records,
+        dataset_version=receipt.dataset_version,
+        acquisition_scope=receipt.acquisition_scope,
+        declared_date_basis=receipt.declared_date_basis,
+    )
+
+
+def _validate_compact_citation_records(
+    records: tuple[CitationResponseRecord, ...],
+    *,
+    dataset_version: str,
+    acquisition_scope: str,
+    declared_date_basis: str,
+) -> None:
+    if len({row.source_record_id for row in records}) != len(records) or len(
+        {row.paper_id for row in records}
+    ) != len(records):
         raise CertificationError(
             "citation source or canonical identities are duplicated"
         )
-    for row in receipt.records:
+    for row in records:
         if (
             not row.source_record_id.strip()
             or not row.paper_id.strip()
@@ -171,10 +186,10 @@ def validate_single_response_receipt(receipt: SingleResponseCitationReceipt) -> 
             or date_evidence.context
             != AutomaticEvidenceContext(
                 paper_id=row.paper_id,
-                dataset_version=receipt.dataset_version,
-                acquisition_scope=receipt.acquisition_scope,
+                dataset_version=dataset_version,
+                acquisition_scope=acquisition_scope,
             )
-            or date_evidence.declared_basis != receipt.declared_date_basis
+            or date_evidence.declared_basis != declared_date_basis
         ):
             raise CertificationError("citation date evidence does not bind the record")
         expected_date, _ = _assessed_date(date_evidence)
@@ -251,7 +266,40 @@ def capture_single_response_citations(
     links = payload.get("links")
     if not isinstance(links, dict) or links.get("next"):
         raise CertificationError("citation response is incomplete or has another page")
-    records = connector._records(payload)
+    compact = _compact_citation_records(
+        connector._records(payload),
+        connector=connector,
+        source_snapshot_id=source_snapshot_id,
+        dataset_version=dataset_version,
+        canonical_paper_ids=canonical_paper_ids,
+        declared_date_basis=declared_date_basis,
+        canonical_date_evidence=canonical_date_evidence,
+    )
+    return SingleResponseCitationReceipt(
+        acquisition_scope=connector.acquisition_scope.id,
+        dataset_version=dataset_version,
+        calendar_year=calendar_year,
+        query=query,
+        observed_at=observed_at,
+        source_snapshot_id=source_snapshot_id,
+        response_sha256=hashlib.sha256(response_bytes).hexdigest(),
+        reported_total=total,
+        records=compact,
+        declared_date_basis=declared_date_basis,
+        end_calendar_year=end_calendar_year,
+    )
+
+
+def _compact_citation_records(
+    records: Sequence[SourceRecord],
+    *,
+    connector: InspireConnector,
+    source_snapshot_id: str,
+    dataset_version: str,
+    canonical_paper_ids: Mapping[str, str],
+    declared_date_basis: str,
+    canonical_date_evidence: Mapping[str, AutomaticDateEvidence] | None = None,
+) -> tuple[CitationResponseRecord, ...]:
     if set(canonical_paper_ids) != {record.source_record_id for record in records}:
         raise CertificationError(
             "canonical identity mapping must cover all source records"
@@ -366,19 +414,7 @@ def capture_single_response_citations(
                 unresolved_membership=unresolved,
             )
         )
-    return SingleResponseCitationReceipt(
-        acquisition_scope=connector.acquisition_scope.id,
-        dataset_version=dataset_version,
-        calendar_year=calendar_year,
-        query=query,
-        observed_at=observed_at,
-        source_snapshot_id=source_snapshot_id,
-        response_sha256=hashlib.sha256(response_bytes).hexdigest(),
-        reported_total=total,
-        records=tuple(compact),
-        declared_date_basis=declared_date_basis,
-        end_calendar_year=end_calendar_year,
-    )
+    return tuple(compact)
 
 
 def derive_citation_observations(
@@ -386,12 +422,35 @@ def derive_citation_observations(
     cohort_key: tuple[str, int, str],
 ) -> tuple[CitationObservationCertification, ...]:
     validate_single_response_receipt(receipt)
+    return _derive_citation_observations(
+        receipt.records,
+        cohort_key,
+        dataset_version=receipt.dataset_version,
+        acquisition_scope=receipt.acquisition_scope,
+        source=receipt.source,
+        observed_at=receipt.observed_at,
+        source_snapshot_id=receipt.source_snapshot_id,
+        response_sha256=receipt.response_sha256,
+    )
+
+
+def _derive_citation_observations(
+    records: tuple[CitationResponseRecord, ...],
+    cohort_key: tuple[str, int, str],
+    *,
+    dataset_version: str,
+    acquisition_scope: str,
+    source: str,
+    observed_at: datetime,
+    source_snapshot_id: str,
+    response_sha256: str,
+) -> tuple[CitationObservationCertification, ...]:
     if any(
         row.unresolved_membership
         or row.publication_date is None
         or not row.field_ids
         or row.document_type is None
-        for row in receipt.records
+        for row in records
     ):
         raise CertificationError(
             "unresolved source records prevent exact cohort membership"
@@ -405,7 +464,7 @@ def derive_citation_observations(
     ):
         raise CertificationError("automatic citation cohort key is invalid")
     observations: list[CitationObservationCertification] = []
-    for row in receipt.records:
+    for row in records:
         assert row.publication_date is not None
         if (
             field_id not in row.field_ids
@@ -417,22 +476,22 @@ def derive_citation_observations(
             certify_citation_observation(
                 CitationObservationEvidence(
                     paper_id=row.paper_id,
-                    dataset_version=receipt.dataset_version,
-                    acquisition_scope=receipt.acquisition_scope,
-                    citation_source=receipt.source,
+                    dataset_version=dataset_version,
+                    acquisition_scope=acquisition_scope,
+                    citation_source=source,
                     raw_citation_count=row.raw_citation_count,
                     non_self_citation_count=row.non_self_citation_count,
-                    observed_at=receipt.observed_at,
-                    selected_cutoff=receipt.observed_at,
+                    observed_at=observed_at,
+                    selected_cutoff=observed_at,
                     publication_date=row.publication_date,
                     field_id=field_id,
                     document_type=document_type,
                     source_reference=EvidenceReference(
-                        provider=receipt.source,
+                        provider=source,
                         source_record_id=row.source_record_id,
                         checksum=row.source_record_checksum,
-                        source_snapshot_id=receipt.source_snapshot_id,
-                        storage_reference=f"citation-response:{receipt.response_sha256}",
+                        source_snapshot_id=source_snapshot_id,
+                        storage_reference=f"citation-response:{response_sha256}",
                     ),
                     citation_policy_version=CITATION_POLICY_VERSION,
                 )

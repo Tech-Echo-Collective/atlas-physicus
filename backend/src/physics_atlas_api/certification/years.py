@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import math
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from ..attribution import FRACTIONAL_ATTRIBUTION_V1
 from ..backfill import HistoricalPartition, build_partitions
@@ -30,6 +32,9 @@ from .rules import (
     required_coverage_evidence,
     required_window_years,
 )
+
+if TYPE_CHECKING:
+    from .measurement_windows import CertifiedSessionCitationCohort
 
 SOURCE_YEAR_CERTIFICATION_RULE_VERSION = "complete-source-year-certification-v1"
 METRIC_WINDOW_CERTIFICATION_RULE_VERSION = "metric-window-certification-v1"
@@ -827,10 +832,14 @@ def certify_source_year(
 @dataclass(frozen=True)
 class CertifiedMetricWindow:
     source_years: tuple[CertifiedSourceYear, ...]
-    citation_cohorts: tuple[CertifiedCitationCohort[object], ...]
+    citation_cohorts: tuple[
+        CertifiedCitationCohort[object] | CertifiedSessionCitationCohort, ...
+    ]
     certification: MetricWindowCertification
 
     def __post_init__(self) -> None:
+        from .measurement_windows import CertifiedSessionCitationCohort
+
         if not isinstance(self.certification, MetricWindowCertification):
             raise CertificationError(
                 "metric-window proof requires an exact certification result"
@@ -840,7 +849,9 @@ class CertifiedMetricWindow:
                 "metric-window proof requires reconstructable source years"
             )
         if any(
-            not isinstance(item, CertifiedCitationCohort)
+            not isinstance(
+                item, (CertifiedCitationCohort, CertifiedSessionCitationCohort)
+            )
             for item in self.citation_cohorts
         ):
             raise CertificationError(
@@ -883,8 +894,16 @@ def _evaluate_metric_window(
     terminal_year: int,
     source_years: tuple[SourceYearCertification, ...],
     threshold_version: str,
-    citation_cohorts: tuple[CertifiedCitationCohort[object], ...] = (),
+    citation_cohorts: tuple[
+        CertifiedCitationCohort[object] | CertifiedSessionCitationCohort, ...
+    ] = (),
 ) -> MetricWindowCertification:
+    from .measurement_windows import (
+        CertifiedSessionCitationCohort,
+        require_session_cohort,
+        session_comparison_key,
+    )
+
     required_years = required_window_years(metric_id, terminal_year)
     required_coverage = required_coverage_evidence(metric_id, entity_type)
     years = {item.calendar_year: item for item in source_years}
@@ -945,22 +964,71 @@ def _evaluate_metric_window(
             reasons.append(
                 "Impact window has no certified common-cutoff citation cohorts"
             )
-        if any(
-            item.rule_version != CITATION_CERTIFICATION_RULE_VERSION
+        session_cohorts = tuple(
+            item
             for item in citation_cohorts
-        ):
+            if isinstance(item, CertifiedSessionCitationCohort)
+        )
+        legacy_cohorts = tuple(
+            item
+            for item in citation_cohorts
+            if isinstance(item, CertifiedCitationCohort)
+        )
+        if session_cohorts and legacy_cohorts:
             state = "conflicted"
-            reasons.append("Impact window contains a stale citation cohort proof")
-        if any(
-            not isinstance(item.certification_proof, CitationCohortCertification)
-            or item.certification_proof.minimum_paper_count
-            != IMPACT_REFERENCE_COHORT_MINIMUM_V1
-            or item.certification_proof.paper_count < IMPACT_REFERENCE_COHORT_MINIMUM_V1
-            for item in citation_cohorts
-        ):
-            if state == "certified":
-                state = "insufficient_evidence"
-            reasons.append("Impact citation cohort does not meet the v1 size policy")
+            reasons.append(
+                "Impact cannot mix atomic-cutoff and measurement-window cohorts"
+            )
+        elif session_cohorts:
+            try:
+                for item in session_cohorts:
+                    require_session_cohort(
+                        item,
+                        dataset_version=dataset_version,
+                        acquisition_scope=acquisition_scope,
+                        evaluation_horizon=cutoff.date(),
+                    )
+                    if item.ended_at > cutoff:
+                        raise CertificationError(
+                            "measurement session extends beyond the evaluation horizon"
+                        )
+                    populations = dict(item.source_year_population_digests)
+                    if any(
+                        populations.get(year.calendar_year)
+                        != year.canonical_paper_population_digest
+                        for year in selected
+                    ):
+                        raise CertificationError(
+                            "measurement session uses a different canonical "
+                            "source population"
+                        )
+                session_comparison_key(session_cohorts)
+            except ValueError:
+                state = "conflicted"
+                reasons.append(
+                    "Impact measurement-window cohorts fail exact "
+                    "session/population validation"
+                )
+        else:
+            if any(
+                item.rule_version != CITATION_CERTIFICATION_RULE_VERSION
+                for item in legacy_cohorts
+            ):
+                state = "conflicted"
+                reasons.append("Impact window contains a stale citation cohort proof")
+            if any(
+                not isinstance(item.certification_proof, CitationCohortCertification)
+                or item.certification_proof.minimum_paper_count
+                != IMPACT_REFERENCE_COHORT_MINIMUM_V1
+                or item.certification_proof.paper_count
+                < IMPACT_REFERENCE_COHORT_MINIMUM_V1
+                for item in legacy_cohorts
+            ):
+                if state == "certified":
+                    state = "insufficient_evidence"
+                reasons.append(
+                    "Impact citation cohort does not meet the v1 size policy"
+                )
         if any(
             item.dataset_version != dataset_version
             or item.acquisition_scope != acquisition_scope
@@ -968,7 +1036,7 @@ def _evaluate_metric_window(
         ):
             state = "conflicted"
             reasons.append("Impact citation cohort lineage does not match source years")
-        if any(item.cutoff != cutoff for item in citation_cohorts):
+        if any(item.cutoff != cutoff for item in legacy_cohorts):
             state = "conflicted"
             reasons.append(
                 "Impact citation cohorts do not share the source-year cutoff"
@@ -1001,13 +1069,20 @@ def certify_metric_window(
     terminal_year: int,
     source_years: tuple[CertifiedSourceYear, ...],
     threshold_version: str,
-    citation_cohorts: tuple[CertifiedCitationCohort[object], ...] = (),
+    citation_cohorts: tuple[
+        CertifiedCitationCohort[object] | CertifiedSessionCitationCohort, ...
+    ] = (),
 ) -> CertifiedMetricWindow:
+    from .measurement_windows import CertifiedSessionCitationCohort
+
     if any(not isinstance(item, CertifiedSourceYear) for item in source_years):
         raise CertificationError(
             "metric windows require reconstructable source-year proofs"
         )
-    if any(not isinstance(item, CertifiedCitationCohort) for item in citation_cohorts):
+    if any(
+        not isinstance(item, (CertifiedCitationCohort, CertifiedSessionCitationCohort))
+        for item in citation_cohorts
+    ):
         raise CertificationError(
             "Impact windows require reconstructable citation-cohort proofs"
         )

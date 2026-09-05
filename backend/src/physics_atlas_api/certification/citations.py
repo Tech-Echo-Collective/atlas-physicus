@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
 from ..fields import PHYSICS_FIELD_ONTOLOGY_V1
 from .contracts import (
@@ -9,6 +12,9 @@ from .contracts import (
     EvidenceReference,
     canonical_digest,
 )
+
+if TYPE_CHECKING:
+    from .measurement_windows import CertifiedSessionCitationCohort
 
 CITATION_CERTIFICATION_RULE_VERSION = "common-cutoff-non-self-citation-v1"
 CITATION_POLICY_VERSION = "non-self-citation-cutoff-v1"
@@ -585,7 +591,9 @@ def wrap_certified_citation_cohort[CohortT](
 
 def impact_comparable_paper_ids(
     partition: object,
-    cohorts: tuple[CertifiedCitationCohort[object], ...],
+    cohorts: tuple[
+        CertifiedCitationCohort[object] | CertifiedSessionCitationCohort, ...
+    ],
 ) -> tuple[str, ...]:
     """Return exact partition papers backed by activation-grade Impact cohorts."""
 
@@ -598,9 +606,43 @@ def impact_comparable_paper_ids(
         or not isinstance(papers, tuple)
     ):
         raise CertificationError("Impact partition structure is invalid")
-    cohorts_by_key = {getattr(item.cohort, "key", None): item for item in cohorts}
+    from .measurement_windows import (
+        CertifiedSessionCitationCohort,
+        partition_citation_policy_is_current,
+        require_session_cohort,
+    )
+
+    if not partition_citation_policy_is_current(partition, "research_impact", cohorts):
+        raise CertificationError(
+            "Impact citation measurement policy lacks matching proof"
+        )
+    cohorts_by_key = {
+        item.cohort_key
+        if isinstance(item, CertifiedSessionCitationCohort)
+        else getattr(item.cohort, "key", None): item
+        for item in cohorts
+    }
     if len(cohorts_by_key) != len(cohorts):
         raise CertificationError("Impact cohort inventory contains duplicate keys")
+    session_values: dict[tuple[str, int, str], dict[str, int | None]] = {}
+    session_times: dict[tuple[str, int, str], dict[str, date]] = {}
+    for cohort in cohorts:
+        if isinstance(cohort, CertifiedSessionCitationCohort):
+            measured = require_session_cohort(
+                cohort,
+                dataset_version=getattr(partition, "dataset_version", ""),
+                acquisition_scope=getattr(partition, "acquisition_scope", ""),
+                evaluation_horizon=cutoff,
+            )
+            observations = measured.observations
+            session_values[cohort.cohort_key] = {
+                item.paper_id: item.non_self_citation_count for item in observations
+            }
+            session_times[cohort.cohort_key] = {
+                item.paper_id: item.evidence.observed_at.date()
+                for item in observations
+                if item.evidence.observed_at is not None
+            }
     comparable: list[str] = []
     for paper in papers:
         publication_date = getattr(paper, "publication_date", None)
@@ -618,6 +660,27 @@ def impact_comparable_paper_ids(
             raise CertificationError(
                 "Impact cohort inventory is incomplete for the partition"
             )
+        if isinstance(certified, CertifiedSessionCitationCohort):
+            supplied = getattr(paper, "citation_count", None)
+            expected = session_values[key].get(paper_id)
+            if supplied is None:
+                if expected is not None:
+                    raise CertificationError(
+                        "partition citation value differs from measured evidence"
+                    )
+                continue
+            if expected is None or supplied != expected:
+                raise CertificationError(
+                    "partition citation value differs from measured evidence"
+                )
+            if getattr(paper, "citation_observed_at", None) != session_times[key].get(
+                paper_id
+            ):
+                raise CertificationError(
+                    "paper date differs from its actual citation measurement"
+                )
+            comparable.append(paper_id)
+            continue
         proof = certified.certification_proof
         if (
             not isinstance(proof, CitationCohortCertification)

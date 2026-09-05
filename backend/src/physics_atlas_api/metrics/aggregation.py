@@ -7,7 +7,7 @@ from datetime import datetime
 
 from ..certification import CertificationError, canonical_digest
 from ..fields import PHYSICS_FIELD_ONTOLOGY_V1, PHYSICS_FIELD_ONTOLOGY_VERSION
-from .calculators import MetricCalculationResult
+from .calculators import MetricCalculationResult, citation_session_normalization_key
 from .presentation import AtlasScaleObservation
 from .thresholds import (
     METRIC_VALIDATION_THRESHOLDS_V1,
@@ -149,6 +149,7 @@ def _aggregate_group(
             result.mapping_policy_version,
             result.citation_policy_version,
         )
+        + citation_session_normalization_key(result)
         for result in results
     }
     if len(version_tuples) != 1:
@@ -181,6 +182,7 @@ def _aggregate_group(
         ) / len(available)
 
     baseline = results[0]
+    session_key = citation_session_normalization_key(baseline)
     digest_payload = "|".join(
         sorted(result.input_manifest_digest for result in results)
     )
@@ -201,6 +203,19 @@ def _aggregate_group(
             "expected_field_count": len(expected),
             "field_evidence_coverage": coverage,
             "publication_volume_used_as_final_weight": False,
+            **(
+                {
+                    "citation_cutoff": None,
+                    "citation_session_id": session_key[0],
+                    "citation_measurement_started_at": session_key[1],
+                    "citation_measurement_ended_at": session_key[2],
+                    "citation_measurement_semantics": (
+                        "retrospective-measurement-window"
+                    ),
+                }
+                if session_key
+                else {}
+            ),
         },
         normalization_parameters={
             "physics_aggregation_version": ("physics-field-balanced-coverage-aware-v1"),

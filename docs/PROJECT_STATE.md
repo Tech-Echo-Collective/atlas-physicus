@@ -9,7 +9,7 @@ recent [worklog](WORKLOG.md). Exact scientific measurements belong in the
 linked validation reports rather than being repeated throughout the project
 documentation.
 
-## Current task: evidence-derived automatic certification
+## Current task: automatic certification and measured citation windows
 
 The owner removed mandatory human review (PA-054), superseding that blocker in
 the earlier [launch readiness review](validation/lightweight-launch-readiness-2026-09-05.md).
@@ -20,21 +20,31 @@ They do not fabricate reviewer identities or relax scientific thresholds.
 
 **The five-metric launch remains incomplete.** Record-level date/researcher
 assessments still need exact calculator-input admission; real complete-year
-populations, mature common-cutoff cohorts and the production export/activation
+populations, mature comparable cohorts and the production export/activation
 producer are not supplied by these adapters. A read-only INSPIRE count found
 16,815 Condensed Matter articles in the 2020–2022 declared query, exceeding the
-1,000-record single-response path. Multi-response snapshot semantics remain an
-actual evidence limitation, not a reason to invent one shared timestamp.
+1,000-record single-response path. The owner subsequently authorized PA-055:
+versioned retrospective citation measurement windows. New opt-in contracts freeze
+independently certified paper identities before exact-ID measurement, retain each
+actual batch time, and bind Impact, normalization and domain aggregation to the
+same session/population. They do not invent a provider snapshot or historical
+as-of counts. This removes the single-response implementation restriction, not
+the requirement for real independently certified source years and coverage.
 
 254 focused tests, full backend lint/format and strict type checking pass. Web
 `63fc454` removes public synthetic fallback and fixes previously ineffective
 root-project type checking; its Pages build/deploy is green. At 13:06 UTC the
 API/database/providers were healthy with zero exposed metric observations.
 No legacy evidence, production rows, release tags or provider corpus were changed.
-Next: complete source-bound automatic date/identity admission and a defensible
-citation population/cutoff before generating a bounded v1 dataset—not human
+Next: complete source-bound automatic date/identity admission and real certified
+citation populations before generating a bounded v1 dataset—not human
 sign-off, storage research or Full Physics acquisition. Implementation limits,
 sources, checks and cleanup: [automatic certification report](validation/automatic-certification-2026-09-05.md).
+Subsequent PA-055 integration and validation are recorded separately in the
+[measurement-window report](validation/citation-measurement-window-2026-09-05.md).
+That follow-up passes 304 focused tests, full backend lint/format and strict
+typing. Its 73,489,482 temporary bytes were removed; no newly certified live
+observations or production activation are claimed.
 
 ## Release and scope
 
@@ -520,17 +530,14 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Immediate next action
 
-The [final bounded storage review](validation/final-storage-consolidation-2026-09-05.md)
-finds remaining provider/researcher/replay paths unsupported by current archive
-authority. In particular, 102 provider pages exceed the existing payload bound,
-and older acquisition metadata cannot be guessed. The smallest separate next
-action is a narrow provider-page authority/binding design review, not another
-corpus replay or a larger storage tier by default.
+Continue the owner's lightweight scientific launch work: complete exact
+source-bound automatic date/identity admission, certify a bounded real historical
+population, then apply the measured-session contract and existing five-metric
+gates. Do not equate fixture validation with a passed live gate. Produce the
+compact dataset only from genuinely admitted calculations; no partial activation.
 
-Keep all remaining originals, both decision archives, three affiliation
-authorities, historical manifests and proofs. No production migration or further
-unlink is authorized. Reuse sample `5f520b2a…` and fresh proof-budget admission;
-never generate paired/recovery traces per corpus batch. Current retained storage
-fails the combined 5 GB budget; future final-schema capacity and scientific
-activation remain withheld. Production inline data stays intact. Do not begin
-scientific evidence-coverage work, Full Physics loading or v3.1 from this result.
+The earlier storage review is historical context, **not the current next task**.
+Legacy retained evidence is not a launch prerequisite; do not expand, reorganize,
+delete or optimize it. Keep production healthy, existing tags unchanged, no Full
+Physics load or v3.1. New temporary work belongs in one explicit directory under
+2 GB and must be removed on success or failure.

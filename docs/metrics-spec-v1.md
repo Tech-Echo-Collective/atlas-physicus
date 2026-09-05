@@ -87,8 +87,10 @@ available.
 
 Definition version: `impact-fractional-mncs-pp10-v1`.
 
-Eligible papers are compared at a common citation cutoff within the same
-canonical field, publication year, and document type. For paper `p`:
+Eligible papers are compared at a common citation cutoff, or under the explicitly
+versioned PA-055 retrospective measurement-window contract, within the same
+canonical field, publication year, and document type. Distinct measurement
+sessions and point-cutoff observations cannot be pooled. For paper `p`:
 
 ```text
 expected(p) = mean recorded citations in its comparison cohort
@@ -102,8 +104,9 @@ score. `PP(top 10%)` is retained as companion evidence: it is the fractionally
 weighted share of eligible papers at or above the tie-aware 90th percentile in
 their comparison cohort.
 
-Papers must have a recorded citation observation at the common cutoff and a
-mature citation window. Under Validation Thresholds v1 the minimum age is 24
+Papers must have a recorded citation observation at the common cutoff (or its
+actual response time in a PA-055 session) and a mature citation window.
+Under Validation Thresholds v1 the minimum age is 24
 months. A recorded citation count of zero is data; a missing citation
 observation is not zero. A comparison cohort with no positive expected citation
 mean is ineligible.

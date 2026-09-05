@@ -7,6 +7,27 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Authorized citation measurement windows
+
+- PA-055 records explicit owner approval for retrospective measurement windows,
+  not a fabricated common timestamp. Frozen certified paper membership precedes
+  exact-ID capture; missing/drifting identities and conflicting date/field facts
+  fail closed. Actual request/response times and compact counts remain recoverable.
+- Bound the interval to 30 minutes operationally and each parsed response to
+  8 MiB. Neither is a scientific drift assertion or a substitute for the one-
+  directory, <2 GB task storage contract. No provider data was acquired here.
+- Added typed cohort/window admission, unchanged Impact arithmetic, session-
+  isolated normalization/domain aggregation and explicit interval presentation.
+  Legacy cutoff proofs/hashes and scientific thresholds remain intact.
+- Source `b7d532a` baseline CI is green; Web `63fc454` and its source pin remain
+  unchanged. No public activation, live evidence gain or deployment is claimed.
+  304 focused tests, full lint/format and strict typing pass; all 73,489,482 new
+  temporary bytes were removed. Exact focused validation, limits and cleanup:
+  [measurement-window report](validation/citation-measurement-window-2026-09-05.md).
+- Corrected the stale PROJECT_STATE next-action section: legacy storage research
+  is not a launch dependency. Current work remains bounded scientific admission
+  and a real compact dataset, not Full Physics or v3.1.
+
 ## 2026-09-05 — Evidence-derived automatic certification
 
 - PA-054 records explicit owner cancellation of mandatory human review. Added

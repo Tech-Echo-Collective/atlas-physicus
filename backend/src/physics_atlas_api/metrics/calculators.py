@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import json
 import math
@@ -5,8 +7,8 @@ import statistics
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field, replace
-from datetime import date
-from typing import Literal
+from datetime import date, datetime
+from typing import TYPE_CHECKING, Literal
 
 from ..certification.citations import (
     CITATION_CERTIFICATION_RULE_VERSION,
@@ -32,6 +34,9 @@ from .thresholds import (
     METRIC_VALIDATION_THRESHOLDS_V1,
     MetricValidationThresholds,
 )
+
+if TYPE_CHECKING:
+    from ..certification.measurement_windows import CertifiedSessionCitationCohort
 
 MetricEntityType = Literal["researcher", "institution", "country"]
 MetricMetadataValue = str | int | float | bool | None
@@ -439,12 +444,78 @@ def _normalization_cohorts(
             result.citation_policy_version,
             result.threshold_version,
         )
-        cohorts[key].append((index, result))
+        cohorts[key + citation_session_normalization_key(result)].append(
+            (index, result)
+        )
     for cohort in cohorts.values():
         entity_ids = [result.entity_id for _, result in cohort]
         if len(entity_ids) != len(set(entity_ids)):
             raise ValueError("a normalization cohort may contain each entity once")
     return cohorts
+
+
+def citation_session_normalization_key(
+    result: MetricCalculationResult,
+) -> tuple[str, ...]:
+    """Keep non-atomic sessions separate without changing any legacy cohort key."""
+    from ..certification.measurement_windows import SESSION_CITATION_POLICY_VERSION
+
+    if (
+        result.metric_id != "research_impact"
+        or result.citation_policy_version != SESSION_CITATION_POLICY_VERSION
+    ):
+        return ()
+    values = tuple(
+        result.components.get(key)
+        for key in (
+            "citation_session_id",
+            "citation_measurement_started_at",
+            "citation_measurement_ended_at",
+        )
+    )
+    if any(not isinstance(value, str) or not value.strip() for value in values):
+        raise CertificationError(
+            "measurement-window normalization requires exact session metadata"
+        )
+    if (
+        result.components.get("citation_measurement_semantics")
+        != "retrospective-measurement-window"
+        or result.components.get("citation_cutoff") is not None
+    ):
+        raise CertificationError(
+            "measurement-window result cannot claim an atomic citation cutoff"
+        )
+    session_id, start_text, end_text = (str(value) for value in values)
+    try:
+        start, end, horizon = (
+            datetime.fromisoformat(value)
+            for value in (start_text, end_text, result.evidence_cutoff)
+        )
+    except ValueError as error:
+        raise CertificationError("measurement-window timestamps are invalid") from error
+    if (
+        any(
+            value.tzinfo is None or value.utcoffset() is None
+            for value in (start, end, horizon)
+        )
+        or not start <= end <= horizon
+    ):
+        raise CertificationError(
+            "measurement-window interval exceeds the evidence horizon"
+        )
+    return session_id, start_text, end_text
+
+
+def _impact_reference_key(
+    cohort: CitationReferenceCohort | CertifiedSessionCitationCohort,
+) -> tuple[str, int, str]:
+    from ..certification.measurement_windows import CertifiedSessionCitationCohort
+
+    return (
+        cohort.cohort_key
+        if isinstance(cohort, CertifiedSessionCitationCohort)
+        else cohort.key
+    )
 
 
 def normalize_activity_results(
@@ -491,9 +562,18 @@ def _months_elapsed(start: date, end: date) -> int:
 
 def calculate_impact_raw(
     certified_partition: CertifiedMetricPartitionInput,
-    certified_citation_cohorts: Sequence[CertifiedCitationReferenceCohort],
+    certified_citation_cohorts: Sequence[
+        CertifiedCitationReferenceCohort | CertifiedSessionCitationCohort
+    ],
     thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
 ) -> MetricCalculationResult:
+    from ..certification.measurement_windows import (
+        SESSION_CITATION_POLICY_VERSION,
+        CertifiedSessionCitationCohort,
+        require_session_cohort,
+        session_comparison_key,
+    )
+
     partition: MetricPartitionInput = require_certified_partition(
         certified_partition,
         metric_id="research_impact",
@@ -507,16 +587,63 @@ def calculate_impact_raw(
         raise CertificationError(
             "Impact partition citation cohort proofs differ from its certified window"
         )
-    citation_cohorts: tuple[CitationReferenceCohort, ...] = tuple(
-        require_certified_citation_cohort(
-            item,
-            dataset_version=partition.dataset_version,
-            acquisition_scope=partition.acquisition_scope,
-            cutoff=partition.as_of_date,
-            rule_version=CITATION_CERTIFICATION_RULE_VERSION,
-        )
+    session_cohorts = tuple(
+        item
         for item in certified_citation_cohorts
+        if isinstance(item, CertifiedSessionCitationCohort)
     )
+    legacy_cohorts = tuple(
+        item
+        for item in certified_citation_cohorts
+        if isinstance(item, CertifiedCitationCohort)
+    )
+    if len(session_cohorts) + len(legacy_cohorts) != len(
+        certified_citation_cohorts
+    ) or (session_cohorts and legacy_cohorts):
+        raise CertificationError(
+            "Impact cannot mix atomic-cutoff and measurement-window cohorts"
+        )
+    citation_cohorts: tuple[
+        CitationReferenceCohort | CertifiedSessionCitationCohort, ...
+    ]
+    session_key: tuple[str, str, str] | None = None
+    if session_cohorts:
+        if partition.citation_policy_version != SESSION_CITATION_POLICY_VERSION:
+            raise CertificationError(
+                "session citation evidence requires its explicit policy version"
+            )
+        citation_cohorts = tuple(
+            require_session_cohort(
+                item,
+                dataset_version=partition.dataset_version,
+                acquisition_scope=partition.acquisition_scope,
+                evaluation_horizon=partition.as_of_date,
+            )
+            for item in session_cohorts
+        )
+        session_key = session_comparison_key(session_cohorts)
+        if any(
+            item.ended_at > certified_partition.certification.evidence_cutoff
+            for item in session_cohorts
+        ):
+            raise CertificationError(
+                "measurement window extends beyond the dataset evaluation horizon"
+            )
+    else:
+        if partition.citation_policy_version == SESSION_CITATION_POLICY_VERSION:
+            raise CertificationError(
+                "measurement-window policy lacks session-bound cohorts"
+            )
+        citation_cohorts = tuple(
+            require_certified_citation_cohort(
+                item,
+                dataset_version=partition.dataset_version,
+                acquisition_scope=partition.acquisition_scope,
+                cutoff=partition.as_of_date,
+                rule_version=CITATION_CERTIFICATION_RULE_VERSION,
+            )
+            for item in legacy_cohorts
+        )
     supplied_cohort_ids = tuple(
         item.certification_id for item in certified_citation_cohorts
     )
@@ -528,10 +655,11 @@ def calculate_impact_raw(
         raise CertificationError(
             "Impact citation cohort proofs do not match the certified metric window"
         )
-    exact_cutoffs = {item.cutoff for item in certified_citation_cohorts}
-    if len(exact_cutoffs) != 1 or exact_cutoffs != {
-        certified_partition.certification.evidence_cutoff
-    }:
+    exact_cutoffs = {item.cutoff for item in legacy_cohorts}
+    if not session_cohorts and (
+        len(exact_cutoffs) != 1
+        or exact_cutoffs != {certified_partition.certification.evidence_cutoff}
+    ):
         raise CertificationError(
             "Impact citation cohorts do not share the certified exact cutoff"
         )
@@ -544,16 +672,48 @@ def calculate_impact_raw(
     )
     if reason := _complete_window_reason(partition, 3):
         reasons.append(reason)
-    cohort_by_key = {cohort.key: cohort for cohort in citation_cohorts}
+    cohort_by_key = {
+        _impact_reference_key(cohort): cohort for cohort in citation_cohorts
+    }
     if len(cohort_by_key) != len(citation_cohorts):
         raise ValueError("citation reference cohort keys must be unique")
-    for paper in papers:
-        cohort = cohort_by_key.get(
-            (partition.field_id, paper.publication_date.year, paper.document_type)
+    # Reconstruct typed evidence at the boundary, not once for every focal paper.
+    # These local indexes do not survive a calculation or bypass proof validation.
+    cohort_values: dict[tuple[str, int, str], dict[str, float]] = {}
+    cohort_observation_dates: dict[tuple[str, int, str], dict[str, date]] = {}
+    cohort_means: dict[tuple[str, int, str], float] = {}
+    cohort_percentiles: dict[tuple[str, int, str], dict[str, float]] = {}
+    for key, cohort in cohort_by_key.items():
+        if isinstance(cohort, CertifiedSessionCitationCohort):
+            observations = cohort.observations
+            values = {
+                item.evidence.paper_id: float(item.non_self_citation_count)
+                for item in observations
+                if item.non_self_citation_count is not None
+            }
+            dates = {
+                item.evidence.paper_id: item.evidence.observed_at.date()
+                for item in observations
+                if item.evidence.observed_at is not None
+            }
+        else:
+            values = dict(cohort.citations)
+            dates = {paper_id: cohort.observed_at for paper_id in values}
+        cohort_values[key] = values
+        cohort_observation_dates[key] = dates
+        cohort_means[key] = statistics.fmean(values.values()) if values else 0.0
+        cohort_percentiles[key] = dict(
+            log_midrank_percentiles(
+                values,
+                minimum_cohort=thresholds.impact.minimum_reference_cohort,
+            ).scores
         )
-        if cohort is None:
+    for paper in papers:
+        key = (partition.field_id, paper.publication_date.year, paper.document_type)
+        paper_cohort_values = cohort_values.get(key)
+        if paper_cohort_values is None:
             continue
-        certified_value = dict(cohort.citations).get(paper.paper_id)
+        certified_value = paper_cohort_values.get(paper.paper_id)
         if certified_value is not None and paper.citation_count != certified_value:
             raise CertificationError(
                 "partition citation value differs from its certified cohort evidence"
@@ -583,43 +743,36 @@ def calculate_impact_raw(
     for paper in papers:
         if paper.citation_count is None or paper.citation_observed_at is None:
             continue
-        if paper.citation_observed_at != partition.as_of_date:
+        key = (partition.field_id, paper.publication_date.year, paper.document_type)
+        citation_values = cohort_values.get(key)
+        if citation_values is None or paper.paper_id not in citation_values:
+            unavailable_cohort += 1
+            continue
+        observed_date = cohort_observation_dates[key][paper.paper_id]
+        if paper.citation_observed_at != observed_date:
             unavailable_cohort += 1
             continue
         if (
-            _months_elapsed(paper.publication_date, partition.as_of_date)
+            _months_elapsed(paper.publication_date, observed_date)
             < thresholds.impact.citation_maturity_months
         ):
             ineligible_maturity += 1
             continue
-        cohort = cohort_by_key.get(
-            (partition.field_id, paper.publication_date.year, paper.document_type)
-        )
-        if (
-            cohort is None
-            or cohort.observed_at != partition.as_of_date
-            or len(cohort.citations) < thresholds.impact.minimum_reference_cohort
-        ):
+        if (not session_cohorts and observed_date != partition.as_of_date) or len(
+            citation_values
+        ) < thresholds.impact.minimum_reference_cohort:
             unavailable_cohort += 1
             continue
-        citation_values = dict(cohort.citations)
-        if paper.paper_id not in citation_values:
-            unavailable_cohort += 1
-            continue
-        expected_citations = statistics.fmean(citation_values.values())
+        expected_citations = cohort_means[key]
         if expected_citations <= 0:
             unavailable_cohort += 1
             continue
         ncs = paper.citation_count / expected_citations
-        percentiles = log_midrank_percentiles(
-            citation_values,
-            minimum_cohort=thresholds.impact.minimum_reference_cohort,
-        )
         weighted_ncs.append((paper.attribution_weight, ncs))
         weighted_top_decile.append(
             (
                 paper.attribution_weight,
-                1.0 if percentiles.scores[paper.paper_id] >= 90.0 else 0.0,
+                1.0 if cohort_percentiles[key][paper.paper_id] >= 90.0 else 0.0,
             )
         )
 
@@ -653,8 +806,20 @@ def calculate_impact_raw(
             "eligible_fractional_paper_mass": eligible_weight,
             "citation_coverage": effective_coverage,
             "citation_maturity_months": thresholds.impact.citation_maturity_months,
-            "citation_cutoff": (
-                certified_partition.certification.evidence_cutoff.isoformat()
+            "citation_cutoff": None
+            if session_key
+            else (certified_partition.certification.evidence_cutoff.isoformat()),
+            **(
+                {
+                    "citation_session_id": session_key[0],
+                    "citation_measurement_started_at": session_key[1],
+                    "citation_measurement_ended_at": session_key[2],
+                    "citation_measurement_semantics": (
+                        "retrospective-measurement-window"
+                    ),
+                }
+                if session_key
+                else {}
             ),
             "maturity_ineligible_papers": ineligible_maturity,
             "unavailable_reference_cohorts": unavailable_cohort,

@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import math
 from dataclasses import dataclass
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from ..certification import (
     CertificationError,
@@ -18,6 +21,7 @@ from .calculators import (
     calculate_diversity,
     calculate_impact_raw,
     calculate_momentum_raw,
+    citation_session_normalization_key,
     normalize_activity_results,
     normalize_impact_results,
     normalize_momentum_results,
@@ -26,6 +30,9 @@ from .thresholds import (
     METRIC_VALIDATION_THRESHOLDS_V1,
     MetricValidationThresholds,
 )
+
+if TYPE_CHECKING:
+    from ..certification.measurement_windows import CertifiedSessionCitationCohort
 
 ATLAS_SCALE_VERSION = "normalized-atlas-scale-v1"
 type AtlasMetadata = dict[str, MetricMetadataValue]
@@ -146,9 +153,15 @@ class CertifiedMetricCalculation:
     calculation: MetricCalculationResult
     partition: CertifiedMetricPartition[MetricPartitionInput]
     thresholds: MetricValidationThresholds
-    citation_cohorts: tuple[CertifiedCitationCohort[CitationReferenceCohort], ...] = ()
+    citation_cohorts: tuple[
+        CertifiedCitationCohort[CitationReferenceCohort]
+        | CertifiedSessionCitationCohort,
+        ...,
+    ] = ()
 
     def __post_init__(self) -> None:
+        from ..certification.measurement_windows import CertifiedSessionCitationCohort
+
         if not isinstance(self.calculation, MetricCalculationResult):
             raise CertificationError(
                 "metric calculation proof requires an exact calculation result"
@@ -162,7 +175,9 @@ class CertifiedMetricCalculation:
                 "metric calculation proof requires exact validation thresholds"
             )
         if any(
-            not isinstance(item, CertifiedCitationCohort)
+            not isinstance(
+                item, (CertifiedCitationCohort, CertifiedSessionCitationCohort)
+            )
             for item in self.citation_cohorts
         ):
             raise CertificationError(
@@ -202,7 +217,11 @@ def bind_metric_calculation(
     calculation: MetricCalculationResult,
     partition: CertifiedMetricPartition[MetricPartitionInput],
     thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
-    citation_cohorts: tuple[CertifiedCitationCohort[CitationReferenceCohort], ...] = (),
+    citation_cohorts: tuple[
+        CertifiedCitationCohort[CitationReferenceCohort]
+        | CertifiedSessionCitationCohort,
+        ...,
+    ] = (),
 ) -> CertifiedMetricCalculation:
     return CertifiedMetricCalculation(
         calculation, partition, thresholds, citation_cohorts
@@ -329,11 +348,19 @@ class AtlasScaleObservation:
             self.value != self.calculation.normalized_value
             or self.certification_manifest_digest
             != self.calculation.certification_manifest_digest
-            or self.cutoff != self.calculation.evidence_cutoff
+            or self.cutoff != _presentation_cutoff(self.calculation)
         ):
             raise CertificationError(
                 "Atlas presentation fields differ from the certified calculation"
             )
+
+
+def _presentation_cutoff(result: MetricCalculationResult) -> str | None:
+    # A measurement session has an interval, not an atomic citation cutoff.
+    # Its calculation still retains the separate dataset evaluation horizon.
+    return (
+        None if citation_session_normalization_key(result) else result.evidence_cutoff
+    )
 
 
 def _calculation_key(result: MetricCalculationResult) -> tuple[str, ...]:
@@ -364,11 +391,11 @@ def _normalization_cohort_key(result: MetricCalculationResult) -> tuple[str, ...
         result.mapping_policy_version,
         result.citation_policy_version,
         result.threshold_version,
-    )
+    ) + citation_session_normalization_key(result)
 
 
 def _comparison_cohort(result: MetricCalculationResult) -> AtlasMetadata:
-    return {
+    metadata: AtlasMetadata = {
         "entity_type": result.entity_type,
         "field_id": result.field_id,
         "period": result.period,
@@ -377,6 +404,17 @@ def _comparison_cohort(result: MetricCalculationResult) -> AtlasMetadata:
         "threshold_version": result.threshold_version,
         "cohort_size": result.normalization_parameters.get("cohort_size"),
     }
+    session_key = citation_session_normalization_key(result)
+    if session_key:
+        metadata.update(
+            {
+                "citation_session_id": session_key[0],
+                "citation_measurement_started_at": session_key[1],
+                "citation_measurement_ended_at": session_key[2],
+                "citation_measurement_semantics": "retrospective-measurement-window",
+            }
+        )
+    return metadata
 
 
 def _coverage_projection(result: MetricCalculationResult) -> AtlasMetadata:
@@ -515,7 +553,7 @@ def apply_atlas_scale(
                 metric_normalization_version=item.normalization_version,
                 certification_manifest_digest=item.certification_manifest_digest,
                 comparison_cohort=cohort,
-                cutoff=item.evidence_cutoff,
+                cutoff=_presentation_cutoff(item),
                 coverage=coverage,
                 uncertainty_reasons=reasons,
                 certification_proof=proof_item,

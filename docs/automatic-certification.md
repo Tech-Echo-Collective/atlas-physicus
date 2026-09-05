@@ -12,7 +12,7 @@ Metric System v1 formulas, thresholds and historical decision hashes are unchang
 | Field | Reconstruct the selected, versioned provider ledger; exact leaf mappings and conserved mass | An unmapped label or broad branch is not an invented leaf; scope is not broad Physics merely because mapping succeeded |
 | Date | Explicit provider/source field; same-basis dates reconciled with precision retained | Mixed `earliest_date`, ingestion/update time, unknown day, or a preprint date relabeled as journal publication |
 | Researcher | Paper-native INSPIRE-author/valid ORCID identifiers; conflicting IDs rejected | Name-only global identity, career history, or paper-time affiliation |
-| Citation population | All records from one exact, complete INSPIRE query response; up to 1,000 records/six query years; exact count/cutoff/membership | Pagination without a shared snapshot; completeness of a different canonical publication-year population |
+| Citation population | Complete single response, or PA-055 measured batches bound to independently certified frozen membership | An atomic provider snapshot, historical as-of counts, or canonical-year completeness derived merely from pagination |
 | Acquisition plan | Reconstruct supported scope/year partitions from existing registry | Successful acquisition, canonical-year completeness or missing date/identity facts |
 | Metric population | Derive all entity×field projections from an already certified window, including excluded/unresolved mass | A source window that has not passed its structural and coverage checks |
 | Category universe | Derive all applicable leaves from the frozen Physics ontology | Unspecified subfields below a leaf or a caller-selected favorable subset |
@@ -60,11 +60,47 @@ fit the bound; truncating an over-limit response or dropping unknown membership
 to make it fit is rejected. A complete provider earliest-date query does not
 certify a canonical journal-publication population.
 
-For a larger population, a bounded measurement-session policy could preserve
-actual response timestamps and temporal uncertainty. That policy is **not
-implemented**: no arbitrary timing tolerance or “as-of” provider snapshot has
-been invented. The inspected official contract did not document a historical
-snapshot token; that is not evidence that none can exist.
+### Versioned measurement window (PA-055)
+
+The owner subsequently authorized an opt-in alternative to the single-response
+path. `non-self-citation-measurement-window-v1` preserves the real measurement
+interval and every batch's request/response times. It does not weaken the old
+contract by assigning different responses one fabricated cutoff.
+
+1. Independently certify canonical source years; freeze exact INSPIRE-to-paper
+   identities before requesting citation counts. Keep unsupported identities in
+   the scientific denominator as missing, not silently removed or zero.
+2. Request bounded exact-ID batches; verify exact membership, no duplicate or
+   missing records, unchanged date/field facts and actual monotonic timestamps.
+   A transport-level pagination mode also exists, but cannot supply its own
+   canonical population authority. Stable totals and successful page traversal
+   alone never establish a snapshot.
+3. Bind annual field/document cohorts to that same session and frozen scientific
+   population. Check maturity at each actual observation time and retain the
+   unchanged 50-paper reference and 30-peer normalization minima.
+4. Retain compact counts, membership, response hashes, exact time interval and
+   source/policy versions. Those observed counts—not a promise to re-query a
+   mutable service—support later exact formula reproduction. Checksums alone
+   cannot reconstruct discarded raw provider bytes.
+5. Keep distinct sessions out of the same normalization or domain aggregation.
+   Report an interval, never a singular citation cutoff, for this variant.
+
+The 30-minute maximum is an operational session bound, **not** a scientifically
+calibrated drift tolerance or simultaneity claim. A long, changed, interrupted or
+incomplete session fails closed; silently extending the bound is not allowed.
+The result means “publications from the stated years, citations measured during
+this later interval.” It does not mean citations known in those historical years.
+
+INSPIRE documents record-ID queries and bounded responses, supporting exact-ID
+batching. [Official API contract](https://github.com/inspirehep/rest-api-doc).
+Recording activity start/end separately follows standard provenance semantics.
+[W3C PROV](https://www.w3.org/TR/prov-dm/).
+Mutable pagination can change membership between requests; this is why captured
+membership is checked against an independently frozen inventory rather than
+equated with a provider snapshot.
+[OAI-PMH protocol](https://www.openarchives.org/OAI/2.0/openarchivesprotocol.2003-02-21.htm).
+The inspected INSPIRE contract did not document a historical snapshot token;
+that is not evidence that none can exist.
 
 ## Remaining launch requirements
 

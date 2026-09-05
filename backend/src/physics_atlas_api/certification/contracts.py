@@ -1035,7 +1035,7 @@ class CertifiedMetricPartition[PartitionT]:
             PHYSICS_FIELD_ONTOLOGY_VERSION,
             PROVIDER_FIELD_MAPPING_VERSION,
         )
-        from .citations import CITATION_POLICY_VERSION
+        from .measurement_windows import partition_citation_policy_is_current
 
         if (
             getattr(self.partition, "attribution_policy_version", None)
@@ -1044,8 +1044,9 @@ class CertifiedMetricPartition[PartitionT]:
             != PHYSICS_FIELD_ONTOLOGY_VERSION
             or getattr(self.partition, "mapping_policy_version", None)
             != PROVIDER_FIELD_MAPPING_VERSION
-            or getattr(self.partition, "citation_policy_version", None)
-            != CITATION_POLICY_VERSION
+            or not partition_citation_policy_is_current(
+                self.partition, metric_id, self.window_proof.citation_cohorts
+            )
         ):
             raise CertificationError(
                 "metric partition uses an unapproved scientific policy version"

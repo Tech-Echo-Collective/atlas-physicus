@@ -40,6 +40,9 @@ automatic rules. The new record/population/normalization adapters and public
 no-synthetic-fallback fix are validated, not a five-metric production launch.
 Next work is exact source-bound date/identity admission and real comparable
 historical populations followed by the compact v1 export/activation producer.
+PA-055 subsequently authorizes measured citation intervals with frozen certified
+membership and per-batch timestamps. The opt-in session path preserves old cutoff
+contracts, formulas and all numerical thresholds; it is not live activation.
 No Full Physics load, storage investigation, threshold relaxation or v3.1 is
 authorized by this step. See [current automatic-certification status](automatic-certification.md).
 

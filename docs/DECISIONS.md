@@ -181,6 +181,40 @@ Implementation and primary-source rationale:
 [automatic certification](automatic-certification.md). All public metrics remain
 withheld until the complete certified calculation and activation chain passes.
 
+## Versioned citation measurement windows — 2026-09-05
+
+**PA-055:** The owner explicitly authorized finite, versioned citation measurement
+windows after reviewing the multi-response limitation. The opt-in policy is
+`non-self-citation-measurement-window-v1`, with transport contract
+`citation-measurement-window-v1`. This changes citation observation semantics,
+not Metric System v1 formulas or numerical scientific thresholds.
+
+Freeze exact paper/provider identities from independently certified canonical
+source years **before** measuring citations. Prefer explicit-ID batches and
+require every frozen measurable identity exactly once; unexpected, omitted,
+duplicate or conflicting identities fail closed. Papers without supported
+provider identities remain explicit missing evidence in the full scientific
+coverage denominators. Neither a frozen ID list nor stable pagination totals
+proves an atomic provider snapshot or certifies a canonical year.
+
+Retain actual request/response times, interval start/end, source references,
+counts, population membership and rule versions. A session is capped at 30
+minutes as a versioned operational bound, **not** an empirically established
+scientific tolerance or an assertion of negligible citation drift. Label the
+result retrospective measurement; do not call it historical as-of evidence.
+Keep measured compact counts because a later mutable provider query cannot
+reproduce those past counts from checksums alone.
+
+All compared cohorts and normalization peers must share the exact session,
+frozen scientific population and policy. Point-cutoff and interval evidence
+cannot mix. Existing 24-month maturity is checked at each actual response time;
+50-paper reference, 30-peer normalization and all coverage gates remain intact.
+Partial-year, missing, unresolved and zero distinctions are unchanged. Legacy
+single-cutoff contracts and historical digests remain valid under their old
+version. This authorization does not activate metrics or certify any live data.
+See [the method](automatic-certification.md#versioned-measurement-window-pa-055)
+and [bounded validation](validation/citation-measurement-window-2026-09-05.md).
+
 ## Current activation decision
 
 The v3.0.4 production activation begins with the implemented `hep-th-v1`
