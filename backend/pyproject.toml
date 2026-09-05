@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "physics-atlas-api"
 version = "3.0.5a0"
-description = "Bounded FastAPI and PostgreSQL infrastructure for Physics Atlas"
+description = "Bounded FastAPI and PostgreSQL infrastructure for Atlas Physica"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }

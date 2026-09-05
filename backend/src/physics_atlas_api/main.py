@@ -30,11 +30,12 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     settings = get_settings()
     application = FastAPI(
-        title="Physics Atlas API",
+        title="Atlas Physica API",
         version=__version__,
         description=(
             "Read-oriented scientific metadata API. v3.0.5-alpha exposes bounded "
-            "live evidence and withholds unvalidated scientific metric layers."
+            "live evidence and withholds unvalidated scientific metric layers. "
+            "Atlas Physica is developed and maintained by Tech Echo Collective."
         ),
         lifespan=lifespan,
     )

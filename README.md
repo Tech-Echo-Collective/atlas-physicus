@@ -1,8 +1,12 @@
-# Physics Atlas
+# Atlas Physica
 
-Physics Atlas is open scientific infrastructure for exploring the geographic,
+Atlas Physica is open scientific infrastructure for exploring the geographic,
 temporal, and institutional structure of physics research ecosystems through a
 map-first interface.
+
+Atlas Physica is developed and maintained by Tech Echo Collective. The product
+was previously named Physics Atlas; repository names, technical identifiers,
+deployment URLs, and historical release records remain unchanged.
 
 It is not a ranking, recommendation, or prediction system, and it is not a
 replacement for scholarly databases such as arXiv or INSPIRE.
@@ -12,7 +16,7 @@ replacement for scholarly databases such as arXiv or INSPIRE.
 
 ## What it does
 
-Physics Atlas supports a continuous exploration path:
+Atlas Physica supports a continuous exploration path:
 
 ```text
 Physics → research field → time → world → country → institution
@@ -163,9 +167,9 @@ architecture or methodology changes.
 
 ## License and citation
 
-Physics Atlas is released under the [Apache License 2.0](LICENSE). Copyright
+Atlas Physica is released under the [Apache License 2.0](LICENSE). Copyright
 (c) 2026 Tech Echo Collective; attribution information is preserved in
 [NOTICE](NOTICE).
 
-If Physics Atlas supports research or teaching, cite it using
+If Atlas Physica supports research or teaching, cite it using
 [CITATION.cff](CITATION.cff).

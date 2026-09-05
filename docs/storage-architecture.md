@@ -5,7 +5,7 @@ Status: implemented foundation; production migration deferred
 Policy version: `scientific-evidence-storage-policy-v1`
 Last reviewed: 2026-09-05
 
-Physics Atlas keeps PostgreSQL for canonical, queryable scientific state. It
+Atlas Physica keeps PostgreSQL for canonical, queryable scientific state. It
 does not treat PostgreSQL as an archive for every immutable provider response.
 This distinction is required for reproducibility and for safe operation within
 the current Railway volume.
@@ -68,10 +68,23 @@ certification outputs for one retained batch. Its SQL replica keeps required
 normalized attributes, IDs, timestamps, provenance and indexes hot, sharing
 checksum-bound page references across raw occurrences. Original payload hashes,
 compressed archive hashes and legacy identity/snapshot checksums remain distinct.
-This is not a deployed dual reader: current NOT NULL payload columns, worker
+This is not a production dual reader: current NOT NULL payload columns, worker
 transactions and cursor behavior are unchanged. Missing/corrupt references must
 fail closed, never masquerade as empty JSON. Production integration and a durable
 independent restore rehearsal remain separate from local artifact verification.
+
+The [one-batch staging integration](validation/staging-dual-read-2026-09-05.md)
+adds an explicit inline/reference selection adapter and a private PostgreSQL
+source catalog. Both paths recover original bytes before calling the same
+existing parser, normalization, canonicalization and certification. Selection
+metadata binds acquisition identity to the payload hash/size; an archive write
+and read-back must finish before transactional promotion and checkpoint advance.
+An unavailable, missing, invalid or corrupt reference returns an operational
+`blocked` error before scientific processing—not an empty evidence record, a
+certification state, or a silent inline fallback. Deliberate rollback verifies
+retained inline bytes and keeps the reference/provenance history without needing
+the archive. This bounded rehearsal retains both representations and does not
+prove production schema compatibility, archive durability, or storage capacity.
 
 ## Storage Budget Gate v1
 

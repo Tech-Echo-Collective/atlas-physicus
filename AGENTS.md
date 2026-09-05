@@ -1,4 +1,9 @@
-# Physics Atlas repository context
+# Atlas Physica repository context
+
+Atlas Physica is the canonical product name (formerly Physics Atlas). Keep
+historical names, repository/package/schema identifiers, service names,
+environment variables, deployment URLs, and release tags unchanged unless a
+separate task explicitly authorizes their migration.
 
 Before any major implementation, architecture, deployment, or release task, read these files in order:
 

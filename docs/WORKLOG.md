@@ -1,4 +1,4 @@
-# Physics Atlas recent worklog
+# Atlas Physica recent worklog
 
 Keep this file to recent active milestones. Completed older detail is archived
 in [`archive/`](archive/), while [`HISTORY_SUMMARY.md`](HISTORY_SUMMARY.md)
@@ -6,6 +6,34 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`DECISIONS.md`](DECISIONS.md), current facts in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
+
+## 2026-09-05 — Staging dual-read/rollback and Atlas Physica name
+
+- Reused the same 474-paper/635-occurrence batch, with 449 original-byte catalog
+  rows in one fresh private PostgreSQL schema. Inline, reference and explicit
+  rollback reproduce all ten artifacts and 9,999 decisions byte-for-byte;
+  1,033/1,033 unique provenance references recover. Seven injected storage/SQL
+  failures block before processing with rows/checkpoints unchanged. Rollback
+  works without archive access. No acquisition, broad replay, production payload
+  migration, scientific change, metric activation, or tag change occurred.
+- The new staging runner rejects optimized Python before proof assertions can
+  be disabled. Both representations remain retained; no storage-saving,
+  production-ORM integration, or independent durable-restore claim is made.
+  Exact hashes, failure/rollback proof and next migration-planning boundary are
+  in the [staging report](validation/staging-dual-read-2026-09-05.md).
+- Diagnosed the existing resource failure: DOI `10.1119/5.0353857` returned HTTP
+  404 on September 3 and still does. The monitor is correct and unrelated to
+  storage changes; no implementation or scientific-data fix is justified.
+- PA-047 establishes Atlas Physica as the product name. Updated current app/API
+  display text, metadata, README/citation/NOTICE, project/methodology docs and
+  public-wrapper branding while preserving historical names, copyright,
+  technical identifiers, services, deployment URLs and release tags.
+- Validation: 130 focused backend tests, Ruff lint/format, strict mypy
+  (80 source files); frontend typecheck/lint, 132 Vitest + seven pipeline tests,
+  production build; native staging PostgreSQL proof. The private server is
+  stopped. Production API/database/providers remain healthy, observations zero;
+  only the diagnosed DOI link failure remains. Commit/CI/deployment results
+  will be recorded after validated publication.
 
 ## 2026-09-05 — One-batch payload-reference recovery pilot
 

@@ -245,7 +245,7 @@ export class APIRepository
       });
       if (response.status === 404 && options.allowNotFound) return null;
       if (!response.ok) {
-        let message = `Physics Atlas API returned ${response.status}`;
+        let message = `Atlas Physica API returned ${response.status}`;
         let code = 'http_error';
         try {
           const body = (await response.json()) as {
@@ -270,7 +270,7 @@ export class APIRepository
       }
       if (error instanceof APIRepositoryError) throw error;
       throw new APIRepositoryError(
-        error instanceof Error ? error.message : 'Physics Atlas API request failed',
+        error instanceof Error ? error.message : 'Atlas Physica API request failed',
         undefined,
         'network_error',
       );

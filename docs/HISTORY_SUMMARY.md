@@ -1,4 +1,9 @@
-# Physics Atlas history summary
+# Atlas Physica history summary
+
+The product was named Physics Atlas through its early alpha releases. From
+2026-09-05 it is Atlas Physica (PA-047); historical names and release provenance
+below are preserved. This is a public-name change, not a repository, service,
+domain, scientific-policy, or release-tag migration.
 
 This is the compact chronological entry point for project history. It records
 milestone provenance and major architectural transitions without repeating the

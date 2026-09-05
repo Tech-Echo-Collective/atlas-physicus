@@ -5,7 +5,7 @@ coverage or live metric readiness**.
 
 Ontology version: `physics-field-ontology-v1`.
 
-The Physics Atlas ontology is a stable internal vocabulary. Provider categories
+The Atlas Physica ontology is a stable internal vocabulary. Provider categories
 remain source evidence and never become Atlas fields merely because a label
 looks similar.
 
@@ -91,7 +91,7 @@ not enough to reinterpret the trial label. Adding a reviewed INSPIRE rule
 requires a new mapping version. Existing arXiv `cond-mat.*` categories continue
 through their exact v1 rules.
 
-For every provider category, Physics Atlas retains:
+For every provider category, Atlas Physica retains:
 
 - provider and provider taxonomy;
 - exact raw category;

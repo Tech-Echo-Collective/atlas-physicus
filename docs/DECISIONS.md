@@ -1,8 +1,11 @@
-# Physics Atlas durable decisions
+# Atlas Physica durable decisions
 
 Last reviewed: 2026-09-05
 
 These decisions constrain implementation and public communication. Add a dated superseding entry when a durable decision changes; do not silently rewrite project history.
+
+Earlier entries retain the historical name Physics Atlas; their scientific and
+architectural constraints continue to apply to Atlas Physica.
 
 | ID | Decision | Consequence |
 | --- | --- | --- |
@@ -52,6 +55,7 @@ These decisions constrain implementation and public communication. Add a dated s
 | PA-044 | Full Physics loading requires both the Scientific Evidence / Joint Metric Gate and `storage-budget-gate-v1`. | The storage gate uses measured physical capacity and a representative final-schema load bound to an exact target-population manifest. The target cannot be smaller than the sample, the projection cannot fall below the versioned deterministic estimate, and audit, projection, population, and typed isolated-restore attestations must be content-addressed and verified. Withhold when the contingency-adjusted steady state exceeds 60% of capacity or peak exceeds 80%. A failed gate first prompts hot-state reduction and cold externalization, not an automatic plan upgrade. Artifact integrity preserves the reviewed attestation; it is not proof that the underlying physical operation occurred. |
 | PA-045 | An endpoint URL alone cannot make captured provider evidence “official.” | An official capture or enrichment manifest requires the internal live lineage-aware transport, exact approved endpoint, response status/timestamps, and checksum-bound stored bytes. Any injected transport remains fixture evidence even when configured with an official-looking URL. Changing certification semantics creates a new manifest/generator version; older outputs are explicitly superseded, never silently relabeled. |
 | PA-046 | Certification integrity and scientific authority are separate trust requirements. | Typed content-addressed acquisition, population, authority, and review records bind exact inputs and reconstruction; they do not authenticate a reviewer or prove scientific completeness. The operating review process must authenticate approvals. The generic institution resolver automatically certifies direct ROR only; name, crosswalk, and context candidates require dated explicit review unless a dedicated adapter has verified the original authority-bearing provider response. Exact population membership cannot substitute for semantic review. |
+| PA-047 | From 2026-09-05, Atlas Physica is the canonical public/product name, formerly Physics Atlas. Atlas Physica is developed and maintained by Tech Echo Collective. | Update current product text and display metadata without changing scientific semantics. Preserve historical release names/records, GitHub repositories, package/import/schema IDs, Railway services/databases, environment variables, deployment URLs/domains, serialized provenance, and existing release tags. Any technical rename requires separate authorization and compatibility review. |
 
 ## Current activation decision
 

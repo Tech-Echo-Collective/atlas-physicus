@@ -1,4 +1,4 @@
-# Physics Atlas project state
+# Atlas Physica project state
 
 Last reviewed: 2026-09-05
 
@@ -11,6 +11,10 @@ documentation.
 
 ## Release and scope
 
+- Canonical public/product name: **Atlas Physica**, formerly Physics Atlas
+  (PA-047, 2026-09-05). Atlas Physica is developed and maintained by Tech Echo
+  Collective. Repository, package, schema, service, environment, provenance,
+  URL/domain, and release identifiers remain unchanged.
 - Current release: `v3.0.5-alpha`; the annotated tag remains at `b1974d2`.
 - Source branch: `main` in `Tech-Echo-Collective/Physics-Atlas`.
 - The active phase is post-release **Stabilization & Scientific Validation**
@@ -64,14 +68,16 @@ documentation.
 
 ## Production health
 
-Read-only verification on 2026-09-05 at `01:34:34Z` found:
+Read-only verification on 2026-09-05 at `02:00:44Z` found:
 
 - runtime `3.0.5-alpha` and database health both healthy;
 - INSPIRE and arXiv healthy with zero consecutive failures and September 4
   latest successes;
 - metric recalculation idle;
-- 440 unresolved entities remain recorded for review; one resource-check
-  failure is reported for follow-up, with no current provider failure;
+- 440 unresolved entities remain recorded for review; the one resource-check
+  failure is a DOI resolver HTTP 404, independently confirmed and unrelated to
+  payload storage. No monitor fix or scientific-data correction is justified;
+  see the [diagnosis](validation/staging-dual-read-2026-09-05.md#existing-resource-check-failure);
 - zero public metric observations; expected `https://atlas.techecho.org`
   CORS was separately verified at `00:16:29Z`.
 
@@ -165,8 +171,14 @@ certification manifest and ten artifacts. A local current-layout replica retains
 all hot metadata/indexes while reducing its raw/snapshot component from 14.156
 to 6.373 MB (54.98%); sampled scaling is 298.645 to 134.459 MB per 10k papers,
 not whole-Atlas storage or approved capacity. Production still stores inline
-payloads. Durable dual-read integration, cursor-failure checks and isolated
-restore require a separately bounded staging rehearsal before any retirement.
+payloads. The subsequent [staging dual-read rehearsal](validation/staging-dual-read-2026-09-05.md)
+integrates 449 original-byte catalog rows in a private PostgreSQL schema.
+Inline, checksum-verified reference, and explicit rollback paths reproduce all
+ten scientific artifacts and 9,999 decisions exactly. Seven fault injections
+block before processing with rows/checkpoints unchanged. Both representations
+are retained; this is not a production ORM migration or measured storage saving.
+Durable independent restore and production-compatible reader/schema review
+remain required before any inline retirement.
 
 ## Track A — `hep-th-v1` evidence
 
@@ -277,6 +289,13 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
+- The staging dual-read/rollback proof passes 130 focused backend tests,
+  focused Ruff lint/format and strict mypy (80 source files). Native private
+  PostgreSQL recovery/certification equivalence and all seven injected failures
+  pass. Current Atlas Physica frontend typecheck/lint, 132 Vitest tests, seven
+  pipeline tests and production build pass. See the
+  [staging report](validation/staging-dual-read-2026-09-05.md) for scope and
+  proof limitations. Publication/CI results are recorded after pushing.
 - The one-batch payload-reference pilot passes 123 focused tests (2.82s), Ruff
   over 11 changed/storage files, and strict mypy over 79 source files. Native
   PostgreSQL SQL-to-cold recovery verifies all 3,179 paper/author-fragment
@@ -310,9 +329,10 @@ authorized**. The exact gate input and output are preserved in the
 
 Perform only reviewed evidence work for canonical dates, researcher identities, fields,
 institution targets/rollups, common-cutoff cohort populations, and complete
-historical windows. The smallest capacity action is an additive verified
-artifact-reference/dual-read staging integration and independent restore rehearsal
-on one existing batch, building on the completed isolated payload-recovery pilot
-and preserving inline production data. A later representative final-schema
-measurement is still required. Both gates remain withheld; Full Physics loading
-and v3.1 remain unauthorized.
+historical windows. The smallest storage action is to review a one-batch
+production-compatible schema/reader plan and durable archive retention plus
+independent restore requirements, building on the completed private staging
+dual-read/rollback proof. Keep production inline data until separately approved
+archive write/read-back, transactional checkpoint, restore, and rollback checks
+pass. A later representative final-schema measurement is still required. Both
+gates remain withheld; Full Physics loading and v3.1 remain unauthorized.

@@ -1,6 +1,6 @@
 # Data quality and public status
 
-Physics Atlas exposes a compact methodology/status surface behind the existing
+Atlas Physica exposes a compact methodology/status surface behind the existing
 information control. It is evidence about the current dataset, not an
 operations dashboard and not a scientific score.
 

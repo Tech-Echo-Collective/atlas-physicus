@@ -7,7 +7,7 @@ break. The earlier candidate explored publication counts, citation
 percentiles, distinct-partner counts, Shannon evenness, and symmetric temporal
 change. It was never activated on the live Atlas.
 
-The implemented Physics Atlas Metric System v1 replaces those provisional
+The implemented Atlas Physica Metric System v1 replaces those provisional
 choices with one coherent, exact-five framework built on paper-time fractional
 attribution:
 
