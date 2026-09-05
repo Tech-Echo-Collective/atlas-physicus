@@ -264,31 +264,23 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
-- The current certification/capacity changes are awaiting their validated
-  commit and post-push CI. Frontend type checking, lint, 130 Vitest tests,
+- Certification/capacity result commit `be5e304` is pushed to `main` and passed
+  [CI 33932839622](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33932839622),
+  including frontend, backend/PostgreSQL, and containerized API/worker checks.
+  Frontend type checking, lint, 130 Vitest tests,
   seven pipeline tests, and production build pass. Backend Ruff format/lint,
   strict mypy, and all 376 pytest tests pass with one existing dependency
-  deprecation warning. No new CI success is claimed yet.
-- The starting `main` commit is `3ab1456`, with green Actions run
-  [33884328992](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33884328992).
-
+  deprecation warning and the existing non-blocking frontend chunk-size warning.
 - The bounded dual-track result is commit `5e3ba1f`; it passed GitHub Actions
   run [33884017132](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33884017132),
   including frontend, backend/PostgreSQL, and containerized API/worker jobs.
-- The completed bounded dual-track work passes backend Ruff format and lint,
-  strict mypy, and all 284 pytest tests; pytest reports one dependency
-  deprecation warning.
-- Frontend TypeScript checking and lint pass, as do 130 Vitest tests, seven
-  pipeline tests, and the production build. The existing bundle chunk-size
-  warning remains non-blocking.
 - Post-push production checks confirm healthy service/database status, expected
   public-origin CORS, healthy INSPIRE/arXiv cursors, and zero public metric
   observations. Existing release tags remain unchanged.
 
 ## Immediate next action
 
-Complete the certification milestone's commit and CI verification, then perform only
-reviewed evidence work for canonical dates, researcher identities, fields,
+Perform only reviewed evidence work for canonical dates, researcher identities, fields,
 institution targets/rollups, common-cutoff cohort populations, and complete
 historical windows. The separate capacity task is a representative final-schema
 staging measurement with a reviewed target and isolated restore. Both gates

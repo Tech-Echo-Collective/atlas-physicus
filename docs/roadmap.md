@@ -165,8 +165,8 @@ Before broad live ingestion, the project should validate:
 
 The roadmap does not currently commit to a graph database, Kubernetes, authentication, full-text paper archive, recommendation engine, prediction model, automatic researcher ranking, or universal live-data coverage. Those additions require a demonstrated scientific or operational need.
 
-The validated dual-track commit and green CI are recorded; the certification
-milestone is awaiting final commit/CI verification. The current minimum
+The certification foundation is committed as `be5e304` with green CI run
+33932839622; this does not constitute scientific activation. The current minimum
 scientific action is reviewed canonical dates, identities, institution
 targets/rollups, field mappings, common-cutoff populations, and complete
 historical certification. The Joint and Storage gates remain withheld.

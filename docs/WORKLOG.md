@@ -38,10 +38,14 @@ reports.
   [storage sizing](validation/storage-sizing-2026-09-04.md).
 - Frontend typecheck/lint, 130 Vitest tests, seven pipeline tests, and build
   pass. Backend Ruff format/lint, strict mypy, and 376 pytest tests pass with
-  one existing dependency deprecation warning. Post-push CI remains pending. Read-only
+  one existing dependency deprecation warning. Result commit `be5e304` is pushed
+  to `main`; [CI 33932839622](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33932839622)
+  passed frontend, backend/PostgreSQL, and container API/worker jobs. Read-only
   production checks on September 5 confirm healthy API/database/providers,
   expected Atlas CORS, and zero public observations. No production data,
   cursor, release tag, or Full Physics scope was changed.
+- After the push, Railway health remained `ok` at `2026-09-05T00:24:27Z`,
+  and the public metric endpoint still returned zero observations.
 
 ## 2026-09-04 — Bounded dual-field Metric System v1 validation
 

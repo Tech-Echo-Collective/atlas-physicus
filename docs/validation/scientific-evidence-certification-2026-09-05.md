@@ -305,11 +305,11 @@ Physics loading, not normal bounded map/API reads.
 Frontend type checking, lint, 130 Vitest tests, seven pipeline tests, and the
 production build pass; the existing chunk-size warning remains non-blocking.
 Backend Ruff format/lint, strict mypy, and all 376 pytest tests pass with one
-existing Starlette/httpx deprecation warning. Post-push CI verification is
-pending. The unchanged source
-baseline `3ab1456` has green CI run
-[33884328992](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33884328992).
-This report does not claim a successful new commit or CI run in advance.
+existing Starlette/httpx deprecation warning. Result commit `be5e304` is pushed
+to `main` and passed
+[CI 33932839622](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33932839622),
+including frontend, real PostgreSQL migration/metadata/bootstrap/worker/API
+checks, and containerized API/worker validation.
 
 Read-only production verification at `2026-09-05T00:14:15Z` found runtime
 `3.0.5-alpha` and database health `ok`, both providers healthy with zero
@@ -318,6 +318,9 @@ two existing resource-check failures. At `00:16:29Z`, the public metric API
 returned total zero and allowed the exact `https://atlas.techecho.org` CORS
 origin. Storage figures remain the separately timestamped September 4 audit.
 The public Atlas root returned HTTP 200 at `2026-09-05T00:16:50Z`.
+After the push, API/database health remained `ok` at `2026-09-05T00:24:27Z`
+and the public metric endpoint still returned zero observations. Existing
+release tags and production history remain unchanged.
 
 The next scientific action is reviewed evidence work: canonical date selection,
 researcher identities, exact field mapping/review, unresolved institution
