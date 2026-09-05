@@ -80,8 +80,10 @@ successful fault injections.
 
 Reference mode never silently uses retained inline bytes. Archive candidates
 verify before one compare-and-swap SQL transaction changes row selections and
-the checkpoint. A failed commit rolls back both. A partial/orphan cold write
-cannot become a selected payload or valid scientific evidence.
+the checkpoint. The injected pre-commit interruption rolls back both rows and
+checkpoint; an uncertain commit/network-loss outcome was not rehearsed. A
+partial/orphan cold write cannot become a selected payload or valid scientific
+evidence.
 
 Explicit rollback reselects verified original inline bytes while preserving
 reference and acquisition metadata. The whole scientific proof still passes
