@@ -22,6 +22,7 @@ from urllib.parse import urlparse
 from .connectors.base import SourceTransport, normalize_external_id
 from .connectors.http import ProviderHttpTransport
 from .connectors.ror import RorConnector
+from .storage.historical_read import HistoricalReadError, open_artifact
 
 HISTORICAL_ROR_TARGET_VERSION = "hep-th-v1-historical-ror-targets-v1"
 HISTORICAL_ROR_STATE_VERSION = "hep-th-v1-historical-ror-state-v1"
@@ -845,8 +846,16 @@ def _verified_jsonl_artifact(
     if relative.is_absolute() or not _is_within(artifact_path, root):
         raise HistoricalRorSafetyError(f"{role} artifact leaves its bundle root")
     try:
-        payload = artifact_path.read_bytes()
-    except OSError as error:
+        with open_artifact(
+            artifact_path,
+            role=role,
+            checksum=checksum,
+            byte_count=entry.get("byte_count"),
+            row_count=row_count,
+            bundle_root=root,
+        ) as stream:
+            payload = stream.read()
+    except (OSError, HistoricalReadError) as error:
         raise HistoricalRorSafetyError(f"{role} artifact is missing") from error
     if hashlib.sha256(payload).hexdigest() != checksum:
         raise HistoricalRorSafetyError(f"{role} artifact checksum failed")

@@ -58,6 +58,7 @@ from physics_atlas_api.storage.dual_read import (
     read_payload,
     rollback_to_inline,
 )
+from physics_atlas_api.storage.historical_read import read_artifact
 from physics_atlas_api.storage.payloads import PayloadMetadata, PayloadReference
 
 DATABASE = "physics_atlas_storage_benchmark"
@@ -201,8 +202,8 @@ def scientific_result(rows, store, destination, roots, original_occurrences):
         == manifest_path(roots["certification"], CERTIFICATION_HASH).read_bytes()
     )
     for entry in generated["artifacts"]:
-        body = (destination / "certification" / entry["path"]).read_bytes()
-        assert body == (roots["certification"] / entry["path"]).read_bytes()
+        body = read_artifact(destination / "certification", entry)
+        assert body == read_artifact(roots["certification"], entry)
         assert sha256(body) == entry["checksum"]
     decisions_entry = next(
         entry for entry in generated["artifacts"] if entry["role"] == "decisions"

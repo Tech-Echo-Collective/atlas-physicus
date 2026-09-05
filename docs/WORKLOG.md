@@ -7,6 +7,25 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Affiliation archive authority and bounded retirement
+
+- Continued verified `main` at `f32e261`; extended the same resolver to affiliation
+  schemas and current callers, keeping old tool imports and historical manifests.
+  PA-053 separates logical content, historical path and current representation.
+- Small-first OS-denied recovery passed, then all ten historical bindings across
+  nine originals passed byte/provenance/conservation/dependency checks. Retired
+  only those nine originals; three prior small pilot inputs remain. Temporary
+  proof copies were removed after exact retained-copy comparison.
+- Gross retirement 2,269,432,865 bytes; net 2,156,281,258 after all new archives,
+  proof/tooling metadata and indices. Evidence 7.799 GB; combined scoped footprint
+  9.678 GB. Independent final accounting and post-retirement authorities pass.
+  Proof retention 949.239 MB fits 1 GiB; total 5 GB gate remains FAIL.
+- 432 focused tests, Ruff lint/format (142 files), strict mypy (86 sources) and
+  whitespace pass. Existing attribution/calculators are unchanged; no Railway,
+  provider/researcher processing, replay, activation or release-tag movement.
+  Exact paths, pins, scientific counts and limitations:
+  [batch report](validation/affiliation-archive-batch-2026-09-05.md).
+
 ## 2026-09-05 — Pinned validation retention and affiliation audit
 
 - Continued verified `main` at `338891f` ([green CI](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33949872535)).

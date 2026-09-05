@@ -248,3 +248,39 @@ map/API reads or the currently bounded production updates, and it does not
 replace the Joint Gate for public metric activation. The current implementation
 provides typed gates and a local artifact-store adapter; it does not migrate
 production payloads, deploy object storage, or certify a physical restore.
+
+## Local historical affiliation authority
+
+The existing historical resolver now lives in
+`physics_atlas_api.storage.historical_authority`; the original tool import remains
+compatible. Decision archive behavior is unchanged. The affiliation codec adds
+exact gzip restoration for paired v1/v2 `affiliation-shares` and replay-v2
+`paper-time-affiliation-shares`, without changing scientific parsers or evidence.
+
+An explicit `artifact-authority.json` beside a historical bundle binds its exact
+relative role/path/hash/size/rows to a pinned descriptor, storage root, pinned
+manifest and **historical recorded manifest path**. Without an index the legacy
+inline reader remains unchanged. With an index, absent/ambiguous/broken authority
+is an error, not a fallback. Descriptor identity is type + schema version + exact
+content SHA-256; multiple old paths require separate verified historical bindings.
+
+The selected archive is verified and restored into one resolver-owned temporary
+file; existing readers consume those bytes while retaining original provenance
+paths. Context exit removes only that temporary file. The codec bounds one old
+artifact to 4 GiB / one million rows and its archive to 192 MiB; these are restore
+bounds, not permission to generate a large new validation corpus. Creation and
+adoption refuse production runtime. Production worker call-boundary tests exclude
+the archive tools and retain authoritative database affiliation state only.
+
+For an immutable older script needing ordinary files, restore into an isolated
+copy of the historical tree under the recorded **relative** artifact path. Supply
+that tree through the script's existing root argument or its unchanged relative
+layout. Never rewrite its manifest to point at compressed bytes. Exact source
+checksums/row dimensions still verify the restored original representation.
+
+`backend/tools/prove_affiliation_archive.py` accepts a pinned, self-contained
+isolated plan/kit and emits only an aggregate receipt. Its OS-denial controls
+must be installed externally; the runner refuses without them. This is local
+historical authority, not a production payload migration or independent backup.
+See [PA-053](DECISIONS.md#historical-affiliation-archive-authority--2026-09-05)
+and the [measured batch](validation/affiliation-archive-batch-2026-09-05.md).

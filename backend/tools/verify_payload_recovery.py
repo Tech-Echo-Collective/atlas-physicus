@@ -30,6 +30,7 @@ from physics_atlas_api.paired_trial_certification import (
     certify_paired_trial,
 )
 from physics_atlas_api.storage import FilesystemArtifactStore
+from physics_atlas_api.storage.historical_read import read_artifact
 from physics_atlas_api.storage.payloads import (
     PayloadMetadata,
     archive_payload,
@@ -252,8 +253,8 @@ def run_pilot(evidence: Path, output: Path):
         raise ValueError("recovered certification manifest differs")
     artifact_results = []
     for entry in generated["artifacts"]:
-        before = (roots["certification"] / entry["path"]).read_bytes()
-        after = (output / "recovered-certification" / entry["path"]).read_bytes()
+        before = read_artifact(roots["certification"], entry)
+        after = read_artifact(output / "recovered-certification", entry)
         if before != after or sha256(after) != entry["checksum"]:
             raise ValueError("scientific output differs from retained certification")
         artifact_results.append(entry | {"byte_identical": True})

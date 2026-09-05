@@ -91,6 +91,7 @@ from .paired_enrichment import (
     verify_paired_enrichment_manifest,
 )
 from .search_index import normalize_search_term
+from .storage.historical_read import HistoricalReadError, open_artifact
 
 SUPERSEDED_CERTIFICATION_ID = "physics-paired-certification-2020w03-v1"
 CERTIFICATION_ID = "physics-paired-certification-2020w03-v2"
@@ -2277,8 +2278,16 @@ def verify_paired_trial_certification_manifest(
                 "certification artifact leaves output"
             ) from error
         try:
-            observed = artifact_path.read_bytes()
-        except OSError as error:
+            with open_artifact(
+                artifact_path,
+                role=role,
+                checksum=expected_checksum,
+                byte_count=len(payload),
+                row_count=row_count,
+                bundle_root=output_root,
+            ) as stream:
+                observed = stream.read()
+        except (OSError, HistoricalReadError) as error:
             raise PairedTrialCertificationError(
                 "certification artifact is missing"
             ) from error

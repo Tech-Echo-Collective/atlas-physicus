@@ -17,6 +17,8 @@ from physics_atlas_api.storage import (
     ArtifactRef,
     FilesystemArtifactStore,
     StorageTier,
+    affiliation_archive,
+    historical_authority,
 )
 from physics_atlas_api.storage.validation_retention import (
     ValidationRetentionError,
@@ -347,6 +349,119 @@ def test_source_size_and_selected_size_caps(source, tmp_path, monkeypatch):
     assert not (tmp_path / "pilot").exists()
 
 
+def test_select_source_uses_real_archive_reader_with_original_absent(
+    source,
+    tmp_path,
+    monkeypatch,
+):
+    _old_data, _old_manifest, _old_sha, body = source
+    root = tmp_path / "archived-source"
+    checksum = pilot.sha256(body)
+    role = "affiliation-shares"
+    schema = "physics-paired-trial-certification-manifest-v2"
+    relative = f"artifacts/affiliation-shares/{checksum}.jsonl"
+    data = root / relative
+    data.parent.mkdir(parents=True)
+    data.write_bytes(body)
+    entry = {
+        "role": role,
+        "path": relative,
+        "checksum": checksum,
+        "byte_count": len(body),
+        "row_count": len(body.splitlines()),
+        "media_type": "application/x-ndjson",
+    }
+    document = {"manifest_version": schema, "artifacts": [entry]}
+    manifest_id = pilot.sha256(historical_authority.archive_helper.encoded(document))
+    document["manifest_checksum"] = manifest_id
+    manifest = root / "manifests" / f"{manifest_id}.json"
+    manifest.parent.mkdir()
+    manifest_sha = write_json(manifest, document)
+    expected = pilot.select_source(data, manifest, manifest_sha, {"paper-1"})
+    artifact = {
+        "type": role,
+        "schema_version": schema,
+        "sha256": checksum,
+        "bytes": len(body),
+        "rows": entry["row_count"],
+        "logical_id": historical_authority.logical_artifact_id(role, schema, checksum),
+    }
+    binding = historical_authority.affiliation_binding_record(
+        manifest,
+        manifest_sha,
+        artifact,
+    )
+    archive_root = root / "authority"
+    result = affiliation_archive.create_archive(
+        data,
+        archive_root,
+        expected_source_sha=checksum,
+        expected_bytes=len(body),
+        expected_rows=entry["row_count"],
+        role=role,
+        schema_version=schema,
+        historical_bindings=[binding],
+    )
+    descriptor = archive_root / "descriptor.json"
+    descriptor_sha = write_json(
+        descriptor,
+        {
+            "version": historical_authority.DESCRIPTOR_VERSION,
+            "artifact": artifact,
+            "authoritative_representation": "archive",
+            "representations": [
+                {
+                    "id": "archive",
+                    "type": "archive",
+                    "storage_reference": Path(result["manifest_path"]).name,
+                    "restore_method": affiliation_archive.VERSION,
+                    "archive_manifest_sha256": result["manifest_sha256"],
+                }
+            ],
+        },
+    )
+    write_json(
+        root / "artifact-authority.json",
+        {
+            "version": "local-artifact-authority-index-v1",
+            "entries": [
+                {
+                    "relative_path": relative,
+                    "role": role,
+                    "checksum": checksum,
+                    "byte_count": len(body),
+                    "row_count": entry["row_count"],
+                    "descriptor_path": "authority/descriptor.json",
+                    "descriptor_sha256": descriptor_sha,
+                    "storage_root": "authority",
+                    "historical_manifest_path": manifest.relative_to(root).as_posix(),
+                    "historical_manifest_sha256": manifest_sha,
+                    "historical_recorded_path": str(manifest),
+                }
+            ],
+        },
+    )
+    data.unlink()  # This is a tiny generated fixture, never retained evidence.
+    old_open, old_stat = Path.open, Path.stat
+
+    def deny_open(path, *args, **kwargs):
+        if path == data:
+            pytest.fail("retired original must never be opened")
+        return old_open(path, *args, **kwargs)
+
+    def deny_stat(path, *args, **kwargs):
+        if path == data:
+            pytest.fail("retired original must never be statted")
+        return old_stat(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", deny_open)
+    monkeypatch.setattr(Path, "stat", deny_stat)
+    recovered = pilot.select_source(data, manifest, manifest_sha, {"paper-1"})
+    assert recovered == expected
+    assert recovered[1]["path"] == relative
+    assert pilot.summarize(recovered[0], role)["unit_mass_papers"] == 1
+
+
 @pytest.mark.parametrize("bound", ["bytes", "rows"])
 def test_source_scan_stops_at_pinned_bounds_before_parsing_extra_data(
     source, tmp_path, monkeypatch, bound
@@ -362,6 +477,8 @@ def test_source_scan_stops_at_pinned_bounds_before_parsing_extra_data(
     reads = []
 
     class GrowingSource(io.BytesIO):
+        name = str(data)
+
         def readline(self, size=-1):
             reads.append(1)
             if len(reads) > expected_rows + 1:

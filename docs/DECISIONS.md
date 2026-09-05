@@ -121,6 +121,26 @@ enforces admission; old standalone validation commands still require operator
 admission, not a claimed universal filesystem quota. See the
 [audit and sample pins](validation/affiliation-retention-2026-09-05.md).
 
+## Historical affiliation archive authority — 2026-09-05
+
+**PA-053:** Extend PA-049's existing logical artifact resolver to explicitly
+versioned historical affiliation artifacts, not a second authority framework.
+Identity includes artifact type, schema version and exact content SHA-256.
+Multiple historical paths may bind one identical logical artifact only when each
+immutable manifest/path/hash/size/row binding is verified independently.
+An additive local authority index selects the retained representation; it does
+not rewrite historical manifests, scientific provenance or attribution decisions.
+Missing or invalid selected authority fails closed without inline fallback.
+
+Retirement requires original-absent recovery, exact bytes, scientific-input and
+provenance equivalence, current-reader compatibility, reviewed dependencies and
+available restore scratch. Historical as-of scripts may use an isolated exactly
+restored tree without changing their recorded inputs. Archive creation/adoption
+is development/test-only. Existing PA-051/052 production and proof-budget limits
+remain unchanged; local archive authority is not independent-backup durability,
+scientific certification, production migration or Full Physics authorization.
+See the [affiliation batch](validation/affiliation-archive-batch-2026-09-05.md).
+
 ## Current activation decision
 
 The v3.0.4 production activation begins with the implemented `hep-th-v1`

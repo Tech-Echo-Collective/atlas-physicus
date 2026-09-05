@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import heapq
 import json
+import os
 import re
 from collections import Counter
 from pathlib import Path
@@ -21,6 +22,7 @@ from physics_atlas_api.certification.validation_artifacts import (
     check_validation_size,
     require_validation_runtime,
 )
+from physics_atlas_api.storage.historical_read import AFFILIATION_ROLES, open_artifact
 
 VERSION = "bounded-cross-track-validation-sample-v1"
 MAX_SOURCE_BYTES = 512 * 1024**2
@@ -222,19 +224,30 @@ def _read_manifest(root, reference, expected, kind):
 
 
 def _rows(root, bundle, artifact):
-    path = _path(root, (bundle / artifact["path"]).relative_to(root).as_posix())
+    reference = (bundle / artifact["path"]).relative_to(root).as_posix()
+    path = root / reference
+    if artifact["role"] not in AFFILIATION_ROLES:
+        path = _path(root, reference)
     expected_bytes, expected_rows = artifact["byte_count"], artifact["row_count"]
     if (
         type(expected_bytes) is not int
         or type(expected_rows) is not int
         or not 0 < expected_bytes <= MAX_SOURCE_BYTES
         or not 0 < expected_rows <= MAX_SOURCE_ROWS
-        or path.stat().st_size != expected_bytes
     ):
         raise SampleError("bounded source dimensions mismatch")
-    before = path.stat()
     digest, offset, count = hashlib.sha256(), 0, 0
-    with path.open("rb") as stream:
+    with open_artifact(
+        path,
+        role=artifact["role"],
+        checksum=artifact["checksum"],
+        byte_count=expected_bytes,
+        row_count=expected_rows,
+        bundle_root=bundle,
+    ) as stream:
+        before = os.fstat(stream.fileno())
+        if before.st_size != expected_bytes:
+            raise SampleError("bounded source dimensions mismatch")
         while line := stream.readline(MAX_LINE_BYTES + 1):
             if len(line) > MAX_LINE_BYTES or offset + len(line) > expected_bytes:
                 raise SampleError("source line/byte limit exceeded")
@@ -253,15 +266,17 @@ def _rows(root, bundle, artifact):
             }
             offset += len(line)
             yield row, locator
-    after = path.stat()
-    if (
-        count != expected_rows
-        or offset != expected_bytes
-        or digest.hexdigest() != artifact["checksum"]
-        or (before.st_ino, before.st_size, before.st_mtime_ns)
-        != (after.st_ino, after.st_size, after.st_mtime_ns)
-    ):
-        raise SampleError("source integrity/identity changed")
+        # Check the actual opened representation's pathname too, preserving the
+        # inline atomic-replacement guard without statting an archived original.
+        after = Path(stream.name).stat()
+        if (
+            count != expected_rows
+            or offset != expected_bytes
+            or digest.hexdigest() != artifact["checksum"]
+            or (before.st_ino, before.st_size, before.st_mtime_ns)
+            != (after.st_ino, after.st_size, after.st_mtime_ns)
+        ):
+            raise SampleError("source integrity/identity changed")
 
 
 def _artifact(manifest, role):

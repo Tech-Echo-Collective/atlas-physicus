@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import BinaryIO, cast
 
+from ..storage.historical_read import HistoricalReadError, open_artifact
 from .contracts import (
     CERTIFICATION_POLICY_VERSION,
     CertificationError,
@@ -104,6 +105,7 @@ class _ArtifactEntry:
     checksum: str
     byte_count: int
     row_count: int | None
+    bundle_root: Path
 
 
 def _canonical_json(value: object, *, pretty: bool = False) -> bytes:
@@ -202,6 +204,7 @@ def _artifact_entries(
                 checksum=checksum,
                 byte_count=byte_count,
                 row_count=row_count,
+                bundle_root=resolved_root,
             )
         )
         roles.add(role)
@@ -218,7 +221,14 @@ def _verify_artifact(entry: _ArtifactEntry) -> None:
     byte_count = 0
     row_count = 0
     try:
-        with entry.path.open("rb") as stream:
+        with open_artifact(
+            entry.path,
+            role=entry.role,
+            checksum=entry.checksum,
+            byte_count=entry.byte_count,
+            row_count=entry.row_count,
+            bundle_root=entry.bundle_root,
+        ) as stream:
             if entry.row_count is None:
                 while chunk := stream.read(1024 * 1024):
                     digest.update(chunk)
@@ -229,7 +239,7 @@ def _verify_artifact(entry: _ArtifactEntry) -> None:
                     byte_count += len(raw_line)
                     if raw_line.strip():
                         row_count += 1
-    except OSError as error:
+    except (OSError, HistoricalReadError) as error:
         raise CertificationError(
             f"replay artifact cannot be read: {entry.relative_path}"
         ) from error
@@ -246,7 +256,14 @@ def _verify_artifact(entry: _ArtifactEntry) -> None:
 def _rows(entry: _ArtifactEntry) -> Iterator[dict[str, object]]:
     count = 0
     try:
-        with entry.path.open("rb") as stream:
+        with open_artifact(
+            entry.path,
+            role=entry.role,
+            checksum=entry.checksum,
+            byte_count=entry.byte_count,
+            row_count=entry.row_count,
+            bundle_root=entry.bundle_root,
+        ) as stream:
             for raw_line in stream:
                 if not raw_line.strip():
                     continue
@@ -260,7 +277,7 @@ def _rows(entry: _ArtifactEntry) -> Iterator[dict[str, object]]:
                     raise CertificationError("replay JSONL rows must be objects")
                 count += 1
                 yield cast(dict[str, object], row)
-    except OSError as error:
+    except (OSError, HistoricalReadError) as error:
         raise CertificationError(
             f"replay artifact cannot be read: {entry.relative_path}"
         ) from error

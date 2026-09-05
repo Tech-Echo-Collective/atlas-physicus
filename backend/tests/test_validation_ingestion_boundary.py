@@ -26,6 +26,12 @@ from physics_atlas_api import (
 from physics_atlas_api.certification import staging
 from physics_atlas_api.config import Settings
 from physics_atlas_api.connectors.base import ConnectorBatch, SourceConnector
+from physics_atlas_api.storage import (
+    affiliation_archive,
+    historical_authority,
+    historical_decision_archive,
+    historical_read,
+)
 
 SOURCE_ROOT = Path(__file__).resolve().parents[1] / "src"
 VALIDATION_MODULES = {
@@ -34,6 +40,15 @@ VALIDATION_MODULES = {
     "physics_atlas_api.replay_certification",
     "physics_atlas_api.storage.compact",
     "physics_atlas_api.historical_replay_materialization",
+}
+# These are passively imported by the existing certification export shim. Their
+# internal restore calls are implementation edges, not worker execution. Calls
+# into them from production modules are checked below, including aliased imports.
+ARCHIVE_IMPLEMENTATION_MODULES = {
+    "physics_atlas_api.storage.affiliation_archive",
+    "physics_atlas_api.storage.historical_authority",
+    "physics_atlas_api.storage.historical_decision_archive",
+    "physics_atlas_api.storage.historical_read",
 }
 REPLAY_GENERATORS = {
     "certify_replay_bundle",
@@ -65,6 +80,14 @@ FORBIDDEN_CALLS = {
     "compact_historical_artifact.restore_archive",
     "resolve_historical_artifact.resolve_historical_artifact",
     "prove_historical_artifact_resolution.run",
+    "physics_atlas_api.storage.affiliation_archive.create_archive",
+    "physics_atlas_api.storage.affiliation_archive.adopt_archive",
+    "physics_atlas_api.storage.affiliation_archive.restore_archive",
+    "physics_atlas_api.storage.historical_authority.resolve_historical_artifact",
+    "physics_atlas_api.storage.historical_decision_archive.create_archive",
+    "physics_atlas_api.storage.historical_decision_archive.restore_archive",
+    "physics_atlas_api.storage.historical_read.open_artifact",
+    "physics_atlas_api.storage.historical_read.read_artifact",
 }
 
 
@@ -130,9 +153,9 @@ def test_production_import_closure_does_not_invoke_validation_generators() -> No
             # Importing a submodule executes its parent package initializers too.
             parts = dependency.split(".")
             pending.extend(".".join(parts[:end]) for end in range(1, len(parts) + 1))
-        if module in VALIDATION_MODULES:
-            # The known staging implementation is loaded by its export shim;
-            # its own internal calls are not production execution edges.
+        if module in VALIDATION_MODULES | ARCHIVE_IMPLEMENTATION_MODULES:
+            # Passive offline implementations can be loaded by an export shim;
+            # their own internal calls are not production execution edges.
             continue
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
@@ -154,6 +177,14 @@ def test_production_import_closure_does_not_invoke_validation_generators() -> No
         "from .storage.compact import compact_decisions as compact\ncompact()",
         "from .historical_replay_materialization import "
         "materialize_historical_replay as replay\nreplay()",
+        "from .storage.affiliation_archive import create_archive as compress\n"
+        "compress()",
+        "from .storage import affiliation_archive as cold\ncold.adopt_archive()",
+        "from .storage.historical_authority import resolve_historical_artifact as "
+        "resolve\nresolve()",
+        "from .storage import historical_decision_archive as ledger\n"
+        "ledger.restore_archive()",
+        "from .storage.historical_read import open_artifact as read\nread()",
     ],
 )
 def test_static_boundary_recognizes_aliased_generator_calls(source: str) -> None:
@@ -201,6 +232,14 @@ def test_mocked_production_worker_cycle_has_no_verbose_artifact_output(
         "_write_jsonl_artifact_streaming",
     ):
         monkeypatch.setattr(historical_replay_materialization, name, forbidden)
+    for module, names in (
+        (affiliation_archive, ("create_archive", "adopt_archive", "restore_archive")),
+        (historical_decision_archive, ("create_archive", "restore_archive")),
+        (historical_authority, ("resolve_historical_artifact",)),
+        (historical_read, ("open_artifact", "read_artifact")),
+    ):
+        for name in names:
+            monkeypatch.setattr(module, name, forbidden)
 
     # This mock tracks ORM objects without creating a connection or executing SQL.
     objects: dict[tuple[type, str], object] = {}

@@ -1,4 +1,4 @@
-"""Bounded affiliation-only archive experiment; originals never become optional.
+"""Bounded affiliation-only archive experiment; authority is selected separately.
 
 Uses the existing ArtifactRef/FilesystemArtifactStore, not a new authority
 resolver. An archive proves recovery of a selected exact JSONL stream, not
@@ -12,6 +12,7 @@ import gzip
 import hashlib
 import io
 import json
+import os
 import zlib
 from collections import Counter, defaultdict
 from dataclasses import asdict
@@ -23,6 +24,7 @@ from physics_atlas_api.certification.validation_artifacts import (
     require_validation_runtime,
 )
 from physics_atlas_api.storage import ArtifactRef, FilesystemArtifactStore, StorageTier
+from physics_atlas_api.storage.historical_read import open_artifact
 from physics_atlas_api.storage.validation_retention import (
     check_validation_reservation_output,
     preflight_validation_retention,
@@ -155,20 +157,20 @@ def select_source(source, source_manifest, manifest_sha256, paper_ids=None):
         raise ValueError("manifest must bind exactly one affiliation artifact")
     entry = entries[0]
     root = source_manifest.resolve().parent.parent
-    if source.is_symlink() or (root / entry["path"]).resolve() != source.resolve():
+    recorded_source = Path(os.path.abspath(source))
+    if Path(os.path.abspath(root / entry["path"])) != recorded_source:
         raise ValueError("affiliation source differs from the exact manifest path")
-    if not source.resolve().is_relative_to(root):
+    if not recorded_source.is_relative_to(root):
         raise ValueError("affiliation source escapes manifest root")
     if (
-        source.stat().st_size != entry["byte_count"]
-        or source.stat().st_size > MAX_SOURCE_BYTES
+        type(entry["byte_count"]) is not int
+        or not 0 < entry["byte_count"] <= MAX_SOURCE_BYTES
     ):
         raise ValueError("affiliation source size mismatch or source limit exceeded")
     if paper_ids is not None:
         check_validation_size(paper_count=len(paper_ids))
         if not paper_ids:
             raise ValueError("empty selected paper set")
-    before = source.stat()
     digest = hashlib.sha256()
     parts = []
     selected_bytes = 0
@@ -176,7 +178,20 @@ def select_source(source, source_manifest, manifest_sha256, paper_ids=None):
     row_count = 0
     locators = []
     offset = 0
-    with source.open("rb") as stream:
+    with open_artifact(
+        recorded_source,
+        role=entry["role"],
+        checksum=entry["checksum"],
+        byte_count=entry["byte_count"],
+        row_count=entry["row_count"],
+        bundle_root=root,
+    ) as stream:
+        physical_source = Path(stream.name)
+        before = physical_source.stat()
+        if before.st_size != entry["byte_count"]:
+            raise ValueError(
+                "affiliation source size mismatch or source limit exceeded"
+            )
         while line := stream.readline(MAX_BYTES + 1):
             if len(line) > MAX_BYTES:
                 raise ValueError("oversized affiliation line")
@@ -209,13 +224,13 @@ def select_source(source, source_manifest, manifest_sha256, paper_ids=None):
                     }
                 )
             offset += len(line)
-    after = source.stat()
-    if (before.st_size, before.st_mtime_ns, before.st_ino) != (
-        after.st_size,
-        after.st_mtime_ns,
-        after.st_ino,
-    ):
-        raise ValueError("affiliation source changed during selection")
+        after = physical_source.stat()
+        if (before.st_size, before.st_mtime_ns, before.st_ino) != (
+            after.st_size,
+            after.st_mtime_ns,
+            after.st_ino,
+        ):
+            raise ValueError("affiliation source changed during selection")
     if digest.hexdigest() != entry["checksum"] or row_count != entry["row_count"]:
         raise ValueError("affiliation source hash/row count differs")
     if paper_ids is not None and seen != paper_ids:
