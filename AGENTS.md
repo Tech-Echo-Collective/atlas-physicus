@@ -5,6 +5,12 @@ historical names, repository/package/schema identifiers, service names,
 environment variables, deployment URLs, and release tags unchanged unless a
 separate task explicitly authorizes their migration.
 
+The nominal 5 GB storage budget covers **all persistent Atlas data combined**:
+PostgreSQL, archives, required history/metadata and retained backups/copies.
+Externalizing bytes is not total savings unless the representation is smaller.
+Report ephemeral/peak workspace separately; never call retained history free.
+See PA-048 and the current total-storage review before planning migration/load.
+
 Before any major implementation, architecture, deployment, or release task, read these files in order:
 
 1. `docs/PROJECT_STATE.md` — factual current state and immediate task;

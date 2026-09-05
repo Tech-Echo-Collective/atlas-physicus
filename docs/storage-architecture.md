@@ -10,6 +10,24 @@ does not treat PostgreSQL as an archive for every immutable provider response.
 This distinction is required for reproducibility and for safe operation within
 the current Railway volume.
 
+## Combined persistent budget
+
+PA-048 fixes the nominal budget at approximately **5 GB total persistent Atlas
+data**, including PostgreSQL, warm/cold artifacts, required snapshots/citation
+history, provenance/restore metadata and retained backup/replica copies. An
+external store has its own disclosed capacity/cost but is not free extra budget.
+Report hot DB savings separately from true combined savings. Ephemeral processing
+has a separate peak; existing retained history is not ephemeral by default.
+
+The [production design/total-storage review](validation/production-storage-design-review-2026-09-05.md)
+counts a 474-paper closed evidence envelope at 50.941 MB inline versus 35.990 MB
+reference-layout total (29.35% less), not the 54.98% DB-only saving. Retained local
+evidence already totals 16.248 GB before production, so the observed total-budget
+result is **FAIL**. This is not a claim that Railway itself is full. The future
+complete production-layout assessment remains **WITHHELD**; migration execution
+is **NO-GO** until representation, independent operational restore and total peak
+costs are verified. No production schema or payload was changed.
+
 ## Target tiers
 
 ### Hot — PostgreSQL target state
@@ -103,6 +121,14 @@ capacity rather than a plan label and requires:
    index build, or rewrite working set, at or below 80% of capacity;
 6. checksum-verifiable references for every externalized required artifact;
 7. a demonstrated backup and restore path.
+
+These volume-oriented inputs are necessary but insufficient for PA-048. A new
+approval must explicitly bind a deduplicated cross-store inventory and all
+required persistent costs, including archives and backup/retention generations.
+The nominal combined limits are 3 GB steady and 4 GB peak after the existing
+25% contingency; actual individual-volume limits still apply. The current generic
+projected-byte fields/flags do not themselves demonstrate this completeness.
+This design review does not reinterpret older attestations or change gate code.
 
 The projection is also bound to a content-addressed target-population manifest
 (population ID, exact canonical-paper count, and digest of the paper-ID set).

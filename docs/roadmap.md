@@ -133,8 +133,13 @@ projections do not pass the latter; no object-store deployment, production
 payload migration, or wider load is implied. The bounded September 5
 [storage investigation](validation/storage-amplification-2026-09-05.md) validates
 compact decision storage, not production compaction or a safe larger capacity.
-Next is a one-batch additive artifact-reference/dual-read and isolated-restore
-pilot before any representative final-schema staging load is considered.
+One-batch private dual-read/rollback and same-host archive-only dependency proofs
+now pass. The [production schema/reader plan and total-budget review](validation/production-storage-design-review-2026-09-05.md)
+remain design-only: no production migration is ready. PA-048 counts all persistent
+Atlas data within the nominal 5 GB budget; retained local history already exceeds
+it. Next is reviewed lossless history compaction/retention and isolated testing
+of the proposed production representation, durable restore and complete peak
+costs—not payload deletion or a broader load.
 
 Remaining scientific and operational gates are:
 

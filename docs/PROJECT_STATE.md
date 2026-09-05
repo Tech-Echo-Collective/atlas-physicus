@@ -26,6 +26,12 @@ documentation.
 - Public live observations for Activity, Impact, Connectivity, Diversity, and
   Momentum remain jointly withheld. Missing evidence is not displayed as
   zero, and no partial activation is allowed.
+- PA-048: the nominal **5 GB budget covers all persistent Atlas data combined**,
+  including archives, history, metadata and retained copies—not PostgreSQL only.
+  Current retained local evidence alone is 16.248 GB: observed total-budget
+  **FAIL**. Production migration execution is **NO-GO**; a future representative
+  final-layout capacity assessment remains **WITHHELD**. No history is deleted
+  or scientific policy weakened to fit the budget.
 
 ## Operated system
 
@@ -74,7 +80,7 @@ documentation.
 
 ## Production health
 
-Read-only verification on 2026-09-05 at `02:07:55Z` found:
+Read-only verification on 2026-09-05 at `02:26:03Z` found:
 
 - runtime `3.0.5-alpha` and database health both healthy;
 - INSPIRE and arXiv healthy with zero consecutive failures and September 4
@@ -186,6 +192,25 @@ are retained; this is not a production ORM migration or measured storage saving.
 Durable independent restore and production-compatible reader/schema review
 remain required before any inline retirement.
 
+The subsequent [production storage design review](validation/production-storage-design-review-2026-09-05.md)
+defines an additive mode/descriptor on existing snapshot/raw rows, shared archive
+locators and explicit fail-closed precedence; no production adapter/DDL was
+implemented. It additionally proves same-host **archive-only dependency recovery**:
+OS-denied original evidence, DB files and network; 449 recovered inputs reproduce
+all ten artifacts and 9,999 decisions exactly. Independent-host archive durability,
+production JSONB/ORM recovery, worker crash/uncertain-commit handling and total
+retention/backup/WAL peaks remain unproven.
+
+Counting exact source archives plus retained scientific artifacts/metadata changes
+the 474-paper evidence envelope from **50.941 MB to 35.990 MB total**, a 29.35%
+modeled total reduction versus 54.98% DB-only. This is not the proposed final
+production schema or reclaimed disk. A metadata-only inventory found 5,348 local
+evidence files / **16,247,696,733 logical bytes**, dominated by Condensed Matter
+raw/replay/certification history; none was deleted or casually labeled temporary.
+Known-component 10k-paper hybrid scaling reaches 3.333 GB with contingency,
+already above the nominal 3 GB steady limit, before unmeasured required costs.
+The total-budget FAIL does not mean the healthy Railway volume is full.
+
 ## Track A — `hep-th-v1` evidence
 
 The immutable 2026-08-31 source and canonical-replay reports remain the source
@@ -295,6 +320,13 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Repository validation state
 
+- The production storage design review changes documentation only. 85 focused
+  existing storage/budget/recovery tests pass (1.02s); OS-isolated archive-only
+  recovery and the separate post-recovery hash comparison pass. Baseline source
+  `d4859c5` passed [CI 33938302268](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33938302268).
+  No new provider calls, production database connection, schema migration or
+  frontend changes were needed. Exact evidence hashes and limits are in the
+  [review](validation/production-storage-design-review-2026-09-05.md).
 - The staging dual-read/rollback proof passes 130 focused backend tests,
   focused Ruff lint/format and strict mypy (80 source files). Native private
   PostgreSQL recovery/certification equivalence and all seven injected failures
@@ -338,10 +370,12 @@ authorized**. The exact gate input and output are preserved in the
 
 Perform only reviewed evidence work for canonical dates, researcher identities, fields,
 institution targets/rollups, common-cutoff cohort populations, and complete
-historical windows. The smallest storage action is to review a one-batch
-production-compatible schema/reader plan and durable archive retention plus
-independent restore requirements, building on the completed private staging
-dual-read/rollback proof. Keep production inline data until separately approved
-archive write/read-back, transactional checkpoint, restore, and rollback checks
-pass. A later representative final-schema measurement is still required. Both
-gates remain withheld; Full Physics loading and v3.1 remain unauthorized.
+historical windows. The production-compatible reader/schema and twelve-stage
+one-batch pilot plan are now documented, not implemented or approved to execute.
+First review lossless history compaction/retention against the combined budget,
+starting with one existing artifact and exact original-hash restore proof; do
+not delete originals. Then rehearse the proposed production JSONB representation,
+independent operational restore and full archive/backup peak in isolation.
+Production inline data stays intact. The observed retained total-budget result
+is FAIL; future final-layout and scientific activation evidence remain withheld.
+Full Physics loading and v3.1 remain unauthorized.

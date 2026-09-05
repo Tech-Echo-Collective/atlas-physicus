@@ -7,6 +7,35 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-05 — Production storage design and combined 5 GB budget
+
+- PA-048 clarifies the budget includes PostgreSQL, archives, required history,
+  provenance/restore metadata and persistent copies. The current local evidence
+  inventory alone is 5,348 files / 16.248 GB; nothing was deleted or silently
+  called ephemeral. Observed total-budget **FAIL**; future final-schema assessment
+  **WITHHELD**; production migration execution **NO-GO**. Railway remains healthy.
+- Defined the minimum additive mode/descriptor plan on existing snapshot/raw
+  rows, explicit read precedence, legacy JSONB/checksum compatibility, checkpoint
+  and uncertain-commit safeguards, and a twelve-stage one-batch pilot/rollback
+  plan. No production code, schema, payload, tag or scientific policy changed.
+- A fresh copied archive/catalog kit recovered the same 474-paper batch with OS
+  denial of original evidence, PostgreSQL files and network. All ten scientific
+  hashes, 9,999 decisions and 1,033 provenance references match. This proves local
+  archive-only dependency, not independent-host durability or production ORM
+  recovery. The extra 39.27 MB working copy is reported, not counted as savings.
+- Exact closed pilot envelope: 50.941 → 35.990 MB total, **29.35% savings** versus
+  54.98% DB-only. Retain scientific outputs and proof/history metadata; no unproven
+  compact-certification subtraction. Measured-component 10k/50k/100k/250k scenarios
+  and unknown costs are in the [design review](validation/production-storage-design-review-2026-09-05.md).
+- Validation: 85 focused tests pass (1.02s), independent recovery/comparison and
+  bounded checksum accounting pass. Baseline `d4859c5` passed
+  [CI 33938302268](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33938302268).
+  At `02:26:03Z`, production API/DB/providers remain healthy, cursors unchanged,
+  public observations zero; known DOI 404 and 440 unresolved identities remain.
+  Only documentation is changed for publication. Next: review lossless compaction
+  of one existing historical artifact with exact recovery, then isolated
+  production-representation/backup-peak tests; no production migration yet.
+
 ## 2026-09-05 — Staging dual-read/rollback and Atlas Physica name
 
 - Reused the same 474-paper/635-occurrence batch, with 449 original-byte catalog
