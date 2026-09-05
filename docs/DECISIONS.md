@@ -1,11 +1,11 @@
-# Atlas Physica durable decisions
+# Atlas Physicus durable decisions
 
 Last reviewed: 2026-09-05
 
 These decisions constrain implementation and public communication. Add a dated superseding entry when a durable decision changes; do not silently rewrite project history.
 
 Earlier entries retain the historical name Physics Atlas; their scientific and
-architectural constraints continue to apply to Atlas Physica.
+architectural constraints continue to apply to Atlas Physicus.
 
 | ID | Decision | Consequence |
 | --- | --- | --- |
@@ -69,6 +69,18 @@ archive recovery does not grant scientific certification, production migration o
 automatic original-retirement permission. The initial implementation is limited
 to the corrected decision-ledger contract; see the
 [resolver proof](validation/artifact-resolver-2026-09-05.md).
+
+## Project-family naming — 2026-09-05
+
+**PA-050:** Atlas Physicus is the canonical product name within **Tech Echo
+Physica**, alongside Illuminatio Physica and Theatrum Physicum. This supersedes
+the naming portion of PA-047. The primary GitHub repository and frontend package
+are `atlas-physicus`; current source links use that identifier. Preserve historical
+release records, scientific provenance/schema/artifact identifiers, installed
+backend package/import/CLI names, service/database/volume/environment identifiers,
+and production API URLs to avoid breaking operated integrations. The separate
+Web deployment remains independently versioned and pins an exact source commit.
+See the [deployment compatibility audit](production-deployment.md#naming-and-deployment-compatibility).
 
 ## Current activation decision
 

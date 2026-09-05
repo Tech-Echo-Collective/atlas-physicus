@@ -87,7 +87,7 @@ def execute_once(
 
 def run() -> None:
     parser = argparse.ArgumentParser(
-        description="Physics Atlas incremental update worker"
+        description="Atlas Physicus incremental update worker"
     )
     parser.add_argument(
         "--source",

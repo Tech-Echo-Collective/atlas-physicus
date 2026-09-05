@@ -2,7 +2,7 @@
 
 ## Purpose and status
 
-Atlas Physica uses a canonical scientific knowledge graph to connect source evidence to institutions, researchers, papers, fields, affiliations, authorships, groups, places, metrics, and external resources. The graph exists to support transparent exploration; it is not a university or researcher ranking, recommendation engine, or claim that source coverage is complete.
+Atlas Physicus uses a canonical scientific knowledge graph to connect source evidence to institutions, researchers, papers, fields, affiliations, authorships, groups, places, metrics, and external resources. The graph exists to support transparent exploration; it is not a university or researcher ranking, recommendation engine, or claim that source coverage is complete.
 
 v3.0.4-alpha adds a persistent PostgreSQL representation and FastAPI read layer alongside the preserved validated static and pilot graph. PostgreSQL is a relational graph store for the current query shapes. A separate graph database is not justified yet.
 

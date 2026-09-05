@@ -147,7 +147,7 @@ No new map behavior, scientific layer or metric observation is enabled.
   diagnosed one resource failure. Public `/api/metric-observations` returns
   `total: 0`. No production payload was migrated or deleted.
 - Source commit `1601b7e` passed
-  [CI 33937979974](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33937979974),
+  [CI 33937979974](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33937979974),
   including all 452 backend fixture tests, PostgreSQL/API/worker and containers.
   Web commit `14ff4df` pins that source and passed
   [Pages build/deploy 33938111627](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/33938111627):

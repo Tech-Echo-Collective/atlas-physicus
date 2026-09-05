@@ -317,7 +317,7 @@ Do not proceed directly to production payload migration.
 85 focused existing storage/recovery/dual-read/rollback/certification/budget tests
 pass (1.02s). The independent archive-only test above is additional. No application,
 schema, metric or deployment code changed; no frontend rebuild is required locally.
-Baseline source [CI 33938302268](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33938302268)
+Baseline source [CI 33938302268](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33938302268)
 is green, including PostgreSQL/API/worker/container checks. The documentation
 commit will run the same CI; final publication status is reported with the task.
 

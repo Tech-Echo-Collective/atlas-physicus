@@ -2,7 +2,7 @@
 
 ## Source policy
 
-Physics Atlas prefers official APIs, stores source provenance, and separates provider metadata from canonical interpretation. A source record is evidence to resolve, not permission to copy all provider content or proof that an entity match is correct. Code is licensed under the repository license; upstream data and linked content retain their own terms.
+Atlas Physicus prefers official APIs, stores source provenance, and separates provider metadata from canonical interpretation. A source record is evidence to resolve, not permission to copy all provider content or proof that an entity match is correct. Code is licensed under the repository license; upstream data and linked content retain their own terms.
 
 Production operators must review current provider documentation before enabling ingestion because API terms, schemas, and limits can change.
 
@@ -151,8 +151,8 @@ label. See [Physics Field Ontology v1](field-ontology.md).
 
 ## Freshness and limitations
 
-Physics Atlas describes provider-backed operation as continuously refreshed or near-real-time metadata, never as realtime scientific truth. The effective update time is visible through `/api/updates/status` and depends on provider publication cadence, service limits, worker uptime, retries, and identity review.
+Atlas Physicus describes provider-backed operation as continuously refreshed or near-real-time metadata, never as realtime scientific truth. The effective update time is visible through `/api/updates/status` and depends on provider publication cadence, service limits, worker uptime, retries, and identity review.
 
 INSPIRE pagination uses closed, inclusive `YYYY-MM-DD` windows. arXiv uses closed, minute-resolution `submittedDate` windows for new submissions. ROR checkpoints progress through the explicit configured target list. A persisted page checkpoint is resumed immediately after interruption, and the source high-water cursor moves to `until` only after the last page succeeds. Inclusive boundary replays are made safe by scope-aware content-addressed snapshots and identifier-led upserts. Cursor scope/version metadata and the dataset-level corpus marker prevent checkpoints or existing broad records from being silently reused by a different acquisition policy.
 
-The connectors are a production-oriented foundation, not a complete global corpus. In particular, the arXiv Query API `submittedDate` path does not guarantee complete discovery of later revisions; a reviewed OAI-PMH or equivalent revision strategy remains future work. Coverage bias, missing affiliations, incomplete identifiers, missing publication dates, corrections, retractions, duplicate records, and delayed deposits remain possible. New papers without an explicit publication year are retained as unresolved raw evidence rather than assigned the ingestion year. INSPIRE affiliation, reference, and citation structures remain preserved in raw evidence; only relationships supported by the current authority-gated materializer become canonical graph edges. No provider supplies a scientifically validated Physics Atlas metric by itself.
+The connectors are a production-oriented foundation, not a complete global corpus. In particular, the arXiv Query API `submittedDate` path does not guarantee complete discovery of later revisions; a reviewed OAI-PMH or equivalent revision strategy remains future work. Coverage bias, missing affiliations, incomplete identifiers, missing publication dates, corrections, retractions, duplicate records, and delayed deposits remain possible. New papers without an explicit publication year are retained as unresolved raw evidence rather than assigned the ingestion year. INSPIRE affiliation, reference, and citation structures remain preserved in raw evidence; only relationships supported by the current authority-gated materializer become canonical graph edges. No provider supplies a scientifically validated Atlas Physicus metric by itself.

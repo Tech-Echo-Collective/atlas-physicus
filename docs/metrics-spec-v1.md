@@ -1,9 +1,9 @@
-# Atlas Physica Metric System v1
+# Atlas Physicus Metric System v1
 
 Status: **formulas implemented as a versioned, deterministic scientific
 framework; not scientifically validated and not active on live data**.
 
-Atlas Physica Metric System v1 contains exactly five descriptive dimensions:
+Atlas Physicus Metric System v1 contains exactly five descriptive dimensions:
 
 | ID | Dimension | Primary raw interpretation |
 | --- | --- | --- |

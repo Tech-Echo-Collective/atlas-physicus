@@ -246,7 +246,7 @@ set.
 
 ## Scientific review still required
 
-Before activation, Atlas Physica still needs representative acquisition
+Before activation, Atlas Physicus still needs representative acquisition
 coverage, sampled expert review of field mappings and historical affiliations,
 identity error analysis, citation-source bias analysis, robustness and
 sensitivity studies, uncertainty communication, external methodological review,

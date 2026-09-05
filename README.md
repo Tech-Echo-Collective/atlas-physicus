@@ -1,22 +1,26 @@
-# Atlas Physica
+# Atlas Physicus
 
-Atlas Physica is open scientific infrastructure for exploring the geographic,
+Atlas Physicus is open scientific infrastructure for exploring the geographic,
 temporal, and institutional structure of physics research ecosystems through a
 map-first interface.
 
-Atlas Physica is developed and maintained by Tech Echo Collective. The product
-was previously named Physics Atlas; repository names, technical identifiers,
-deployment URLs, and historical release records remain unchanged.
+Part of Tech Echo Physica, a Tech Echo Collective project family for exploring physics through research mapping, knowledge structures, and interactive physical systems.
+
+Atlas Physicus focuses on research mapping, alongside Illuminatio Physica for
+knowledge structures and Theatrum Physicum for interactive physical systems.
+The source repository is `atlas-physicus`. Historical names and release records
+remain intact; deployed compatibility identifiers are documented in the
+[deployment guide](docs/production-deployment.md#naming-and-deployment-compatibility).
 
 It is not a ranking, recommendation, or prediction system, and it is not a
 replacement for scholarly databases such as arXiv or INSPIRE.
 
 [Open the public Atlas](https://atlas.techecho.org/)
-· [View the source repository](https://github.com/Tech-Echo-Collective/Physics-Atlas)
+· [View the source repository](https://github.com/Tech-Echo-Collective/atlas-physicus)
 
 ## What it does
 
-Atlas Physica supports a continuous exploration path:
+Atlas Physicus supports a continuous exploration path:
 
 ```text
 Physics → research field → time → world → country → institution
@@ -129,7 +133,7 @@ and licensing.
 
 - Atlas: <https://atlas.techecho.org/>
 - Production API: <https://physics-atlas-api-production.up.railway.app/api>
-- Source: <https://github.com/Tech-Echo-Collective/Physics-Atlas>
+- Source: <https://github.com/Tech-Echo-Collective/atlas-physicus>
 
 The dedicated Atlas hostname replaces the inherited
 `https://techecho.org/Physics-Atlas-Web/` Pages path. During DNS and Pages
@@ -167,9 +171,9 @@ architecture or methodology changes.
 
 ## License and citation
 
-Atlas Physica is released under the [Apache License 2.0](LICENSE). Copyright
+Atlas Physicus is released under the [Apache License 2.0](LICENSE). Copyright
 (c) 2026 Tech Echo Collective; attribution information is preserved in
 [NOTICE](NOTICE).
 
-If Atlas Physica supports research or teaching, cite it using
+If Atlas Physicus supports research or teaching, cite it using
 [CITATION.cff](CITATION.cff).

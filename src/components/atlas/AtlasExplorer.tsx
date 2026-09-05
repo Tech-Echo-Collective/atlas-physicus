@@ -1699,7 +1699,7 @@ export function AtlasExplorer() {
         </div>
         <div>
           <p>Tech Echo Collective</p>
-          <h1>Atlas Physica</h1>
+          <h1>Atlas Physicus</h1>
         </div>
         <span
           className="alpha-badge"

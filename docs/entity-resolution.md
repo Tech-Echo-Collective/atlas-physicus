@@ -2,7 +2,7 @@
 
 ## Purpose and status
 
-Atlas Physica resolves source records before treating them as people, institutions, or papers:
+Atlas Physicus resolves source records before treating them as people, institutions, or papers:
 
 ```text
 RawEntityRecord → evidence and candidates → IdentityResolution
@@ -76,7 +76,7 @@ Researcher ── Affiliation ── Institution
 
 Each affiliation carries start/end bounds, source, confidence, and provenance. Concurrent and historical affiliations can coexist. An unknown bound remains unknown, not “all time.” A newer affiliation cannot replace an older one.
 
-Publication metadata often supports only the statement that an affiliation appeared on a paper at a point in time. Atlas Physica records that dated observation and does not inflate it into continuous employment. Historical profile and paper-attribution queries must evaluate the edge for the relevant period.
+Publication metadata often supports only the statement that an affiliation appeared on a paper at a point in time. Atlas Physicus records that dated observation and does not inflate it into continuous employment. Historical profile and paper-attribution queries must evaluate the edge for the relevant period.
 
 Metric attribution uses the separate `PaperAffiliation` materialization, which
 binds every provider author slot to its raw paper-time affiliation assertion,
@@ -134,4 +134,4 @@ Historical pilot reports remain reproducible from checked-in snapshots. Live fix
 - The alpha review queue has no operational adjudication UI or correction-approval workflow.
 - Broader ingestion needs sampled expert review, reversible merge/split procedures, and explicit conflict policy.
 
-Atlas Physica must prefer visible uncertainty and a reviewable raw record over an unsupported canonical merge.
+Atlas Physicus must prefer visible uncertainty and a reviewable raw record over an unsupported canonical merge.

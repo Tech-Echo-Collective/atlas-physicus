@@ -201,7 +201,7 @@ and database health, healthy INSPIRE/arXiv with zero consecutive failures, and
 zero public metric observations. The existing one resource-check failure and
 440 unresolved entities remain; neither is silently treated as a new pilot
 regression. Pilot commit `7c1f34c` is pushed and passed
-[CI 33936700018](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33936700018):
+[CI 33936700018](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33936700018):
 frontend lint/tests/build, backend/PostgreSQL tests/migrations/ingestion/API,
 and containerized API/worker checks. No production compaction or metric
 activation is inferred from local recovery.

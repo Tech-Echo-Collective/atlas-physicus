@@ -1,4 +1,4 @@
-# Atlas Physica project state
+# Atlas Physicus project state
 
 Last reviewed: 2026-09-05
 
@@ -11,12 +11,15 @@ documentation.
 
 ## Release and scope
 
-- Canonical public/product name: **Atlas Physica**, formerly Physics Atlas
-  (PA-047, 2026-09-05). Atlas Physica is developed and maintained by Tech Echo
-  Collective. Repository, package, schema, service, environment, provenance,
-  URL/domain, and release identifiers remain unchanged.
+- Canonical public/product name: **Atlas Physicus**, part of **Tech Echo
+  Physica** (PA-050, superseding the naming portion of PA-047). The primary
+  repository and frontend package are `atlas-physicus`. Historical records,
+  deployed backend/package/CLI/environment/database identifiers, scientific
+  provenance, production URLs and release tags remain unchanged. The current
+  naming source changes do not by themselves prove a completed deployment; see
+  the [compatibility audit](production-deployment.md#naming-and-deployment-compatibility).
 - Current release: `v3.0.5-alpha`; the annotated tag remains at `b1974d2`.
-- Source branch: `main` in `Tech-Echo-Collective/Physics-Atlas`.
+- Source branch: `main` in `Tech-Echo-Collective/atlas-physicus`.
 - The active phase is post-release **Stabilization & Scientific Validation**
   for Metric System v1. It does not change the release tag, begin v3.1, or
   authorize a Full Physics load.
@@ -387,20 +390,20 @@ authorized**. The exact gate input and output are preserved in the
 - The verified local cleanup changes documentation only. Nine removed paths
   have fresh checksum/retained-source checks and explicit receipts; original
   evidence, archive and historical manifest hashes are preserved. Baseline
-  `0944968` passed [CI 33940584417](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33940584417).
+  `0944968` passed [CI 33940584417](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33940584417).
   Documentation whitespace/link checks pass. No Railway access, scientific replay,
   new compression trial, application/schema change or tag change occurred.
 - The local retention review adds only a bounded standalone archival helper,
   fixture tests and documentation. 97 focused tests and changed-file Ruff pass;
   the real one-file lossless restore passes. Baseline `32b3f4b` passed
-  [CI 33939682265](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33939682265).
+  [CI 33939682265](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33939682265).
   Complete hashes, accounting and limitations are in the
   [local report](validation/local-evidence-retention-2026-09-05.md). Railway was
   not contacted in this local-only task; production code/schema remain unchanged.
 - The production storage design review changes documentation only. 85 focused
   existing storage/budget/recovery tests pass (1.02s); OS-isolated archive-only
   recovery and the separate post-recovery hash comparison pass. Baseline source
-  `d4859c5` passed [CI 33938302268](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33938302268).
+  `d4859c5` passed [CI 33938302268](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33938302268).
   No new provider calls, production database connection, schema migration or
   frontend changes were needed. Exact evidence hashes and limits are in the
   [review](validation/production-storage-design-review-2026-09-05.md).
@@ -411,7 +414,7 @@ authorized**. The exact gate input and output are preserved in the
   pipeline tests and production build pass. See the
   [staging report](validation/staging-dual-read-2026-09-05.md) for scope and
   proof limitations. Source commit `1601b7e` is pushed and passed
-  [CI 33937979974](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33937979974),
+  [CI 33937979974](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33937979974),
   including all 452 backend fixture tests, PostgreSQL migrations/API/worker
   and container checks. No production payload integration was enabled.
 - The one-batch payload-reference pilot passes 123 focused tests (2.82s), Ruff
@@ -419,25 +422,25 @@ authorized**. The exact gate input and output are preserved in the
   PostgreSQL SQL-to-cold recovery verifies all 3,179 paper/author-fragment
   locators and unchanged hot metadata; independent restored sources reproduce
   all certification artifacts exactly. Commit `7c1f34c` is pushed and passed
-  [CI 33936700018](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33936700018)
+  [CI 33936700018](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33936700018)
   (frontend, backend/PostgreSQL and containers). Exact measurements
   and limitations are in the [payload recovery report](validation/payload-reference-recovery-2026-09-05.md).
 - The bounded storage investigation passes all 398 backend tests, strict mypy
   (78 source files), and Ruff format/lint (119 files, including tools). Native
   PostgreSQL SQL/archive recovery and bounded local provenance verification
   pass. Commit `c88f9b9` is pushed and passed
-  [CI 33935510006](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33935510006)
+  [CI 33935510006](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33935510006)
   (frontend, backend/PostgreSQL and containers). No frontend code changed. Exact results and
   limits are in the [storage report](validation/storage-amplification-2026-09-05.md).
 - Certification/capacity result commit `be5e304` is pushed to `main` and passed
-  [CI 33932839622](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33932839622),
+  [CI 33932839622](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33932839622),
   including frontend, backend/PostgreSQL, and containerized API/worker checks.
   Frontend type checking, lint, 130 Vitest tests,
   seven pipeline tests, and production build pass. Backend Ruff format/lint,
   strict mypy, and all 376 pytest tests pass with one existing dependency
   deprecation warning and the existing non-blocking frontend chunk-size warning.
 - The bounded dual-track result is commit `5e3ba1f`; it passed GitHub Actions
-  run [33884017132](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33884017132),
+  run [33884017132](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33884017132),
   including frontend, backend/PostgreSQL, and containerized API/worker jobs.
 - Post-push production checks confirm healthy service/database status, expected
   public-origin CORS, healthy INSPIRE/arXiv cursors, and zero public metric

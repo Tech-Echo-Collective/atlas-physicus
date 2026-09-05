@@ -5,7 +5,7 @@ Status: implemented foundation; production migration deferred
 Policy version: `scientific-evidence-storage-policy-v1`
 Last reviewed: 2026-09-05
 
-Atlas Physica keeps PostgreSQL for canonical, queryable scientific state. It
+Atlas Physicus keeps PostgreSQL for canonical, queryable scientific state. It
 does not treat PostgreSQL as an archive for every immutable provider response.
 This distinction is required for reproducibility and for safe operation within
 the current Railway volume.

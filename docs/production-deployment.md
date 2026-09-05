@@ -1,5 +1,39 @@
 # Production deployment runbook
 
+## Naming and deployment compatibility
+
+Atlas Physicus is the research-mapping project in Tech Echo Physica. Its primary
+GitHub repository and frontend npm package are `atlas-physicus`. Repository URLs
+and the Web submodule source point directly to that name. GitHub links to old
+commits, releases and Actions runs also use the canonical repository name; their
+resource IDs and historical prose remain unchanged. Sealed scientific fixtures,
+capture outputs and manifests are preserved byte-for-byte; none contain an old
+GitHub repository URL that needs an exception.
+
+The following identifiers intentionally remain compatible with the operated
+system:
+
+- `physics-atlas-api`, `physics_atlas_api` and `physics-atlas-*` Python commands:
+  installed distribution/import names and Docker, worker and CI entry points.
+- `PHYSICS_ATLAS_*`, `VITE_ATLAS_API_URL`, PostgreSQL names, Compose project and
+  volume names, backup paths and Railway service identifiers: existing settings,
+  persistent storage and recovery procedures depend on them.
+- `physics-atlas-metric-system-v1`, `physics-atlas-artifact://`, payload media
+  types, fixture IDs and stored source/provenance strings: changing them would
+  alter scientific or serialized contracts and invalidate retained evidence.
+- The Railway HTTPS API hostname, `https://atlas.techecho.org/`, its CNAME and
+  approved CORS origins: a GitHub name change does not rename hosted endpoints.
+- Existing version/release tags and historical pilot user-agent/metadata strings:
+  they identify the original reproducible release or capture.
+
+Deployment order: rename the primary GitHub repository, commit and push its
+validated source, then advance the Web submodule to that exact commit and deploy
+the wrapper. Confirm Railway's existing GitHub source integration tracks the
+renamed repository and branch; do not replace its services, database or volume.
+Verify API health, OpenAPI display identity, public Atlas/root/deep routes, Pages
+source and the unchanged CORS/API settings after deployment. Local source changes
+alone do not establish that those operated checks have passed.
+
 ## Status and safety boundary
 
 The operated production path uses Railway-managed PostgreSQL, a Railway FastAPI
@@ -34,7 +68,7 @@ have settled.
 
 ## Configure and start the API
 
-On the production host, from a reviewed Physics Atlas checkout:
+On the production host, from a reviewed Atlas Physicus checkout:
 
 ```bash
 cp .env.production.example .env.production
@@ -94,7 +128,7 @@ activating a metric layer.
 
 Railway uses the same backend image and safety boundary, but replaces the
 single-host PostgreSQL and Caddy services with managed PostgreSQL and Railway's
-TLS edge. Create two services from `Tech-Echo-Collective/Physics-Atlas` on
+TLS edge. Create two services from `Tech-Echo-Collective/atlas-physicus` on
 `main`: one API and one worker. Keep the source root at the repository root
 because `backend/Dockerfile` copies both backend files and the Atlas reference
 dataset. Set `RAILWAY_DOCKERFILE_PATH=backend/Dockerfile` on both services.

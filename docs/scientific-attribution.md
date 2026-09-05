@@ -5,7 +5,7 @@ metrics**.
 
 Policy implementation: `fractional-attribution-v1`.
 
-This policy defines how Atlas Physica connects a paper to researchers,
+This policy defines how Atlas Physicus connects a paper to researchers,
 institutions, and countries. It is a conservative evidence-allocation policy,
 not a claim about intellectual contribution, authorship importance, research
 quality, or institutional ownership.

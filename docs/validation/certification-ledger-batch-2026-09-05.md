@@ -1,7 +1,7 @@
 # Atlas Physica — bounded certification-ledger archive batch
 
 2026-09-05. Starting `main` commit `5760524` was revalidated, pushed before this
-batch and passed [CI 33945043808](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33945043808).
+batch and passed [CI 33945043808](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33945043808).
 **Nine candidates; one retired; eight retained.** No shared archive/resolver
 defect, new archive format, scientific policy change, acquisition, Railway access,
 scientific replay, other-class processing or metric activation occurred.

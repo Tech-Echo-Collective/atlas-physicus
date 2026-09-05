@@ -253,6 +253,6 @@ regressions; strict mypy passes 78 source files and Ruff formatting/lint passes
 warning remains. At `2026-09-05T00:56:21.780483Z`, production API/database were
 healthy; INSPIRE/arXiv had zero consecutive failures and September 4 latest
 successes. One resource-check failure remains. Commit `c88f9b9` is pushed and
-passed [CI 33935510006](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33935510006):
+passed [CI 33935510006](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33935510006):
 frontend lint/tests/build, backend tests/PostgreSQL migrations/ingestion/API,
 and containerized API/worker checks. No frontend changes were made.

@@ -1,4 +1,4 @@
-"""Canonical Physics Atlas field ontology and provider mapping."""
+"""Canonical Atlas Physicus field ontology and provider mapping."""
 
 from .mapping import (
     ARXIV_CATEGORY_TAXONOMY,

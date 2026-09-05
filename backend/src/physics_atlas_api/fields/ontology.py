@@ -1,4 +1,4 @@
-"""Immutable Physics Atlas field vocabulary.
+"""Immutable Atlas Physicus field vocabulary.
 
 The ontology is intentionally independent from provider category systems.  Some
 legacy public field identifiers resemble arXiv labels, but a matching string is

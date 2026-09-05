@@ -23,7 +23,7 @@ provenance record; current operating facts belong in
   targetless-ROR expectation, updating workflow action runtimes, accepting
   Railway's database/port conventions, and adding focused configuration tests.
   GitHub Actions run
-  [33181797118](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33181797118)
+  [33181797118](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33181797118)
   passed frontend, PostgreSQL backend, migration, ingestion/API, and container
   jobs. `v3.0.4-alpha` was not moved.
 
@@ -51,7 +51,7 @@ provenance record; current operating facts belong in
   sampling and public quality status.
 - Tagged documentation commit `b1974d2` records `v3.0.5-alpha`. GitHub Actions
   run
-  [33191858046](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33191858046)
+  [33191858046](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33191858046)
   passed frontend, PostgreSQL migration/drift/ingestion/API, and container jobs.
 - At release, Railway operated the bounded `hep-th-v1` path, but all five
   scientific metric layers remained experimental and jointly withheld.

@@ -2,7 +2,7 @@
 
 ## Status
 
-The approved Physics Atlas metric families remain the long-term conceptual
+The approved Atlas Physicus metric families remain the long-term conceptual
 model. The post-v3.0.5 scientific-modeling work implements the exact five
 Metric System v1 algorithms behind a withheld Joint Activation Gate. Synthetic
 transformations and historical pilot signals remain isolated for interface and

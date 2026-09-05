@@ -120,7 +120,7 @@ Independent read-only audits confirm exactly nine approved paths absent, all
 eight source twins present, all 26 inventoried historical manifests hash-unchanged,
 all 1,840 protected older proof files retained, and reconciled accounting.
 Documentation-only repository changes pass whitespace and 52 local-link checks.
-Baseline `0944968` passed [CI 33940584417](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33940584417).
+Baseline `0944968` passed [CI 33940584417](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33940584417).
 No application tests/replay are needed locally for these documentation changes;
 publication uses the existing CI. Railway was deliberately not contacted, so
 this task makes no new production-health claim.

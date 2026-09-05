@@ -307,7 +307,7 @@ production build pass; the existing chunk-size warning remains non-blocking.
 Backend Ruff format/lint, strict mypy, and all 376 pytest tests pass with one
 existing Starlette/httpx deprecation warning. Result commit `be5e304` is pushed
 to `main` and passed
-[CI 33932839622](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33932839622),
+[CI 33932839622](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33932839622),
 including frontend, real PostgreSQL migration/metadata/bootstrap/worker/API
 checks, and containerized API/worker validation.
 

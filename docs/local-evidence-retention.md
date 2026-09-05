@@ -1,4 +1,4 @@
-# Atlas Physica — proposed local evidence retention policy
+# Atlas Physicus — proposed local evidence retention policy
 
 Draft, 2026-09-05. This is a review proposal, **not deletion authorization or an
 automatic cleanup policy**. PA-048's combined persistent budget still applies.

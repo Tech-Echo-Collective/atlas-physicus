@@ -240,7 +240,7 @@ recovery tests); changed-tool/test Ruff lint and formatting pass. A final stat
 check of all 5,356 hashed baseline inputs finds no change after the pilot.
 No production
 application, schema or deployment configuration changed. Baseline `32b3f4b`
-passed [CI 33939682265](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33939682265).
+passed [CI 33939682265](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33939682265).
 New-commit CI status is reported with publication. Railway was not contacted in
 this local-only task; its last verified health remains in the prior report.
 

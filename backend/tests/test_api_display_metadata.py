@@ -4,9 +4,9 @@ from physics_atlas_api.main import create_app
 def test_product_rename_preserves_api_routes() -> None:
     schema = create_app().openapi()
 
-    assert schema["info"]["title"] == "Atlas Physica API"
+    assert schema["info"]["title"] == "Atlas Physicus API"
     assert (
-        "developed and maintained by Tech Echo Collective"
+        "Part of Tech Echo Physica, a Tech Echo Collective project family"
         in schema["info"]["description"]
     )
     assert "/api/health" in schema["paths"]

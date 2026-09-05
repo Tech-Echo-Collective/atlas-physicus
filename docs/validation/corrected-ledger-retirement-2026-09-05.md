@@ -101,7 +101,7 @@ scientific gates do not change. No next deletion or second compression is cleare
 
 Application/resolver source, scientific inputs and deployment configuration are
 unchanged. Starting `d9aa5c7` passed
-[CI 33944202529](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33944202529).
+[CI 33944202529](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33944202529).
 33 focused resolver tests pass after retirement (0.07s). Whitespace checks and
 61 local documentation links pass; independent dependency review is complete.
 Only this report and current context require documentation updates; historical

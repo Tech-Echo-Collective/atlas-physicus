@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Atlas Physica visualizes scientific activity across geography. It does not interpret, endorse, or adjudicate political boundaries, sovereignty, or territorial claims.
+Atlas Physicus visualizes scientific activity across geography. It does not interpret, endorse, or adjudicate political boundaries, sovereignty, or territorial claims.
 
 Map geometry provides geographic context for exploration. A rendered boundary must not be read as a statement about political status, and the visual prominence of a place must not be read as a measure of scientific quality.
 
 ## Separate geographic and scientific layers
 
-Atlas Physica treats geographic rendering and research attribution as separate layers:
+Atlas Physicus treats geographic rendering and research attribution as separate layers:
 
 1. the geographic layer renders places, boundaries, and research locations from documented map sources;
 2. the research layer connects institutions, affiliations, researchers, and scientific activity using source metadata;
@@ -20,7 +20,7 @@ This separation allows geographic source data to change without redefining scien
 
 Institutions are assigned to research locations using documented institutional metadata, including their physical coordinates and address information. Scientific contribution follows the affiliations recorded for the contributing researchers or organizations.
 
-A collaborative paper is attributed to every participating institution represented by its affiliation metadata. For example, if Institutions A, B, and C contribute, each receives attribution. Atlas Physica does not force the paper into a single-institution or single-country ownership model.
+A collaborative paper is attributed to every participating institution represented by its affiliation metadata. For example, if Institutions A, B, and C contribute, each receives attribution. Atlas Physicus does not force the paper into a single-institution or single-country ownership model.
 
 Country-level views may aggregate affiliated activity for exploration, but those aggregates remain multi-attribution summaries. They do not imply exclusive national ownership of collaborative science.
 

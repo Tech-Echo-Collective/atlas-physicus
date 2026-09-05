@@ -2,7 +2,7 @@
 
 ## Status vocabulary
 
-Atlas Physica uses four deliberately distinct data modes:
+Atlas Physicus uses four deliberately distinct data modes:
 
 | Mode | Meaning |
 | --- | --- |

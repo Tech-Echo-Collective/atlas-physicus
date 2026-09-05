@@ -1,9 +1,11 @@
-# Atlas Physica repository context
+# Atlas Physicus repository context
 
-Atlas Physica is the canonical product name (formerly Physics Atlas). Keep
-historical names, repository/package/schema identifiers, service names,
-environment variables, deployment URLs, and release tags unchanged unless a
-separate task explicitly authorizes their migration.
+Atlas Physicus is the canonical product name within Tech Echo Physica. The
+primary GitHub repository and frontend package are `atlas-physicus` (PA-050).
+Preserve historical names/releases and deployed compatibility identifiers: Python
+package/import/CLI names, schemas, services, databases, environment variables,
+artifact identifiers and API URLs. See the naming audit in
+`docs/production-deployment.md` before changing any operational identifier.
 
 The nominal 5 GB storage budget covers **all persistent Atlas data combined**:
 PostgreSQL, archives, required history/metadata and retained backups/copies.

@@ -1,6 +1,6 @@
-# Atlas Physica roadmap
+# Atlas Physicus roadmap
 
-The roadmap records engineering direction, not promised dates. Each milestone must preserve the map-first exploration path and the rule that Atlas Physica is not a ranking, recommendation, or prediction system. Historical release descriptions retain Physics Atlas where it was the product name at that time.
+The roadmap records engineering direction, not promised dates. Each milestone must preserve the map-first exploration path and the rule that Atlas Physicus is not a ranking, recommendation, or prediction system. Historical release descriptions retain Physics Atlas where it was the product name at that time.
 
 ## Completed alpha foundations
 

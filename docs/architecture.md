@@ -1,8 +1,8 @@
-# Atlas Physica architecture
+# Atlas Physicus architecture
 
 ## Purpose
 
-Atlas Physica is an open-source scientific exploration system for visualizing the structure and evolution of physics research ecosystems. Atlas Physica is developed and maintained by Tech Echo Collective. Its map-first path remains:
+Atlas Physicus is an open-source scientific exploration system for visualizing the structure and evolution of physics research ecosystems. Atlas Physicus is developed and maintained by Tech Echo Collective. Its map-first path remains:
 
 ```text
 Physics domain → research field → year → world → country

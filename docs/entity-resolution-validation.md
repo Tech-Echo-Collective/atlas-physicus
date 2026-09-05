@@ -1,7 +1,7 @@
 # Entity-resolution validation
 
 Entity resolution decides whether source evidence refers to a canonical
-research entity. It does not evaluate scientific contribution. Physics Atlas
+research entity. It does not evaluate scientific contribution. Atlas Physicus
 prefers a reviewable unresolved record to an unjustified merge.
 
 ## Outcomes and workflow state

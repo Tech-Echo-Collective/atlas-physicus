@@ -74,5 +74,5 @@ ledger or change scientific policy as part of that review.
 
 This review changes documentation only; no application tests or CI rerun is
 needed for the read-only dependency check. Current source `05783c1` passed
-[CI 33942051823](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33942051823).
+[CI 33942051823](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33942051823).
 No release tag or deployment configuration changed.

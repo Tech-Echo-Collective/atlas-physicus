@@ -16,7 +16,7 @@ validation reports.
 - Local validation passed 172 backend tests, 130 frontend tests, seven pipeline
   tests, strict Python/TypeScript checks, lint, build, and migration checks.
   GitHub Actions run
-  [33300307090](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33300307090)
+  [33300307090](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33300307090)
   passed. No live metric observation was created.
 
 ## Bounded activation diagnostic
@@ -44,7 +44,7 @@ validation reports.
   refetching completed pages. The run created no canonical or production rows.
 - Backend validation passed 209 tests; frontend validation passed 130 tests and
   seven pipeline tests. GitHub Actions run
-  [33309487273](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33309487273)
+  [33309487273](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33309487273)
   passed.
 
 ## Dedicated hostname preparation
@@ -70,7 +70,7 @@ validation reports.
 - Full local validation passed 258 backend tests, 130 frontend tests, seven
   pipeline tests, strict type/lint/build/migration checks, and artifact
   checksum/conservation verification. GitHub Actions run
-  [33368874387](https://github.com/Tech-Echo-Collective/Physics-Atlas/actions/runs/33368874387)
+  [33368874387](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/33368874387)
   passed.
 
 Exact evidence remains in:

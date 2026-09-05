@@ -431,7 +431,7 @@ def ensure_reference_data(session: Session) -> None:
     )
     if not reference_path.is_file():
         raise FileNotFoundError(
-            "Physics Atlas reference data is unavailable. Configure "
+            "Atlas Physicus reference data is unavailable. Configure "
             "PHYSICS_ATLAS_REFERENCE_DATA_PATH for an installed deployment."
         )
     payload = json.loads(reference_path.read_text(encoding="utf-8"))
