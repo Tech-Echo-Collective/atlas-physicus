@@ -30,12 +30,19 @@ reports.
   factory/coverage regressions; full Ruff lint/format and strict mypy (102 sources) pass. Frontend
   typecheck/lint, 139 Vitest cases, seven pipeline cases and production build pass.
   Existing Starlette deprecation and optional pilot chunk warnings are unchanged.
-- Cleanup PASS: removed the sole scratch directory and all 129,412,818 logical
-  temporary bytes (1,475 regular files); maximum observed allocation was
-  114,958,336 bytes. No source payloads, new retained scientific datasets or
-  unapproved local build leftovers remain. Legacy evidence was untouched.
-- Baseline source `4e203c0` CI 33973186186 is green. Current push/CI status is
-  recorded after completion, not inferred from these tests.
+- Implementation `a813d3e` was pushed. CI 34008433748 passed frontend/containers
+  and 1,118 backend cases, but its import-boundary case exposed a launch adapter
+  dependency on the offline paired validator. Reproduced the failure locally;
+  extracted the unchanged pure alignment function into the attribution package.
+  Both caller aliases share it; no whitelist or scientific behavior changed.
+  The 105-case boundary/paired/launch recheck and full lint/format/mypy (103 source
+  files) pass. The follow-up CI result must be checked, not inferred from this.
+- Cleanup PASS: removed 129,412,818 logical bytes initially, then 22,098,815 bytes
+  from the isolated CI diagnosis/recheck in the same sole scratch directory:
+  **151,511,633 bytes cumulatively removed**. Maximum observed allocation was
+  114,958,336 bytes, not the cumulative total. No source payloads, new retained
+  scientific datasets or unapproved build leftovers remain. Legacy evidence
+  was untouched.
   Web `63fc454` and pin `21bfcdb8` remain unchanged; no dataset environment variable
   was enabled. The healthy API exposes zero observations; no launch is claimed.
   Exact evidence and limits: [integration report](validation/minimum-launch-integration-2026-09-06.md).

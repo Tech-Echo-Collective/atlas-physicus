@@ -22,8 +22,10 @@ from ..attribution import (
     PaperTimeAffiliationAssertion,
     calculate_fractional_attribution,
 )
+from ..attribution.affiliation_identifiers import (
+    align_affiliation_ror_evidence as _align_affiliation_ror_evidence,
+)
 from ..connectors.base import SourceRecord, normalize_external_id
-from ..paired_trial_certification import _align_affiliation_ror_evidence
 from .automation import (
     ResolvedResearcherIdentifiers,
     SourceBoundPaperFacts,

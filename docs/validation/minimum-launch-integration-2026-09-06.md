@@ -320,11 +320,14 @@ no scientific files, caches or payload archives. The report retains compact fact
 and hashes, not a replay bundle. A later mutable provider response is not guaranteed
 byte-identical; hashes are observation bindings, not recovery of discarded bytes.
 Temporary validation/build work was confined to
-`/private/tmp/atlas-minimum-launch.eAjJt3`. Final cleanup removed this exact
+`/private/tmp/atlas-minimum-launch.eAjJt3`. Initial cleanup removed this exact
 directory, 1,475 regular files totaling **129,412,818 logical bytes**, plus 81
 temporary symlinks. The maximum observed filesystem allocation was **114,958,336
 bytes**; logical and allocated sizes differ. This was below 2 GB; it is not a
-claim about total RAM or provider-transfer bytes. The directory is absent; no
+claim about total RAM or provider-transfer bytes. The same explicit scratch
+location was recreated only for the subsequent CI diagnosis/recheck, then removed
+again: 343 regular files, 22,098,815 logical bytes and 15 symlinks. Cumulative
+temporary bytes removed are **151,511,633**; the directory is absent and no
 unapproved scientific/build leftovers remain. Legacy evidence was not touched.
 
 Final local validation: **420 focused backend tests**, **139 frontend tests**,
@@ -334,6 +337,18 @@ identical certification objects/hashes and independent tamper rejection. The
 loader rejects globally positive but non-co-located five-metric groups. Existing
 Starlette deprecation and optional pilot chunk warnings are unchanged. CI status
 is recorded in the worklog after the validated source is pushed.
+
+The first pushed implementation `a813d3e` failed exactly one of 1,119 backend
+tests in CI 34008433748: the production import-closure guard found that
+`launch_attribution` reused a pure helper through `paired_trial_certification`,
+an offline validation module. No production ledger generation was observed;
+the dependency itself violated the intentional boundary. The correction moves
+the identical function body to `attribution/affiliation_identifiers.py`, with
+both adapters retaining their old alias. A new test checks shared function
+identity; the original guard remains unchanged. All 105 focused boundary, paired,
+launch and guard cases pass, plus full lint/format and strict mypy (103 sources).
+Frontend and container jobs passed in the first run; a corrected full CI run is
+still required, not assumed from the narrow recheck.
 
 At **03:10:33 UTC**, read-only health and observation requests returned HTTP 200,
 healthy API/database, expected `https://atlas.techecho.org` CORS and **zero public

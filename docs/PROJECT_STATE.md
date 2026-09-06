@@ -43,12 +43,16 @@ decision; it remains pending, not an implemented relaxation.
 The API/database were healthy at 03:10:33 UTC on September 6, expected public-origin
 CORS was present and public metric observations were zero. Web `63fc454`/source pin
 `21bfcdb8` remain unchanged; no dataset variable or live metrics are enabled. Source
-baseline `4e203c0` passed CI 33973186186. Current implementation validation and final
-commit status are recorded in the recent worklog, not inferred from baseline CI.
+baseline `4e203c0` passed CI 33973186186. Implementation `a813d3e` is pushed;
+CI 34008433748 exposed one offline import-boundary failure after 1,118 backend
+passes. A narrow shared-pure-function extraction fixes the reproduced failure;
+105 relevant cases and full lint/format/mypy (103 source files) pass. Follow-up CI
+status is recorded in the recent worklog, not inferred from local validation.
 The final local run passes 420 focused backend cases, 139 frontend cases and seven
 pipeline cases, full lint/type checking and production build. Local cleanup is
-PASS: all 129,412,818 temporary logical bytes were removed; no raw scientific or
-build artifacts were retained by this task.
+PASS: all **151,511,633** cumulative temporary logical bytes were removed,
+including the isolated CI diagnosis/recheck; no raw scientific or build artifacts
+were retained by this task.
 Exact acquisition bounds, measured denominators, fixes and remaining blockers:
 [minimum integration report](validation/minimum-launch-integration-2026-09-06.md).
 
