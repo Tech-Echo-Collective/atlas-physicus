@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from ..attribution import FRACTIONAL_ATTRIBUTION_V1
 from ..fields import (
@@ -15,8 +15,13 @@ from .thresholds import (
     MetricValidationThresholds,
 )
 
+if TYPE_CHECKING:
+    from .scoped_activation import CertifiedDatasetScope
+
 JointActivationStatus = Literal["withheld", "eligible-for-reviewed-activation"]
-AcquisitionBoundaryKind = Literal["field-conditioned", "broad-physics"]
+AcquisitionBoundaryKind = Literal[
+    "field-conditioned", "broad-physics", "ontology-branch"
+]
 METRIC_SYSTEM_V1_VERSION = "physics-atlas-metric-system-v1"
 DIVERSITY_BREADTH_REVIEW_VERSION = "diversity-breadth-review-v1"
 HEP_TH_CONDITIONED_SCOPE = "hep-th-v1"
@@ -161,6 +166,8 @@ def reviewed_activation_manifest_is_current(
 def assess_joint_metric_activation(
     evidence: MetricSystemActivationEvidence,
     thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
+    *,
+    dataset_scope: "CertifiedDatasetScope | None" = None,
 ) -> JointMetricActivationDecision:
     """Fail the public system closed unless all five dimensions pass together.
 
@@ -169,6 +176,21 @@ def assess_joint_metric_activation(
     entity availability is deliberately not an input to this global decision.
     """
     reasons: list[str] = []
+    if dataset_scope is not None:
+        from .scoped_activation import (
+            SCOPED_DATASET_ACTIVATION_VERSION,
+            CertifiedDatasetScope,
+        )
+
+        if not isinstance(dataset_scope, CertifiedDatasetScope):
+            raise ValueError("scoped activation requires exact certified source years")
+        dataset_scope.__post_init__()
+        if (
+            dataset_scope.dataset_version != evidence.data_source_version
+            or dataset_scope.acquisition_scope != evidence.acquisition_scope
+            or evidence.acquisition_boundary_kind != "ontology-branch"
+        ):
+            reasons.append("scoped dataset activation lineage does not match")
     if evidence.metric_system_version != METRIC_SYSTEM_V1_VERSION:
         reasons.append("metric system version does not match Metric System v1")
     expected_ids = set(CANDIDATE_METRIC_IDS)
@@ -222,16 +244,25 @@ def assess_joint_metric_activation(
             f"{evidence.acquisition_scope} cannot validate the broad-field "
             "Research Diversity boundary"
         )
-    if evidence.acquisition_boundary_kind != "broad-physics":
+    if dataset_scope is None and evidence.acquisition_boundary_kind != "broad-physics":
         reasons.append(
             "the acquisition boundary is not certified as broad Physics evidence"
         )
     if not evidence.data_source_version or not evidence.data_source_version.strip():
         reasons.append("data source version is missing")
-    if evidence.diversity_breadth_review_version != DIVERSITY_BREADTH_REVIEW_VERSION:
+    breadth_version = (
+        DIVERSITY_BREADTH_REVIEW_VERSION
+        if dataset_scope is None
+        else SCOPED_DATASET_ACTIVATION_VERSION
+    )
+    if evidence.diversity_breadth_review_version != breadth_version:
         reasons.append("Diversity breadth-review version does not match the contract")
     if not evidence.diversity_breadth_review_passed:
-        reasons.append("broad-field Research Diversity review has not passed")
+        reasons.append(
+            "broad-field Research Diversity review has not passed"
+            if dataset_scope is None
+            else "the declared Research Diversity boundary has not passed"
+        )
     if evidence.threshold_version != thresholds.version:
         reasons.append("metric validation threshold version does not match v1")
 

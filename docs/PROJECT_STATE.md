@@ -1,6 +1,6 @@
 # Atlas Physicus project state
 
-Last reviewed: 2026-09-05
+Last reviewed: 2026-09-06
 
 This is the canonical snapshot of the project's current operating and
 scientific state. Read it with [durable decisions](DECISIONS.md), the
@@ -9,42 +9,48 @@ recent [worklog](WORKLOG.md). Exact scientific measurements belong in the
 linked validation reports rather than being repeated throughout the project
 documentation.
 
-## Current task: automatic certification and measured citation windows
+## Current task: minimum launch integration and actual evidence blockers
 
-The owner removed mandatory human review (PA-054), superseding that blocker in
-the earlier [launch readiness review](validation/lightweight-launch-readiness-2026-09-05.md).
-New opt-in adapters reconstruct exact provider-field decisions, explicit date
-bases, paper-native researcher IDs, complete single-response citation cohorts,
-fixed acquisition plans, source-window populations and normalization peer sets.
-They do not fabricate reviewer identities or relax scientific thresholds.
+PA-054 removes mandatory human approval; PA-055 permits explicitly retrospective
+citation measurement intervals. Neither removes unresolved source evidence or
+scientific thresholds. PA-056 admits a declared, limited ontology branch with all
+five metrics together, without relabeling it broad Physics. The bounded candidate
+is the existing nuclear branch, exact preprint years 2018–2023, not Full Physics.
 
-**The five-metric launch remains incomplete.** Record-level date/researcher
-assessments still need exact calculator-input admission; real complete-year
-populations, mature comparable cohorts and the production export/activation
-producer are not supplied by these adapters. A read-only INSPIRE count found
-16,815 Condensed Matter articles in the 2020–2022 declared query, exceeding the
-1,000-record single-response path. The owner subsequently authorized PA-055:
-versioned retrospective citation measurement windows. New opt-in contracts freeze
-independently certified paper identities before exact-ID measurement, retain each
-actual batch time, and bind Impact, normalization and domain aggregation to the
-same session/population. They do not invent a provider snapshot or historical
-as-of counts. This removes the single-response implementation restriction, not
-the requirement for real independently certified source years and coverage.
+The working integration supplies source-bound date/identity admission, bounded
+page receipts, conserved partial-field coverage, fractional affiliation coverage,
+source-year proofs, branch aggregation/Diversity and a fail-closed compact dataset
+export/loader. PA-057 adds strictly corroborated paper-native ROR matching;
+PA-058 distinguishes exact ROR identity from optional parent aggregation. Explicit
+erratum/addendum DOIs are preserved as related evidence, not primary identifiers.
+Legacy policies, formulas, historical hashes and normal API behavior are unchanged.
 
-254 focused tests, full backend lint/format and strict type checking pass. Web
-`63fc454` removes public synthetic fallback and fixes previously ineffective
-root-project type checking; its Pages build/deploy is green. At 13:06 UTC the
-API/database/providers were healthy with zero exposed metric observations.
-No legacy evidence, production rows, release tags or provider corpus were changed.
-Next: complete source-bound automatic date/identity admission and real certified
-citation populations before generating a bounded v1 dataset—not human
-sign-off, storage research or Full Physics acquisition. Implementation limits,
-sources, checks and cleanup: [automatic certification report](validation/automatic-certification-2026-09-05.md).
-Subsequent PA-055 integration and validation are recorded separately in the
-[measurement-window report](validation/citation-measurement-window-2026-09-05.md).
-That follow-up passes 304 focused tests, full backend lint/format and strict
-typing. Its 73,489,482 temporary bytes were removed; no newly certified live
-observations or production activation are claimed.
+**The five-metric launch remains incomplete.** A complete 2018 source traversal
+retained all 2,306 records with exact dates and 93.404% known field mass. Following
+the DOI-role repair, the identifier-only recheck has 2,299 matched components and
+seven unresolved components, not a certified complete year. On the same 250-paper
+authority sample, exact-ROR retention raises canonical institution coverage from
+49.139% to 67.354%; paper-time affiliation presence is 96.359%. These are measured
+sample results, not whole-year institution coverage. Six certified years, mature
+comparable cohorts and real exact-five normalized observations are not established.
+
+The current per-entity admission rule also includes the global unknown mass in
+each entity's possible-coverage denominator. That intentional worst-case rule is
+not silently replaced by the source-year fractional-coverage repair. Separating
+observed coverage from retained uncertainty bounds requires a versioned policy
+decision; it remains pending, not an implemented relaxation.
+
+The API/database were healthy at 03:10:33 UTC on September 6, expected public-origin
+CORS was present and public metric observations were zero. Web `63fc454`/source pin
+`21bfcdb8` remain unchanged; no dataset variable or live metrics are enabled. Source
+baseline `4e203c0` passed CI 33973186186. Current implementation validation and final
+commit status are recorded in the recent worklog, not inferred from baseline CI.
+The final local run passes 420 focused backend cases, 139 frontend cases and seven
+pipeline cases, full lint/type checking and production build. Local cleanup is
+PASS: all 129,412,818 temporary logical bytes were removed; no raw scientific or
+build artifacts were retained by this task.
+Exact acquisition bounds, measured denominators, fixes and remaining blockers:
+[minimum integration report](validation/minimum-launch-integration-2026-09-06.md).
 
 ## Release and scope
 
@@ -530,11 +536,14 @@ authorized**. The exact gate input and output are preserved in the
 
 ## Immediate next action
 
-Continue the owner's lightweight scientific launch work: complete exact
-source-bound automatic date/identity admission, certify a bounded real historical
-population, then apply the measured-session contract and existing five-metric
-gates. Do not equate fixture validation with a passed live gate. Produce the
-compact dataset only from genuinely admitted calculations; no partial activation.
+Resolve the remaining source identity/authority evidence and the explicit
+coverage-versus-uncertainty policy question before repeating a larger capture.
+Then certify the bounded historical population and apply the measured-session,
+five-metric and normalization gates. Admission/export adapters are implemented;
+they do not substitute for real certified populations or end-to-end calculation.
+Produce the compact dataset only from genuinely admitted calculations; no partial
+activation. Do not repeat diagnostics or introduce a new architecture as a proxy
+for these concrete evidence requirements.
 
 The earlier storage review is historical context, **not the current next task**.
 Legacy retained evidence is not a launch prerequisite; do not expand, reorganize,

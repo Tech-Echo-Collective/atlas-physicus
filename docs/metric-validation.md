@@ -140,6 +140,15 @@ proofs cannot expose or preserve live observations.
 
 The gate fails closed:
 
+PA-056 adds a separate opt-in `certified-ontology-branch-release-v1` export
+boundary for the owner's first limited launch. It reconstructs the existing
+branch's entire descendant leaf catalog and requires co-located exact-five
+observations with the same declared entity/period, complete source years,
+comparable populations and unchanged numerical gates. It cannot label a branch
+as broad Physics or reuse a subset of favorable normalization/citation peers.
+The default broad-Physics API publication rule described above is unchanged.
+See [automatic certification](automatic-certification.md) for the scoped path.
+
 ```text
 any required system evidence missing
 → Metric System v1 = experimental / withheld

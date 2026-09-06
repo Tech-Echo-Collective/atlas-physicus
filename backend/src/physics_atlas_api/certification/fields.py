@@ -1,7 +1,7 @@
 import math
 from dataclasses import dataclass, fields
 from datetime import datetime
-from typing import Literal
+from typing import Final, Literal
 
 from ..fields import (
     FIELD_WEIGHTING_POLICY_VERSION,
@@ -24,6 +24,69 @@ from .contracts import (
 
 FIELD_CERTIFICATION_RULE_VERSION = "reviewed-field-ledger-certification-v1"
 FIELD_CONSERVATION_TOLERANCE = 1e-9
+BRANCH_DIVERSITY_FIELD_BINDING: Final = "branch-diversity-paper-v1"
+AUTOMATIC_FIELD_PROJECTION_RULE_VERSION: Final = "conserved-known-field-projection-v1"
+
+
+def ontology_branch_category_ids(field_id: str) -> tuple[str, ...]:
+    """Return a branch's entire frozen leaf catalog, never a selected subset."""
+    ontology = PHYSICS_FIELD_ONTOLOGY_V1
+    if not ontology.contains(field_id):
+        raise CertificationError(
+            "automatic category universe has an unknown ontology root"
+        )
+    categories = tuple(
+        sorted(
+            item.id
+            for item in ontology.fields
+            if item.node_kind == "field"
+            and any(parent.id == field_id for parent in ontology.ancestors_of(item.id))
+        )
+    )
+    if ontology.get(field_id).node_kind != "branch" or len(categories) < 2:
+        raise CertificationError(
+            "automatic Diversity needs at least two frozen ontology subfields; "
+            "leaf-field subcategories cannot be invented"
+        )
+    return categories
+
+
+def branch_diversity_field_projection(
+    field_id: str,
+    field_weights: tuple[tuple[str, float], ...],
+) -> tuple[float, tuple[tuple[str, float], ...]]:
+    """Condition already conserved leaf mass on one frozen ontology branch.
+
+    The source ledger is unchanged: outside-branch and unmapped mass is never
+    reassigned. For positive branch mass B, (entity_share * B) * (w / B)
+    recovers each original entity-weighted leaf contribution exactly up to
+    floating-point arithmetic. No supported branch mass means no categories.
+    """
+    categories = ontology_branch_category_ids(field_id)
+    weights = dict(field_weights)
+    ontology = PHYSICS_FIELD_ONTOLOGY_V1
+    if (
+        len(weights) != len(field_weights)
+        or any(
+            not ontology.contains(key)
+            or ontology.get(key).node_kind != "field"
+            or not math.isfinite(value)
+            or not 0 < value <= 1
+            for key, value in field_weights
+        )
+        or math.fsum(weights.values()) > 1 + FIELD_CONSERVATION_TOLERANCE
+    ):
+        raise CertificationError(
+            "branch Diversity requires conserved canonical leaf weights"
+        )
+    branch_weight = math.fsum(weights.get(key, 0.0) for key in categories)
+    return branch_weight, (
+        tuple(
+            (key, weights[key] / branch_weight) for key in categories if key in weights
+        )
+        if branch_weight > 0
+        else ()
+    )
 
 
 @dataclass(frozen=True)
@@ -260,7 +323,9 @@ def certify_field_ledger(ledger: FieldLedgerEvidence) -> FieldCertificationResul
 class AutomaticFieldBinding:
     """Exact consumer projection, distinct from the raw provider ledger."""
 
-    purpose: Literal["source-year-ledger", "coverage", "metric-paper"]
+    purpose: Literal[
+        "source-year-ledger", "coverage", "metric-paper", "branch-diversity-paper-v1"
+    ]
     field_id: str | None = None
     entity_attribution_weight: float | None = None
     include_category_weights: bool = False
@@ -288,18 +353,35 @@ def _automatic_field_value(
             "field_weight_total": ledger.conservation_total,
             "field_weighting_policy_version": ledger.weighting_policy_version,
         }
-    if binding.purpose != "metric-paper":
+    if binding.purpose not in {"metric-paper", BRANCH_DIVERSITY_FIELD_BINDING}:
         raise CertificationError("unsupported automatic field binding purpose")
     weights = {item.field_id: item.weight for item in ledger.assignments}
     share = binding.entity_attribution_weight
     field_id = binding.field_id
     if (
         field_id is None
-        or field_id not in weights
         or share is None
         or not math.isfinite(share)
         or not 0 <= share <= 1
     ):
+        raise CertificationError(
+            "automatic metric field binding lacks an exact supported share"
+        )
+    if binding.purpose == BRANCH_DIVERSITY_FIELD_BINDING:
+        branch_weight, category_weights = branch_diversity_field_projection(
+            field_id, tuple(sorted(weights.items()))
+        )
+        if not binding.include_category_weights or branch_weight <= 0:
+            raise CertificationError(
+                "branch Diversity binding requires positive branch mass and categories"
+            )
+        return {
+            "paper_id": ledger.paper_id,
+            "field_id": field_id,
+            "attribution_weight": share * branch_weight,
+            "category_weights": category_weights,
+        }
+    if field_id not in weights:
         raise CertificationError(
             "automatic metric field binding lacks an exact supported share"
         )
@@ -313,6 +395,43 @@ def _automatic_field_value(
     }
 
 
+def _automatic_field_decision_status(
+    ledger: AutomaticFieldLedgerEvidence,
+    binding: AutomaticFieldBinding,
+) -> tuple[CertificationState, tuple[str, ...], str]:
+    """Conservation/known projections do not certify the unknown remainder.
+
+    The old whole-paper coverage purpose remains binary and unchanged. A source
+    ledger may conserve one unit even when part or all is explicitly unmapped;
+    a metric-specific projection may consume only its positive known leaf share.
+    """
+    decision = AutomaticCertification(ledger.automatic_evidence).decision
+    if decision.state == "certified" or binding.purpose == "coverage":
+        return decision.state, decision.reasons, AUTOMATIC_FIELD_RULE_VERSION
+    if (
+        decision.state == "conflicted"
+        or not math.isclose(
+            ledger.conservation_total,
+            1.0,
+            rel_tol=0.0,
+            abs_tol=FIELD_CONSERVATION_TOLERANCE,
+        )
+        or any(
+            PHYSICS_FIELD_ONTOLOGY_V1.get(item.field_id).node_kind != "field"
+            for item in ledger.assignments
+        )
+    ):
+        return decision.state, decision.reasons, AUTOMATIC_FIELD_RULE_VERSION
+    if binding.purpose == "source-year-ledger":
+        return "certified", (), AUTOMATIC_FIELD_PROJECTION_RULE_VERSION
+    if binding.purpose in {"metric-paper", BRANCH_DIVERSITY_FIELD_BINDING}:
+        # This also rejects unsupported/all-unknown target fields. The consumed
+        # digest retains the original fractional weight rather than promoting it.
+        _automatic_field_value(ledger, binding)
+        return "certified", (), AUTOMATIC_FIELD_PROJECTION_RULE_VERSION
+    return decision.state, decision.reasons, AUTOMATIC_FIELD_RULE_VERSION
+
+
 @dataclass(frozen=True, kw_only=True)
 class AutomaticFieldDecision(EvidenceCertificationDecision):
     """Known automatic rule with reconstructable evidence and consumed-value binding."""
@@ -324,6 +443,9 @@ class AutomaticFieldDecision(EvidenceCertificationDecision):
         EvidenceCertificationDecision.__post_init__(self)
         ledger = automatic_field_ledger(self.automatic_field_evidence)
         assessment = AutomaticCertification(self.automatic_field_evidence)
+        expected_state, expected_reasons, expected_version = (
+            _automatic_field_decision_status(ledger, self.field_binding)
+        )
         expected_type = (
             "coverage-unit" if self.field_binding.purpose == "coverage" else "paper"
         )
@@ -340,11 +462,11 @@ class AutomaticFieldDecision(EvidenceCertificationDecision):
             self.subject_type != expected_type
             or self.subject_id != context.paper_id
             or self.evidence_kind not in allowed_kinds
-            or self.rule_version != AUTOMATIC_FIELD_RULE_VERSION
+            or self.rule_version != expected_version
             or self.dataset_version != context.dataset_version
             or self.acquisition_scope != context.acquisition_scope
-            or self.state != assessment.decision.state
-            or self.reasons != assessment.decision.reasons
+            or self.state != expected_state
+            or self.reasons != expected_reasons
             or self.evidence != assessment.decision.evidence
             or self.reviewed_by is not None
             or self.reviewed_at is not None
@@ -365,19 +487,20 @@ def automatic_field_decision(
 ) -> AutomaticFieldDecision:
     ledger = automatic_field_ledger(evidence)
     assessment = AutomaticCertification(evidence)
+    state, reasons, version = _automatic_field_decision_status(ledger, binding)
     return AutomaticFieldDecision(
         subject_type="coverage-unit" if binding.purpose == "coverage" else "paper",
         subject_id=evidence.context.paper_id,
         evidence_kind=evidence_kind,
-        state=assessment.decision.state,
-        rule_version=AUTOMATIC_FIELD_RULE_VERSION,
+        state=state,
+        rule_version=version,
         dataset_version=evidence.context.dataset_version,
         acquisition_scope=evidence.context.acquisition_scope,
         evidence=assessment.decision.evidence,
         certified_value_digest=canonical_digest(
             _automatic_field_value(ledger, binding)
         ),
-        reasons=assessment.decision.reasons,
+        reasons=reasons,
         automatic_field_evidence=evidence,
         field_binding=binding,
     )

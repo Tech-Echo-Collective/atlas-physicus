@@ -72,10 +72,13 @@ function mergeById<T extends { id: string }>(current: T[], incoming: T[]): T[] {
 const liveTimelineStartYear = 1900;
 
 export function AtlasExplorer() {
+  const atlasDatasetUrl = typeof import.meta.env.VITE_ATLAS_DATASET_URL === 'string'
+    ? import.meta.env.VITE_ATLAS_DATASET_URL.trim()
+    : '';
   const atlasApiUrl = normalizeAtlasApiBaseUrl(
     import.meta.env.VITE_ATLAS_API_URL,
   );
-  const liveApiAvailable = atlasApiUrl !== null;
+  const liveApiAvailable = atlasApiUrl !== null || atlasDatasetUrl.length > 0;
   const shellRef = useRef<HTMLElement>(null);
   const sourceRequestGateRef = useRef(new AtlasDataSourceRequestGate());
   const restoreNavigationFromUrlRef = useRef(false);
@@ -237,6 +240,11 @@ export function AtlasExplorer() {
         );
       }
       if (requestedDataSourceId === 'live-api') {
+        if (atlasDatasetUrl) {
+          return import('../../data/CertifiedAtlasDataset').then(
+            ({ loadCertifiedAtlasRepository }) => loadCertifiedAtlasRepository(atlasDatasetUrl),
+          );
+        }
         if (!atlasApiUrl) {
           return Promise.reject(
             new Error('No Atlas API URL is configured for this deployment.'),
@@ -392,6 +400,7 @@ export function AtlasExplorer() {
   }, [
     applyNavigationState,
     atlasApiUrl,
+    atlasDatasetUrl,
     requestedDataSourceId,
   ]);
 
@@ -991,6 +1000,7 @@ export function AtlasExplorer() {
   const isPilotDataset = dataset.metadata.datasetKind === 'inspire-hep-pilot';
   const datasetPresentation = getDatasetPresentation(
     dataset.metadata.datasetKind,
+    dataset.metadata.deliveryMode,
   );
   const activeMetricLabel =
     selectedMetricId === compositeMetricId
@@ -1811,10 +1821,13 @@ export function AtlasExplorer() {
         <DataSourceSelector
           selectedSourceId={selectedDataSourceId}
           liveApiAvailable={liveApiAvailable}
+          certifiedDataset={dataset.metadata.deliveryMode === 'versioned-dataset'}
           isLoading={isDataSourceLoading}
           loadingSourceId={requestedDataSourceId}
           error={sourceError}
-          notice={sourceNotice}
+          notice={sourceNotice ?? (dataset.metadata.datasetScope
+            ? `Certified ${dataset.fields.find((field) => field.id === dataset.metadata.datasetScope?.rootFieldId)?.label ?? dataset.metadata.datasetScope.rootFieldId} scope only. Overall Physics and unsupported fields remain neutral; missing is not zero.`
+            : null)}
           onSelect={selectDataSource}
         />
         <ScienceDomainSelector

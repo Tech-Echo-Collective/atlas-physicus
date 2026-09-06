@@ -57,9 +57,15 @@ export function getExplorationCountryId(
 export function createDefaultAtlasNavigation(
   dataset: AtlasDataset,
 ): AtlasNavigationState {
+  const domain = dataset.scienceDomains[0];
+  const defaultFieldId = dataset.metadata.deliveryMode === 'versioned-dataset' &&
+    dataset.metadata.defaultFieldId === dataset.metadata.datasetScope?.rootFieldId &&
+    domain?.fieldIds.includes(dataset.metadata.defaultFieldId ?? '')
+    ? dataset.metadata.defaultFieldId ?? null
+    : null;
   return {
-    selectedDomainId: dataset.scienceDomains[0]?.id ?? 'physics',
-    selectedFieldId: null,
+    selectedDomainId: domain?.id ?? 'physics',
+    selectedFieldId: defaultFieldId,
     selectedYear: Number(dataset.metadata.period),
     selectedCountryId: null,
     selectedInstitutionId: null,
@@ -106,7 +112,9 @@ export function resolveAtlasLocation(
   const selectedFieldId =
     requestedFieldId && selectedDomain?.fieldIds.includes(requestedFieldId)
       ? requestedFieldId
-      : null;
+      : parameters.has('field') || parameters.has('domain')
+        ? null
+        : defaultState.selectedFieldId;
   const baseState: AtlasNavigationState = {
     ...defaultState,
     selectedDomainId: selectedDomain?.id ?? defaultState.selectedDomainId,

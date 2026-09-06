@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from ..attribution import FRACTIONAL_ATTRIBUTION_V1
 from ..fields import PHYSICS_FIELD_ONTOLOGY_VERSION, PROVIDER_FIELD_MAPPING_VERSION
+from .automation import verify_automatic_date_axis, verify_automatic_source_binding
 from .citations import impact_comparable_paper_ids
 from .contracts import (
     CERTIFICATION_POLICY_VERSION,
@@ -276,6 +277,7 @@ def build_certified_metric_partition[PartitionT](
         item for item in decisions if item.decision_id not in superseded_ids
     )
     current_by_id = {item.decision_id: item for item in current_decisions}
+    verify_automatic_date_axis(current_decisions, window.source_years)
     for decision in current_decisions:
         if not evidence_decision_is_current(decision):
             raise CertificationError(
@@ -336,6 +338,10 @@ def build_certified_metric_partition[PartitionT](
         paper = papers_by_id[paper_certification.paper_id]
         for decision_id in paper_certification.decision_ids:
             decision = current_by_id[decision_id]
+            verify_automatic_source_binding(
+                decision,
+                window_projections[paper_certification.paper_id],
+            )
             expected_digest = paper_evidence_value_digest(
                 partition, paper, decision.evidence_kind
             )

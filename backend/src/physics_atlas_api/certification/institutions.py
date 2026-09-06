@@ -1,11 +1,19 @@
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
+from urllib.parse import urlsplit
 
+from ..connectors.base import SourceRecord, normalize_external_id
 from ..search_index import normalize_search_term
-from .contracts import CertificationState, canonical_digest
+from .contracts import (
+    CertificationError,
+    CertificationState,
+    EvidenceReference,
+    canonical_digest,
+)
 
 INSTITUTION_CERTIFICATION_RULE_VERSION = "institution-ror-certification-v1"
+EXACT_ROR_IDENTITY_RULE_VERSION = "institution-ror-exact-identity-v1"
 
 
 @dataclass(frozen=True)
@@ -110,11 +118,167 @@ def institution_authority_version(
     return f"ror-authority-{canonical_digest(ordered_records)}"
 
 
+def certify_paper_institution_link(
+    *,
+    paper_record: SourceRecord,
+    paper_reference: EvidenceReference,
+    paper_time_provider_institution_id: str,
+    institution_record: SourceRecord,
+    institution_reference: EvidenceReference,
+    ror_record: SourceRecord,
+    ror_reference: EvidenceReference,
+    raw_affiliation_name: str | None = None,
+) -> InstitutionCertificationResult:
+    """Follow an exact paper-time INSPIRE ID to its explicit ROR authority link.
+
+    This is not a name match or a current affiliation inference. The caller must
+    use the institution ID found in the paper's affiliation record, not an author
+    profile; this function verifies that relationship. Provider and ROR records
+    are exact known-ID responses. Parent links
+    remain metadata, never an automatic permission to roll historical activity up.
+    No raw payload or reviewer identity is added to the retained result.
+    """
+    if (
+        paper_reference.provider != "inspire"
+        or paper_record.provider != "inspire"
+        or not paper_reference.source_snapshot_id
+        or institution_record.provider != "inspire"
+        or institution_record.source_record_id != paper_time_provider_institution_id
+        or not paper_time_provider_institution_id.isdecimal()
+        or ror_record.provider != "ror"
+    ):
+        raise CertificationError("paper-time institution link has invalid identity")
+    for record, reference in (
+        (paper_record, paper_reference),
+        (institution_record, institution_reference),
+        (ror_record, ror_reference),
+    ):
+        if (
+            reference.provider != record.provider
+            or reference.source_record_id != record.source_record_id
+            or reference.checksum != record.checksum
+            or not reference.source_snapshot_id
+        ):
+            raise CertificationError(
+                "institution authority reference does not bind source"
+            )
+    authors = paper_record.raw.get("authors")
+    if not isinstance(authors, list):
+        raise CertificationError("paper has no affiliation author inventory")
+    paper_institution_ids: set[str] = set()
+    for author in authors:
+        if not isinstance(author, dict):
+            raise CertificationError("paper author inventory is malformed")
+        affiliations = author.get("affiliations", [])
+        if not isinstance(affiliations, list):
+            raise CertificationError("paper affiliation inventory is malformed")
+        for affiliation in affiliations:
+            if not isinstance(affiliation, dict):
+                raise CertificationError("paper affiliation entry is malformed")
+            link = affiliation.get("record")
+            if isinstance(link, dict) and isinstance(link.get("$ref"), str):
+                url = urlsplit(link["$ref"])
+                prefix = "/api/institutions/"
+                if (
+                    url.scheme == "https"
+                    and url.netloc == "inspirehep.net"
+                    and url.path.startswith(prefix)
+                    and url.path[len(prefix) :].isdecimal()
+                    and not url.query
+                    and not url.fragment
+                ):
+                    paper_institution_ids.add(url.path[len(prefix) :])
+    if paper_time_provider_institution_id not in paper_institution_ids:
+        raise CertificationError(
+            "institution link is absent from paper-time affiliations"
+        )
+    raw = institution_record.raw
+    if str(raw.get("control_number", "")) != institution_record.source_record_id:
+        raise CertificationError("institution authority response has another record ID")
+    entries = raw.get("external_system_identifiers")
+    if not isinstance(entries, list):
+        raise CertificationError("institution has no explicit ROR authority link")
+    identifiers: set[str] = set()
+    for entry in entries:
+        if (
+            not isinstance(entry, dict)
+            or str(entry.get("schema", "")).casefold() != "ror"
+        ):
+            continue
+        normalized = normalize_external_id("ror", str(entry.get("value", "")))
+        if normalized is None:
+            raise CertificationError("institution has an invalid explicit ROR link")
+        identifiers.add(normalized[1])
+    if identifiers != {ror_record.source_record_id}:
+        raise CertificationError("institution ROR authority is missing or ambiguous")
+    if normalize_external_id("ror", str(ror_record.raw.get("id", ""))) != (
+        "ror",
+        ror_record.source_record_id,
+    ):
+        raise CertificationError(
+            "ROR authority response does not match the exact target"
+        )
+    names = ror_record.raw.get("names")
+    if not isinstance(names, list):
+        raise CertificationError("ROR authority lacks canonical name metadata")
+    display = tuple(
+        entry["value"]
+        for entry in names
+        if isinstance(entry, dict)
+        and isinstance(entry.get("value"), str)
+        and entry["value"].strip()
+        and isinstance(entry.get("types"), list)
+        and "ror_display" in entry["types"]
+    )
+    if len(display) != 1:
+        raise CertificationError("ROR canonical display name is missing or ambiguous")
+    parents: set[str] = set()
+    relationships = ror_record.raw.get("relationships", [])
+    if not isinstance(relationships, list):
+        raise CertificationError("ROR authority relationships are malformed")
+    for relationship in relationships:
+        if not isinstance(relationship, dict):
+            raise CertificationError("ROR authority relationship is malformed")
+        if str(relationship.get("type", "")).casefold() == "parent":
+            parent = normalize_external_id("ror", str(relationship.get("id", "")))
+            if parent is None:
+                raise CertificationError("ROR parent authority is invalid")
+            parents.add(parent[1])
+    authority = InstitutionAuthorityRecord(
+        institution_id=f"institution-ror-{ror_record.source_record_id}",
+        ror_id=ror_record.source_record_id,
+        canonical_name=display[0],
+        active=ror_record.raw.get("status") == "active",
+        parent_ror_ids=tuple(sorted(parents)),
+    )
+    references = (paper_reference, institution_reference, ror_reference)
+    evidence = InstitutionResolutionEvidence(
+        raw_name=raw_affiliation_name,
+        source_evidence_ids=tuple(
+            f"{item.provider}:{item.source_record_id}:{item.checksum}"
+            for item in references
+        ),
+        source_manifest_digest=canonical_digest(references),
+        authority_version=institution_authority_version((authority,)),
+        direct_ror_ids=(authority.ror_id,),
+        provider="inspire",
+        provider_institution_id=paper_time_provider_institution_id,
+    )
+    result = certify_institution(evidence, (authority,), retain_exact_ror_identity=True)
+    return replace(
+        result,
+        match_method="paper-native-provider-id-explicit-ror"
+        if result.state == "certified"
+        else result.match_method,
+    )
+
+
 def certify_institution(
     evidence: InstitutionResolutionEvidence,
     authority_records: tuple[InstitutionAuthorityRecord, ...],
     *,
     provider_crosswalk: dict[tuple[str, str], str] | None = None,
+    retain_exact_ror_identity: bool = False,
 ) -> InstitutionCertificationResult:
     """Resolve only authority-supported exact evidence; never make a fuzzy guess."""
 
@@ -274,6 +438,31 @@ def certify_institution(
             match_method=method,
             candidate_institution_ids=(source.institution_id,),
             reasons=("matched ROR organization is inactive or withdrawn",),
+        )
+
+    if retain_exact_ror_identity:
+        # An independently identified ROR child is still an organization. Its
+        # parent relationship does not request a metric rollup. This opt-in
+        # adapter preserves the exact source organization and every relationship;
+        # the historical parent-rollup contract below remains unchanged.
+        if (
+            evidence.direct_ror_ids != (source.ror_id,)
+            or evidence.reviewed_rollup_institution_id is not None
+        ):
+            raise CertificationError(
+                "exact organization retention needs one direct authority "
+                "and cannot request a parent rollup"
+            )
+        return InstitutionCertificationResult(
+            evidence=evidence,
+            state="certified",
+            canonical_institution_id=source.institution_id,
+            source_institution_id=source.institution_id,
+            retained_subunit_label=evidence.subunit_label,
+            match_method=f"{method}-retain-exact-ror",
+            candidate_institution_ids=(source.institution_id,),
+            reasons=(),
+            rule_version=EXACT_ROR_IDENTITY_RULE_VERSION,
         )
 
     target = source

@@ -38,11 +38,15 @@ The release tag remains the architectural baseline. The follow-up Production Act
 September 5 PA-054 removes mandatory human approval for supported evidence-derived
 automatic rules. The new record/population/normalization adapters and public
 no-synthetic-fallback fix are validated, not a five-metric production launch.
-Next work is exact source-bound date/identity admission and real comparable
-historical populations followed by the compact v1 export/activation producer.
+The September 6 source-bound admission and compact export/loader integration is
+not a real certified dataset. Remaining work is unresolved identity/authority
+evidence, complete comparable historical populations and end-to-end calculation.
 PA-055 subsequently authorizes measured citation intervals with frozen certified
 membership and per-batch timestamps. The opt-in session path preserves old cutoff
 contracts, formulas and all numerical thresholds; it is not live activation.
+PA-056 permits an explicitly named existing ontology branch as the first bounded
+exact-five release. It does not make the 2018–2023 nuclear recipe certified or
+authorize a Full Physics load. Current evidence remains below activation gates.
 No Full Physics load, storage investigation, threshold relaxation or v3.1 is
 authorized by this step. See [current automatic-certification status](automatic-certification.md).
 

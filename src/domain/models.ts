@@ -326,6 +326,18 @@ export interface MetricWeightConfiguration {
 export interface DatasetMetadata extends Provenanced {
   schemaVersion: string;
   datasetKind: 'synthetic-demo' | 'inspire-hep-pilot' | 'live-api';
+  /** Delivery is separate from scientific source identity. */
+  deliveryMode?: 'versioned-dataset';
+  releaseManifestUrl?: string;
+  /** Explicit first-release branch; never an alias for overall Physics. */
+  datasetScope?: {
+    version: 'certified-ontology-branch-release-v1';
+    rootFieldId: string;
+    leafFieldIds: string[];
+    boundaryKind: 'ontology-branch';
+    certificationDigest: string;
+  };
+  defaultFieldId?: string;
   period: string;
   generatedAt: string;
   latestUpdateAt?: string;

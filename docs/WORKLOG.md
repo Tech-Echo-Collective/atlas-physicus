@@ -7,6 +7,39 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-06 — Minimum launch integration, evidence still withheld
+
+- Added source-bound automatic date/identity admission, bounded exact-date
+  source capture, fractional evidence coverage, declared ontology-branch
+  aggregation/activation and an optional integrity-checked dataset loader.
+  PA-056/057/058 distinguish a limited exact-five launch, corroborated raw
+  affiliation matching and exact ROR identity from parent aggregation. Default
+  public API behavior and all raw formulas/numerical thresholds are unchanged.
+- Fixed partial-field loss, mandatory parent rollup and primary/related DOI
+  confusion. The measured same-page canonical coverage improved 49.139%→67.354%;
+  full 2018 identifier conflicts fell 37→7 without dropping any of 2,306 records.
+  The 2018 source traversal has exact dates and 93.404% known field mass, but no
+  complete source-year certificate. Remaining source contradictions are explicit.
+- Preserved the existing worst-case per-entity unknown-mass denominator. Its
+  relationship to observed coverage needs an explicit versioned policy decision;
+  no such change or metric activation was smuggled into the fractional bug fix.
+- Removed two redundant factory reconstructions while keeping independent typed
+  proof checks and byte-identical decision hashes. The frontend now also rejects
+  disjoint five-metric counts without a co-located entity/period composite group.
+- Validation: the final combined 420-case focused backend suite passes, including
+  factory/coverage regressions; full Ruff lint/format and strict mypy (102 sources) pass. Frontend
+  typecheck/lint, 139 Vitest cases, seven pipeline cases and production build pass.
+  Existing Starlette deprecation and optional pilot chunk warnings are unchanged.
+- Cleanup PASS: removed the sole scratch directory and all 129,412,818 logical
+  temporary bytes (1,475 regular files); maximum observed allocation was
+  114,958,336 bytes. No source payloads, new retained scientific datasets or
+  unapproved local build leftovers remain. Legacy evidence was untouched.
+- Baseline source `4e203c0` CI 33973186186 is green. Current push/CI status is
+  recorded after completion, not inferred from these tests.
+  Web `63fc454` and pin `21bfcdb8` remain unchanged; no dataset environment variable
+  was enabled. The healthy API exposes zero observations; no launch is claimed.
+  Exact evidence and limits: [integration report](validation/minimum-launch-integration-2026-09-06.md).
+
 ## 2026-09-05 — Authorized citation measurement windows
 
 - PA-055 records explicit owner approval for retrospective measurement windows,

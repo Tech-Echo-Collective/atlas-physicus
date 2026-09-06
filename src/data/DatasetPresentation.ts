@@ -51,16 +51,16 @@ const presentations: Record<AtlasDatasetKind, DatasetPresentation> = {
   },
   'live-api': {
     badgeLabel: 'Live API alpha',
-    dataLabel: 'API-backed metadata',
-    dataLabelLower: 'API-backed metadata',
-    observationLabel: 'API-backed scientific metadata observation',
+    dataLabel: 'Source-backed scientific metadata',
+    dataLabelLower: 'source-backed scientific metadata',
+    observationLabel: 'Source-backed scientific observation',
     sourceLabel: 'provider metadata',
-    valuesLabel: 'API values',
+    valuesLabel: 'Atlas values',
     recordLabel: 'source-backed',
-    sampleLabel: 'API dataset',
-    mapAriaLabel: 'Temporal geographic atlas of API-backed physics metric values',
+    sampleLabel: 'Atlas dataset',
+    mapAriaLabel: 'Temporal geographic atlas of source-backed physics metric values',
     disclaimer:
-      'API-backed scientific metadata with source-dependent coverage. Not a scientific ranking.',
+      'Scientific metadata with source-dependent coverage. Not a scientific ranking.',
     isSynthetic: false,
     isPilot: false,
     isLiveApi: true,
@@ -69,6 +69,21 @@ const presentations: Record<AtlasDatasetKind, DatasetPresentation> = {
 
 export function getDatasetPresentation(
   datasetKind: AtlasDatasetKind,
+  deliveryMode?: DatasetMetadata['deliveryMode'],
 ): DatasetPresentation {
+  if (datasetKind === 'live-api' && deliveryMode === 'versioned-dataset') {
+    return {
+      ...presentations['live-api'],
+      badgeLabel: 'Certified Atlas dataset',
+      dataLabel: 'Certified scientific dataset',
+      dataLabelLower: 'certified scientific dataset',
+      observationLabel: 'Certified Atlas observation',
+      valuesLabel: 'Certified Atlas values',
+      sampleLabel: 'Versioned dataset',
+      mapAriaLabel: 'Temporal geographic atlas of certified physics metric values',
+      disclaimer: 'Versioned scientific evidence with limited coverage. Not a scientific ranking.',
+      isLiveApi: false,
+    };
+  }
   return presentations[datasetKind];
 }

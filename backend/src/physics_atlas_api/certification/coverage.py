@@ -26,6 +26,29 @@ def certify_coverage(
     partially certified mass.
     """
 
+    from .field_mass import (
+        SourceFieldMassDecision,
+        SourceFieldMassPopulation,
+        validate_source_field_mass_decisions,
+    )
+    from .launch_metric_coverage import (
+        SourceAttributionMassDecision,
+        SourceAttributionMassPopulation,
+        validate_source_attribution_mass_decisions,
+    )
+
+    if isinstance(population, SourceFieldMassPopulation):
+        validate_source_field_mass_decisions(population, decisions)
+    elif isinstance(population, SourceAttributionMassPopulation):
+        validate_source_attribution_mass_decisions(population, decisions)
+    elif any(isinstance(item, SourceFieldMassDecision) for item in decisions):
+        raise CertificationError(
+            "source field mass decisions require their exact typed population"
+        )
+    elif any(isinstance(item, SourceAttributionMassDecision) for item in decisions):
+        raise CertificationError(
+            "source attribution mass decisions require their exact typed population"
+        )
     minimum = coverage_minimum(evidence_kind)
     ids = [item.decision_id for item in decisions]
     if not ids or len(set(ids)) != len(ids):

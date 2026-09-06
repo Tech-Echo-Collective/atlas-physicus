@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 
-from .automation import AUTOMATIC_FIELD_RULE_VERSION
+from .automation import (
+    AUTOMATIC_DATE_RULE_VERSION,
+    AUTOMATIC_FIELD_RULE_VERSION,
+    AUTOMATIC_RESEARCHER_RULE_VERSION,
+    AutomaticPaperIdentityDecision,
+)
 from .citations import CITATION_CERTIFICATION_RULE_VERSION
 from .contracts import (
     CERTIFICATION_COVERAGE_MINIMUMS_V1,
@@ -9,6 +14,7 @@ from .contracts import (
     EvidenceKind,
 )
 from .fields import (
+    AUTOMATIC_FIELD_PROJECTION_RULE_VERSION,
     FIELD_CERTIFICATION_RULE_VERSION,
     AutomaticFieldDecision,
 )
@@ -43,13 +49,34 @@ def evidence_rule_version(evidence_kind: EvidenceKind) -> str:
 
 
 def evidence_decision_is_current(decision: EvidenceCertificationDecision) -> bool:
-    """Accept legacy rules or a re-evaluated typed exact-field proof, never a flag."""
+    """Accept legacy rules or exact typed source proofs, never an approval flag."""
+    from .field_mass import SourceFieldMassDecision
+    from .launch_metric_coverage import SourceAttributionMassDecision
+
+    if isinstance(decision, (SourceFieldMassDecision, SourceAttributionMassDecision)):
+        try:
+            decision.__post_init__()
+        except ValueError:
+            return False
+        return True
+    if isinstance(decision, AutomaticPaperIdentityDecision):
+        if decision.rule_version != {
+            "publication-metric-date": AUTOMATIC_DATE_RULE_VERSION,
+            "researcher-identity": AUTOMATIC_RESEARCHER_RULE_VERSION,
+        }.get(decision.evidence_kind):
+            return False
+        try:
+            decision.__post_init__()
+        except ValueError:
+            return False
+        return True
     if decision.rule_version == evidence_rule_version(decision.evidence_kind):
         return not isinstance(decision, AutomaticFieldDecision)
     if (
         decision.evidence_kind
         not in {"field-classification", "field-weight-conservation"}
-        or decision.rule_version != AUTOMATIC_FIELD_RULE_VERSION
+        or decision.rule_version
+        not in {AUTOMATIC_FIELD_RULE_VERSION, AUTOMATIC_FIELD_PROJECTION_RULE_VERSION}
         or not isinstance(decision, AutomaticFieldDecision)
     ):
         return False

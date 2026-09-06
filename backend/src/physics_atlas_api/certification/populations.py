@@ -12,12 +12,16 @@ from .contracts import (
     EvidenceCertificationDecision,
     canonical_digest,
 )
+from .fields import branch_diversity_field_projection, ontology_branch_category_ids
 from .years import CertifiedMetricWindow
 
 METRIC_POPULATION_SUBJECT_TYPE = "metric-population"
 METRIC_POPULATION_CERTIFICATION_VERSION = "metric-population-certification-v1"
 AUTOMATIC_CATEGORY_UNIVERSE_VERSION = "ontology-category-universe-v1"
 AUTOMATIC_METRIC_POPULATION_VERSION = "source-window-metric-population-v1"
+AUTOMATIC_BRANCH_DIVERSITY_POPULATION_VERSION = (
+    "source-window-branch-diversity-population-v1"
+)
 _AUTOMATIC_UNRESOLVED_REASON = (
     "source-window affiliation or field mass remains unresolved"
 )
@@ -61,24 +65,7 @@ def _ontology_category_ids(field_id: str) -> tuple[str, ...]:
         return tuple(
             sorted(item.id for item in ontology.fields if item.node_kind == "field")
         )
-    if not ontology.contains(field_id):
-        raise CertificationError(
-            "automatic category universe has an unknown ontology root"
-        )
-    categories = tuple(
-        sorted(
-            item.id
-            for item in ontology.fields
-            if item.node_kind == "field"
-            and any(parent.id == field_id for parent in ontology.ancestors_of(item.id))
-        )
-    )
-    if len(categories) < 2:
-        raise CertificationError(
-            "automatic Diversity needs at least two frozen ontology subfields; "
-            "leaf-field subcategories cannot be invented"
-        )
-    return categories
+    return ontology_branch_category_ids(field_id)
 
 
 @dataclass(frozen=True)
@@ -413,7 +400,8 @@ class AutomaticMetricPopulationEvidence:
 
     def __post_init__(self) -> None:
         if (
-            self.assessment_version != AUTOMATIC_METRIC_POPULATION_VERSION
+            self.assessment_version
+            != _automatic_population_version(self.metric_id, self.field_id)
             or not isinstance(self.assessed_at, datetime)
             or self.assessed_at.tzinfo is None
             or self.assessed_at.utcoffset() is None
@@ -501,7 +489,7 @@ def certify_metric_population(
             raise CertificationError(
                 "automatic metric population targets another window or cutoff"
             )
-        _validate_automatic_population_field(evidence.field_id)
+        _validate_automatic_population_field(evidence.field_id, evidence.metric_id)
     identifiers = (
         evidence.metric_id,
         evidence.dataset_version,
@@ -530,6 +518,8 @@ def certify_metric_population(
                 "Diversity requires a reviewed exact category universe"
             )
         category_evidence = category_universe.evidence
+        if isinstance(evidence, AutomaticMetricPopulationEvidence):
+            category_universe.__post_init__()
         if (
             category_evidence.field_id != evidence.field_id
             or category_evidence.dataset_version != evidence.dataset_version
@@ -584,7 +574,7 @@ def certify_metric_population(
             for entity_type, entity_id, weight in source.entity_shares
             if entity_type == evidence.entity_type and entity_id == evidence.entity_id
         )
-        source_field_weight = dict(source.field_weights).get(evidence.field_id, 0.0)
+        source_field_weight = _population_field_weight(evidence, source.field_weights)
         expected_weight = source_entity_weight * source_field_weight
         unresolved_entity_mass = math.fsum(
             weight
@@ -701,7 +691,7 @@ def certify_metric_population(
             )
         ),
         rule_version=(
-            AUTOMATIC_METRIC_POPULATION_VERSION
+            evidence.assessment_version
             if isinstance(evidence, AutomaticMetricPopulationEvidence)
             else METRIC_POPULATION_CERTIFICATION_VERSION
         ),
@@ -750,8 +740,8 @@ def derive_metric_population(
         )
     if not isinstance(entity_id, str) or not entity_id.strip():
         raise CertificationError("automatic population entity identifier is invalid")
-    _validate_automatic_population_field(field_id)
     context = window.certification
+    _validate_automatic_population_field(field_id, context.metric_id)
     projections: list[MetricPopulationProjection] = []
     decisions: list[EvidenceCertificationDecision] = []
     for year in window.source_years:
@@ -761,7 +751,12 @@ def derive_metric_population(
                 for entity_type, source_entity_id, weight in source.entity_shares
                 if entity_type == context.entity_type and source_entity_id == entity_id
             )
-            field_weight = dict(source.field_weights).get(field_id, 0.0)
+            field_weight = (
+                branch_diversity_field_projection(field_id, source.field_weights)[0]
+                if _automatic_population_version(context.metric_id, field_id)
+                == AUTOMATIC_BRANCH_DIVERSITY_POPULATION_VERSION
+                else dict(source.field_weights).get(field_id, 0.0)
+            )
             weight = entity_weight * field_weight
             unresolved = math.fsum(
                 mass
@@ -847,15 +842,43 @@ def derive_metric_population(
             decisions=tuple(sorted(decisions, key=lambda item: item.subject_id)),
             assessed_at=assessed_at,
             category_universe=category,
+            assessment_version=_automatic_population_version(
+                context.metric_id, field_id
+            ),
         ),
         window,
     )
 
 
-def _validate_automatic_population_field(field_id: str) -> None:
+def _automatic_population_version(metric_id: str, field_id: str) -> str:
+    if (
+        metric_id == "research_diversity"
+        and PHYSICS_FIELD_ONTOLOGY_V1.contains(field_id)
+        and PHYSICS_FIELD_ONTOLOGY_V1.get(field_id).node_kind == "branch"
+    ):
+        return AUTOMATIC_BRANCH_DIVERSITY_POPULATION_VERSION
+    return AUTOMATIC_METRIC_POPULATION_VERSION
+
+
+def _population_field_weight(
+    evidence: PopulationEvidence,
+    field_weights: tuple[tuple[str, float], ...],
+) -> float:
+    if (
+        isinstance(evidence, AutomaticMetricPopulationEvidence)
+        and evidence.assessment_version == AUTOMATIC_BRANCH_DIVERSITY_POPULATION_VERSION
+    ):
+        return branch_diversity_field_projection(evidence.field_id, field_weights)[0]
+    return dict(field_weights).get(evidence.field_id, 0.0)
+
+
+def _validate_automatic_population_field(field_id: str, metric_id: str) -> None:
     if not PHYSICS_FIELD_ONTOLOGY_V1.contains(field_id):
         raise CertificationError("automatic population canonical field is invalid")
     if PHYSICS_FIELD_ONTOLOGY_V1.get(field_id).node_kind != "field":
+        if metric_id == "research_diversity":
+            ontology_branch_category_ids(field_id)
+            return
         raise CertificationError(
             "metric populations require canonical leaf-field weights"
         )

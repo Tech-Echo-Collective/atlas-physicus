@@ -26,12 +26,15 @@ from .contracts import (
     canonical_digest,
 )
 from .coverage import COVERAGE_SUBJECT_TYPE, validate_coverage_certification
+from .field_mass import SourceFieldMassPopulation
+from .launch_scope import BoundedLaunchSourcePlan
 from .rules import (
     coverage_minimum,
     evidence_decision_is_current,
     required_coverage_evidence,
     required_window_years,
 )
+from .source_pages import SourceRecordPageReceipt
 
 if TYPE_CHECKING:
     from .measurement_windows import CertifiedSessionCitationCohort
@@ -118,6 +121,56 @@ class SourcePartitionEvidence:
             and self.observed_records - self.observed_unique_records
             == self.duplicate_records
         )
+
+
+@dataclass(frozen=True, kw_only=True)
+class RecordPageSourcePartitionEvidence(SourcePartitionEvidence):
+    """Opt-in exact record/page bridge; legacy partition hashes remain unchanged."""
+
+    pages: tuple[SourceRecordPageReceipt, ...]
+
+    def __post_init__(self) -> None:
+        SourcePartitionEvidence.__post_init__(self)
+        if not self.pages or any(
+            not isinstance(item, SourceRecordPageReceipt) for item in self.pages
+        ):
+            raise CertificationError(
+                "record/page partition requires typed captured pages"
+            )
+        for item in self.pages:
+            item.__post_init__()
+        pairs = tuple(pair for page in self.pages for pair in page.record_checksums)
+        records = dict(pairs)
+        if (
+            any(
+                page.provider != self.provider or page.partition_id != self.partition_id
+                for page in self.pages
+            )
+            or tuple(page.page_checksum for page in self.pages) != self.page_checksums
+            or len(pairs) != self.observed_records
+            or len(records) != self.observed_unique_records
+            or any(records[record_id] != checksum for record_id, checksum in pairs)
+            or self.record_inventory_digest
+            != source_record_inventory_digest(
+                tuple(
+                    EvidenceReference(
+                        self.provider, record_id, checksum, self.partition_id
+                    )
+                    for record_id, checksum in sorted(records.items())
+                )
+            )
+        ):
+            raise CertificationError(
+                "record/page partition differs from captured inventory"
+            )
+
+    @property
+    def reconciles(self) -> bool:
+        try:
+            self.__post_init__()
+        except ValueError:
+            return False
+        return super().reconciles
 
 
 @dataclass(frozen=True)
@@ -395,7 +448,9 @@ class SourceYearEvidence:
     dataset_version: str
     acquisition_scope: str
     acquisition_plan: (
-        SourceAcquisitionPlanEvidence | AutomaticSourceAcquisitionPlanEvidence
+        SourceAcquisitionPlanEvidence
+        | AutomaticSourceAcquisitionPlanEvidence
+        | BoundedLaunchSourcePlan
     )
     required_partition_ids: tuple[str, ...]
     required_coverage_kinds: tuple[EvidenceKind, ...]
@@ -407,10 +462,17 @@ class SourceYearEvidence:
     def __post_init__(self) -> None:
         if not isinstance(
             self.acquisition_plan,
-            (SourceAcquisitionPlanEvidence, AutomaticSourceAcquisitionPlanEvidence),
+            (
+                SourceAcquisitionPlanEvidence,
+                AutomaticSourceAcquisitionPlanEvidence,
+                BoundedLaunchSourcePlan,
+            ),
         ):
             raise ValueError("source-year evidence requires an exact acquisition plan")
-        if isinstance(self.acquisition_plan, AutomaticSourceAcquisitionPlanEvidence):
+        if isinstance(
+            self.acquisition_plan,
+            (AutomaticSourceAcquisitionPlanEvidence, BoundedLaunchSourcePlan),
+        ):
             self.acquisition_plan.__post_init__()
         if any(
             not isinstance(item, SourceYearPaperProjection)
@@ -545,7 +607,12 @@ def _evaluate_source_year(
     evidence: SourceYearEvidence,
     coverage: tuple[CoverageCertification, ...],
 ) -> SourceYearCertification:
-    if isinstance(evidence.acquisition_plan, AutomaticSourceAcquisitionPlanEvidence):
+    from .launch_metric_coverage import SourceAttributionMassPopulation
+
+    if isinstance(
+        evidence.acquisition_plan,
+        (AutomaticSourceAcquisitionPlanEvidence, BoundedLaunchSourcePlan),
+    ):
         evidence.acquisition_plan.__post_init__()
     reasons: list[str] = []
     state: CertificationState = "certified"
@@ -614,6 +681,13 @@ def _evaluate_source_year(
     occurrences_by_partition: dict[str, list[EvidenceReference]] = {
         partition_id: [] for partition_id in required
     }
+    captured_record_checksums = {
+        partition_id: dict(
+            pair for page in partition.pages for pair in page.record_checksums
+        )
+        for partition_id, partition in partitions.items()
+        if isinstance(partition, RecordPageSourcePartitionEvidence)
+    }
     invalid_occurrence = False
     occurrence_keys: set[tuple[str, str]] = set()
     for projection in evidence.paper_projections:
@@ -623,7 +697,14 @@ def _evaluate_source_year(
             if (
                 partition is None
                 or partition.provider != reference.provider
-                or reference.checksum not in partition.page_checksums
+                or (
+                    reference.checksum
+                    != captured_record_checksums[partition.partition_id].get(
+                        reference.source_record_id
+                    )
+                    if isinstance(partition, RecordPageSourcePartitionEvidence)
+                    else reference.checksum not in partition.page_checksums
+                )
                 or key in occurrence_keys
             ):
                 invalid_occurrence = True
@@ -680,6 +761,55 @@ def _evaluate_source_year(
         reasons.append(
             "structural decision values do not reconstruct from paper projections"
         )
+    from .automation import (
+        AutomaticPaperIdentityDecision,
+        verify_automatic_source_binding,
+    )
+
+    automatic_dates = tuple(
+        item
+        for item in evidence.structural_decisions
+        if isinstance(item, AutomaticPaperIdentityDecision)
+        and item.evidence_kind == "publication-metric-date"
+    )
+    if isinstance(evidence.acquisition_plan, BoundedLaunchSourcePlan) and (
+        len(automatic_dates) != len(canonical_paper_ids)
+        or any(
+            item.source_facts.declared_date_basis
+            != evidence.acquisition_plan.declared_date_basis
+            for item in automatic_dates
+        )
+        or any(
+            not isinstance(item, RecordPageSourcePartitionEvidence)
+            for item in evidence.partitions
+        )
+    ):
+        state = "conflicted"
+        reasons.append(
+            "bounded launch year lacks exact source-bound dates or record/page receipts"
+        )
+    if automatic_dates:
+        # The legacy type has no axis field. Never silently mix an explicit
+        # opt-in basis with an unlabelled legacy date or another source basis.
+        if (
+            len(automatic_dates) != len(canonical_paper_ids)
+            or len({item.source_facts.declared_date_basis for item in automatic_dates})
+            != 1
+        ):
+            state = "conflicted"
+            reasons.append(
+                "automatic source-year dates lack one complete explicit basis"
+            )
+        for item in automatic_dates:
+            try:
+                verify_automatic_source_binding(
+                    item, projections_by_id.get(item.subject_id)
+                )
+            except ValueError:
+                state = "conflicted"
+                reasons.append(
+                    "automatic date does not bind the exact source-year occurrence"
+                )
     if not coverage:
         if state == "certified":
             state = "insufficient_evidence"
@@ -742,7 +872,43 @@ def _evaluate_source_year(
             if decision_by_subject.get(paper_id) is not None
             and decision_by_subject[paper_id].state == "certified"
         )
-        if (
+        if isinstance(population, SourceFieldMassPopulation):
+            if tuple(
+                sorted(population.source_projections, key=lambda item: item.paper_id)
+            ) != tuple(
+                sorted(evidence.paper_projections, key=lambda item: item.paper_id)
+            ) or any(
+                item.context.dataset_version != evidence.dataset_version
+                or item.context.acquisition_scope != evidence.acquisition_scope
+                for item in population.source_field_evidence
+            ):
+                state = "conflicted"
+                reasons.append(
+                    "source-year field mass does not bind its full canonical universe"
+                )
+        elif isinstance(population, SourceAttributionMassPopulation):
+            if (
+                tuple(
+                    sorted(
+                        population.source_projections, key=lambda item: item.paper_id
+                    )
+                )
+                != tuple(
+                    sorted(evidence.paper_projections, key=lambda item: item.paper_id)
+                )
+                or population.entity_type != evidence.entity_type
+                or any(
+                    item.dataset_version != evidence.dataset_version
+                    or item.acquisition_scope != evidence.acquisition_scope
+                    for item in population.source_proofs
+                )
+            ):
+                state = "conflicted"
+                reasons.append(
+                    "source-year attribution mass does not bind "
+                    "its full canonical universe"
+                )
+        elif (
             population.source_manifest_digest != source_population_digest
             or population.formula_inputs != expected_formula_inputs
             or set(unit_id for unit_id, _ in population.units) != canonical_paper_ids
@@ -856,6 +1022,27 @@ class CertifiedMetricWindow:
         ):
             raise CertificationError(
                 "metric-window proof requires reconstructable citation cohorts"
+            )
+        from .automation import AutomaticPaperIdentityDecision
+
+        date_decisions = tuple(
+            decision
+            for year in self.source_years
+            for decision in year.evidence.structural_decisions
+            if decision.evidence_kind == "publication-metric-date"
+        )
+        automatic_dates = tuple(
+            item
+            for item in date_decisions
+            if isinstance(item, AutomaticPaperIdentityDecision)
+        )
+        if automatic_dates and (
+            len(automatic_dates) != len(date_decisions)
+            or len({item.source_facts.declared_date_basis for item in automatic_dates})
+            != 1
+        ):
+            raise CertificationError(
+                "metric window mixes declared and unlabelled metric date bases"
             )
         expected = _evaluate_metric_window(
             metric_id=self.certification.metric_id,

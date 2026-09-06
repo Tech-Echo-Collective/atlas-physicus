@@ -647,6 +647,10 @@ class CertifiedMetricPartition[PartitionT]:
             raise CertificationError("metric partition certification rule is stale")
         if canonical_digest(self.partition) != self.certification.input_digest:
             raise CertificationError("metric partition input digest does not match")
+        from .automation import (
+            verify_automatic_date_axis,
+            verify_automatic_source_binding,
+        )
         from .citations import impact_comparable_paper_ids
         from .coverage import COVERAGE_SUBJECT_TYPE, validate_coverage_certification
         from .populations import (
@@ -829,6 +833,7 @@ class CertifiedMetricPartition[PartitionT]:
                 "metric partition paper projection proof does not match"
             )
         decisions = self.certification.evidence_decisions
+        verify_automatic_date_axis(decisions, self.window_proof.source_years)
         if any(
             not evidence_decision_is_current(item)
             or item.dataset_version != self.certification.dataset_version
@@ -864,6 +869,10 @@ class CertifiedMetricPartition[PartitionT]:
             paper_value = papers_by_id[paper_certification.paper_id]
             for decision in paper_decisions:
                 assert decision is not None
+                verify_automatic_source_binding(
+                    decision,
+                    window_projections.get(paper_certification.paper_id),
+                )
                 used_decision_ids.add(decision.decision_id)
                 if decision.certified_value_digest != paper_evidence_value_digest(
                     self.partition,

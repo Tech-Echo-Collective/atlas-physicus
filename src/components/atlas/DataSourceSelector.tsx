@@ -6,6 +6,7 @@ import {
 interface DataSourceSelectorProps {
   selectedSourceId: AtlasDataSourceId;
   liveApiAvailable: boolean;
+  certifiedDataset?: boolean;
   isLoading?: boolean;
   loadingSourceId?: AtlasDataSourceId | null;
   error?: string | null;
@@ -16,6 +17,7 @@ interface DataSourceSelectorProps {
 export function DataSourceSelector({
   selectedSourceId,
   liveApiAvailable,
+  certifiedDataset = false,
   isLoading = false,
   loadingSourceId = null,
   error = null,
@@ -52,9 +54,10 @@ export function DataSourceSelector({
               }
               onClick={() => onSelect(source.id)}
             >
-              <strong>{source.label}</strong>
+              <strong>{certifiedDataset && source.id === 'live-api' ? 'Certified Atlas dataset' : source.label}</strong>
               <small>
-                {isUnavailable ? 'API deployment not configured' : source.description}
+                {isUnavailable ? 'API deployment not configured' :
+                  certifiedDataset && source.id === 'live-api' ? 'Immutable scientific release' : source.description}
               </small>
             </button>
           );
@@ -90,7 +93,7 @@ export function DataSourceSelector({
       )}
       {isLive && !isLoading && !error && !notice && (
         <p className="pilot-source-note" role="note">
-          <strong>API-backed Atlas metadata</strong>
+          <strong>{certifiedDataset ? 'Certified versioned Atlas dataset' : 'API-backed Atlas metadata'}</strong>
           <span>
             Source provenance remains separate from synthetic and pilot data.
           </span>

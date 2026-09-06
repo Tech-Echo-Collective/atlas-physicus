@@ -1,6 +1,6 @@
 # Atlas Physicus durable decisions
 
-Last reviewed: 2026-09-05
+Last reviewed: 2026-09-06
 
 These decisions constrain implementation and public communication. Add a dated superseding entry when a durable decision changes; do not silently rewrite project history.
 
@@ -214,6 +214,86 @@ single-cutoff contracts and historical digests remain valid under their old
 version. This authorization does not activate metrics or certify any live data.
 See [the method](automatic-certification.md#versioned-measurement-window-pa-055)
 and [bounded validation](validation/citation-measurement-window-2026-09-05.md).
+
+## Explicitly limited five-metric launch — 2026-09-06
+
+**PA-056:** The owner authorized the first scientifically certified field/year/
+entity slice without requiring Full Physics completeness. The opt-in boundary
+`certified-ontology-branch-release-v1` may publish an explicitly named existing
+ontology branch, provided the exact Joint Gate and all five current metrics pass
+on compatible certified evidence. This supersedes only the broad-Physics-only
+public-launch restriction of PA-038/040 for this explicit scoped variant. The
+existing broad-Physics/default activation path is unchanged.
+
+The first bounded recipe is `nuclear-physics-launch-v1`: INSPIRE articles with
+Theory-Nucl or Experiment-Nucl evidence and exact `preprint_date` calendar years
+2018–2023. Its fixed branch contains `nucl-th` and `nucl-ex`; it is not broad
+Physics. A recipe or reconciled retrieval is not a certified complete year or
+an atomic provider snapshot. Public activation still requires certified source
+years, populations, comparable citation evidence, normalization and exact-five
+observations sharing the same branch/entity/period. Unsupported fields, entities
+and periods remain missing; favorable results from incompatible scopes cannot
+be assembled into one passing system.
+
+Branch Diversity uses the entire existing descendant leaf catalog. For branch
+mass `B = Σ descendant field weights`, its within-branch shares are `w/B`;
+effective contributions remain `(entity share × B) × (w/B) = entity share × w`.
+Outside-branch and unmapped mass is retained, not reassigned. This is the existing
+normalized Shannon metric on a declared branch, not a new formula, invented leaf
+subfields or an average of leaf Diversity values. Historical Momentum remains
+backward-looking: six certified years 2018–2023 can support terminal 2023, not
+six fabricated Momentum observations. All numerical thresholds remain unchanged.
+
+## Paper-native ROR affiliation cross-check — 2026-09-06
+
+**PA-057:** `paper-native-ror-affiliation-crosscheck-v1` is a dedicated automatic
+adapter under PA-054/046, not permission for generic name-only institution
+matching. It binds an exact dated INSPIRE paper, author/raw-affiliation slot,
+original text, official ROR affiliation request, response checksum and actual
+request/response times. Trusted acquisition must establish provider origin;
+an official-looking URL or a checksum alone does not authenticate evidence.
+
+Admission requires one official `chosen: true` candidate, a whole institutional
+label/alias match excluding acronym-only matches, and mandatory exact country
+corroboration. A supplied city must also agree; a country-only source does not
+invent a city. Only explicitly recognized simple subunit/address clauses may
+remain. Multiple organizations, contradictory or unclassified geographic text,
+unknown prefixes, inactive identities, unsupported parent rollups and historical
+predecessor/successor ambiguity remain unresolved. Current employment or a
+homepage never replaces paper-time affiliation, and no reviewer is fabricated.
+
+The existing ROR lifecycle/parent validator remains authoritative. The resulting
+match records this distinct cross-check method, not a claim that the original
+paper directly supplied a ROR ID. ROR choice or numeric score alone is insufficient;
+unresolved mass remains in the unchanged coverage denominator. Bounded positive
+checks are not population-wide precision, 95% canonical coverage or activation.
+See [method and limits](automatic-certification.md#paper-native-ror-cross-check-pa-057)
+and [the bounded observations](validation/minimum-launch-integration-2026-09-06.md).
+
+## Exact ROR identity versus parent aggregation — 2026-09-06
+
+**PA-058:** The bounded launch may opt into retaining an exact active ROR
+organization as the canonical institution, without interpreting every ROR parent
+relationship as a request to aggregate into that parent. ROR describes organizations
+with their own ROR IDs as independently identifiable, while ordinary internal
+departments generally do not receive separate IDs. A parent edge alone therefore
+does not invalidate an otherwise supported direct identity.
+
+This is a narrow identity/granularity correction under the owner's minimum-needed
+launch authorization. The existing resolver's parent-rollup behavior remains the
+legacy default. The opt-in path must retain the exact selected ROR ID and all parent
+references as provenance; it must not substitute, invent or automatically credit a
+parent. Missing/ambiguous ROR links, conflicting identifiers, inactive identities
+and unresolved historical lifecycle evidence remain withheld. Paper-time affiliation,
+fractional attribution and all metric formulas/thresholds are unchanged; the same
+paper must not be credited again through an automatic parent aggregation.
+
+The versioned dataset must disclose the retained entity granularity. A separate
+rollup requires an explicit supported policy and authority evidence, not this
+identity option. Coverage must be remeasured after validation; the pre-fix sample
+is not evidence that the corrected path passes the 95% gate.
+[ROR registry scope](https://ror.org/registry/),
+[ROR organizational scope guidance](https://ror.org/blog/2026-06-24-three-tips-for-requesting-ror-id/).
 
 ## Current activation decision
 

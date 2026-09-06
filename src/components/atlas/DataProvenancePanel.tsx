@@ -227,6 +227,13 @@ export function DataProvenancePanel({
           )}
 
           <p>{metadata.disclaimer}</p>
+          {metadata.deliveryMode === 'versioned-dataset' && metadata.releaseManifestUrl && (
+            <p>
+              <a href={metadata.releaseManifestUrl} target="_blank" rel="noreferrer">
+                Release manifest, missing evidence and scientific provenance
+              </a>
+            </p>
+          )}
         </section>
       )}
     </div>

@@ -4,15 +4,20 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime
+from typing import cast
 
 from ..certification import CertificationError, canonical_digest
 from ..fields import PHYSICS_FIELD_ONTOLOGY_V1, PHYSICS_FIELD_ONTOLOGY_VERSION
+from ..fields.ontology import FieldDefinition
 from .calculators import MetricCalculationResult, citation_session_normalization_key
 from .presentation import AtlasScaleObservation
 from .thresholds import (
     METRIC_VALIDATION_THRESHOLDS_V1,
     MetricValidationThresholds,
 )
+
+AUTOMATIC_FIELD_POPULATION_VERSION = "automatic-physics-field-population-v1"
+ONTOLOGY_BRANCH_AGGREGATION_VERSION = "ontology-branch-equal-field-coverage-aware-v1"
 
 
 @dataclass(frozen=True)
@@ -28,8 +33,8 @@ class FieldPopulationEvidence:
     field_weights: tuple[tuple[str, float], ...]
     source_manifest_digest: str
     review_state: str
-    reviewed_by: str
-    reviewed_at: datetime
+    reviewed_by: str | None
+    reviewed_at: datetime | None
 
     @property
     def content_digest(self) -> str:
@@ -43,6 +48,244 @@ class FieldPopulationEvidence:
                 self.ontology_version,
                 tuple(sorted(self.field_weights)),
             )
+        )
+
+
+@dataclass(frozen=True)
+class AutomaticFieldPopulationEvidence(FieldPopulationEvidence):
+    """Exact ontology catalog, bound to certified inputs; not coverage approval."""
+
+    observations: tuple[AtlasScaleObservation, ...]
+    automatic_rule_version: str = AUTOMATIC_FIELD_POPULATION_VERSION
+
+    @property
+    def content_digest(self) -> str:
+        return canonical_digest(
+            (
+                super().content_digest,
+                self.automatic_rule_version,
+                _field_observation_bindings(self.observations),
+            )
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
+class OntologyBranchPopulationEvidence(AutomaticFieldPopulationEvidence):
+    """A named, fixed ontology branch, never a caller-selected leaf subset."""
+
+    branch_id: str
+    automatic_rule_version: str = ONTOLOGY_BRANCH_AGGREGATION_VERSION
+
+    @property
+    def content_digest(self) -> str:
+        return canonical_digest((super().content_digest, self.branch_id))
+
+
+def _branch_leaf_ids(branch_id: str) -> tuple[str, ...]:
+    ontology = PHYSICS_FIELD_ONTOLOGY_V1
+    if (
+        not ontology.contains(branch_id)
+        or ontology.get(branch_id).node_kind != "branch"
+    ):
+        raise CertificationError(
+            "aggregation target must be an existing ontology branch"
+        )
+    return tuple(
+        sorted(
+            item.id
+            for item in ontology.fields
+            if item.node_kind == "field"
+            and branch_id
+            in {ancestor.id for ancestor in ontology.ancestors_of(item.id)}
+        )
+    )
+
+
+def derive_ontology_branch_population(
+    branch: FieldDefinition,
+    observations: tuple[AtlasScaleObservation, ...],
+) -> OntologyBranchPopulationEvidence:
+    """Bind existing leaf-normalized observations to their named branch catalog."""
+    if (
+        not isinstance(branch, FieldDefinition)
+        or not PHYSICS_FIELD_ONTOLOGY_V1.contains(branch.id)
+        or branch != PHYSICS_FIELD_ONTOLOGY_V1.get(branch.id)
+    ):
+        raise CertificationError("branch definition must match the frozen ontology")
+    leaves = _branch_leaf_ids(branch.id)
+    if not observations or any(
+        not isinstance(item, AtlasScaleObservation) for item in observations
+    ):
+        raise CertificationError(
+            "branch aggregation requires certified Atlas observations"
+        )
+    baseline = observations[0].calculation
+    evidence = OntologyBranchPopulationEvidence(
+        entity_id=baseline.entity_id,
+        metric_id=baseline.metric_id,
+        period=baseline.period,
+        dataset_version=baseline.dataset_version,
+        acquisition_scope=baseline.acquisition_scope,
+        ontology_version=PHYSICS_FIELD_ONTOLOGY_VERSION,
+        field_weights=tuple((field_id, 1.0) for field_id in leaves),
+        source_manifest_digest="0" * 64,
+        review_state="automatic-evidence-derived",
+        reviewed_by=None,
+        reviewed_at=None,
+        branch_id=branch.id,
+        observations=tuple(
+            sorted(observations, key=lambda item: item.calculation.field_id)
+        ),
+    )
+    evidence = replace(evidence, source_manifest_digest=evidence.content_digest)
+    _validate_field_population(evidence)
+    return evidence
+
+
+def _field_observation_bindings(
+    observations: tuple[AtlasScaleObservation, ...],
+) -> tuple[tuple[str, str, str], ...]:
+    return tuple(
+        sorted(
+            (
+                item.calculation.field_id,
+                item.certification_manifest_digest,
+                canonical_digest(item.calculation),
+            )
+            for item in observations
+        )
+    )
+
+
+def derive_automatic_field_population(
+    observations: tuple[AtlasScaleObservation, ...],
+) -> AutomaticFieldPopulationEvidence:
+    """Freeze the existing full Physics catalog; absent fields stay missing."""
+    if not observations or any(
+        not isinstance(item, AtlasScaleObservation) for item in observations
+    ):
+        raise CertificationError(
+            "automatic field population requires certified Atlas observations"
+        )
+    baseline = observations[0].calculation
+    evidence = AutomaticFieldPopulationEvidence(
+        entity_id=baseline.entity_id,
+        metric_id=baseline.metric_id,
+        period=baseline.period,
+        dataset_version=baseline.dataset_version,
+        acquisition_scope=baseline.acquisition_scope,
+        ontology_version=PHYSICS_FIELD_ONTOLOGY_VERSION,
+        field_weights=tuple(
+            sorted(
+                (item.id, 1.0)
+                for item in PHYSICS_FIELD_ONTOLOGY_V1.fields
+                if item.node_kind == "field"
+            )
+        ),
+        source_manifest_digest="0" * 64,
+        review_state="automatic-evidence-derived",
+        reviewed_by=None,
+        reviewed_at=None,
+        observations=tuple(
+            sorted(observations, key=lambda item: item.calculation.field_id)
+        ),
+    )
+    evidence = replace(evidence, source_manifest_digest=evidence.content_digest)
+    _validate_field_population(evidence)
+    return evidence
+
+
+def _validate_automatic_field_population(
+    evidence: AutomaticFieldPopulationEvidence,
+) -> None:
+    from .presentation import CertifiedMetricCalculation
+
+    if (
+        evidence.automatic_rule_version
+        != (
+            ONTOLOGY_BRANCH_AGGREGATION_VERSION
+            if isinstance(evidence, OntologyBranchPopulationEvidence)
+            else AUTOMATIC_FIELD_POPULATION_VERSION
+        )
+        or evidence.review_state != "automatic-evidence-derived"
+        or evidence.reviewed_by is not None
+        or evidence.reviewed_at is not None
+        or not evidence.observations
+    ):
+        raise CertificationError(
+            "automatic field population rule or authority is invalid"
+        )
+    keys: set[tuple[str, ...]] = set()
+    observed_fields: set[str] = set()
+    for observation in evidence.observations:
+        if not isinstance(observation, AtlasScaleObservation) or not isinstance(
+            observation.certification_proof, CertifiedMetricCalculation
+        ):
+            raise CertificationError(
+                "automatic population requires field-level certified observations"
+            )
+        observation.certification_proof.__post_init__()
+        observation.__post_init__()
+        result = observation.calculation
+        if result.field_id in observed_fields:
+            raise CertificationError(
+                "automatic field population contains duplicate fields"
+            )
+        observed_fields.add(result.field_id)
+        keys.add(
+            (
+                result.entity_type,
+                result.entity_id,
+                result.metric_id,
+                result.period,
+                result.dataset_version,
+                result.acquisition_scope,
+                result.ontology_version,
+                result.metric_definition_version,
+                result.algorithm_version,
+                result.normalization_version,
+                result.evidence_cutoff,
+                result.threshold_version,
+                result.attribution_policy_version,
+                result.mapping_policy_version,
+                result.citation_policy_version,
+            )
+            + citation_session_normalization_key(result)
+        )
+    first = evidence.observations[0].calculation
+    if isinstance(
+        evidence, OntologyBranchPopulationEvidence
+    ) and first.metric_id not in {
+        "research_activity_score",
+        "research_impact",
+        "collaboration",
+        "momentum",
+    }:
+        raise CertificationError(
+            "branch averaging does not replace within-branch Diversity"
+        )
+    if (
+        len(keys) != 1
+        or (
+            evidence.entity_id,
+            evidence.metric_id,
+            evidence.period,
+            evidence.dataset_version,
+            evidence.acquisition_scope,
+            evidence.ontology_version,
+        )
+        != (
+            first.entity_id,
+            first.metric_id,
+            first.period,
+            first.dataset_version,
+            first.acquisition_scope,
+            first.ontology_version,
+        )
+        or not observed_fields.issubset(dict(evidence.field_weights))
+    ):
+        raise CertificationError(
+            "automatic field population target or observation lineage differs"
         )
 
 
@@ -65,12 +308,16 @@ def _validate_field_population(evidence: FieldPopulationEvidence) -> None:
         evidence.dataset_version,
         evidence.acquisition_scope,
         evidence.ontology_version,
-        evidence.reviewed_by,
     )
     if any(not item.strip() for item in identifiers):
         raise CertificationError("field population identifiers must be non-empty")
-    if (
+    if isinstance(evidence, AutomaticFieldPopulationEvidence):
+        _validate_automatic_field_population(evidence)
+    elif (
         evidence.review_state != "reviewed-approved"
+        or not evidence.reviewed_by
+        or not evidence.reviewed_by.strip()
+        or evidence.reviewed_at is None
         or evidence.reviewed_at.tzinfo is None
         or evidence.reviewed_at.utcoffset() is None
     ):
@@ -78,11 +325,15 @@ def _validate_field_population(evidence: FieldPopulationEvidence) -> None:
     if evidence.ontology_version != PHYSICS_FIELD_ONTOLOGY_VERSION:
         raise CertificationError("field population ontology is stale")
     fields = dict(evidence.field_weights)
-    expected_fields = {
-        item.id
-        for item in PHYSICS_FIELD_ONTOLOGY_V1.fields
-        if item.node_kind == "field"
-    }
+    expected_fields = (
+        set(_branch_leaf_ids(evidence.branch_id))
+        if isinstance(evidence, OntologyBranchPopulationEvidence)
+        else {
+            item.id
+            for item in PHYSICS_FIELD_ONTOLOGY_V1.fields
+            if item.node_kind == "field"
+        }
+    )
     if (
         not fields
         or len(fields) != len(evidence.field_weights)
@@ -230,6 +481,42 @@ def _aggregate_group(
     )
 
 
+def _aggregate_branch_group(
+    results: tuple[MetricCalculationResult, ...],
+    evidence: OntologyBranchPopulationEvidence,
+    thresholds: MetricValidationThresholds,
+) -> MetricCalculationResult:
+    """Same arithmetic/coverage gate, with an explicit branch—not Physics—target."""
+    result = _aggregate_group(
+        results,
+        {
+            (evidence.entity_id, field_id): weight
+            for field_id, weight in evidence.field_weights
+        },
+        thresholds,
+    )
+    parameters = dict(result.normalization_parameters)
+    parameters.pop("physics_aggregation_version", None)
+    parameters.update(
+        {
+            "ontology_branch_aggregation_version": ONTOLOGY_BRANCH_AGGREGATION_VERSION,
+            "aggregation_target_kind": "ontology-branch",
+            "aggregation_target_id": evidence.branch_id,
+            "aggregation_ontology_version": evidence.ontology_version,
+        }
+    )
+    return replace(
+        result,
+        field_id=evidence.branch_id,
+        normalization_parameters=parameters,
+        # Preserve the reason while avoiding a false Physics-wide coverage claim.
+        missing_reasons=tuple(
+            reason.replace("Physics-wide", "Ontology-branch")
+            for reason in result.missing_reasons
+        ),
+    )
+
+
 @dataclass(frozen=True)
 class CertifiedPhysicsAggregation:
     """A Physics-domain result reconstructable from certified field results."""
@@ -269,6 +556,17 @@ class CertifiedPhysicsAggregation:
                 "Physics aggregation threshold proof differs from field inputs"
             )
         evidence = self.field_population_proof.evidence
+        is_branch = isinstance(evidence, OntologyBranchPopulationEvidence)
+        if is_branch != isinstance(self, CertifiedOntologyBranchAggregation):
+            raise CertificationError("branch population cannot be relabeled as Physics")
+        if isinstance(evidence, AutomaticFieldPopulationEvidence):
+            _validate_field_population(evidence)
+            if _field_observation_bindings(
+                self.field_observations
+            ) != _field_observation_bindings(evidence.observations):
+                raise CertificationError(
+                    "Physics aggregation differs from automatic population inputs"
+                )
         baseline = self.field_observations[0].calculation
         if (
             evidence.entity_id != baseline.entity_id
@@ -284,10 +582,18 @@ class CertifiedPhysicsAggregation:
             (evidence.entity_id, field_id): weight
             for field_id, weight in evidence.field_weights
         }
-        expected = _aggregate_group(
-            tuple(item.calculation for item in self.field_observations),
-            weights,
-            self.thresholds,
+        expected = (
+            _aggregate_branch_group(
+                tuple(item.calculation for item in self.field_observations),
+                evidence,
+                self.thresholds,
+            )
+            if isinstance(evidence, OntologyBranchPopulationEvidence)
+            else _aggregate_group(
+                tuple(item.calculation for item in self.field_observations),
+                weights,
+                self.thresholds,
+            )
         )
         if expected != self.calculation:
             raise CertificationError(
@@ -308,18 +614,56 @@ class CertifiedPhysicsAggregation:
             raise CertificationError("Physics aggregation proof digest differs")
 
 
+@dataclass(frozen=True)
+class CertifiedOntologyBranchAggregation(CertifiedPhysicsAggregation):
+    """Typed scoped aggregation; inherited proof reconstruction enforces target."""
+
+
 def aggregate_physics_wide(
     field_results: Sequence[AtlasScaleObservation],
     field_populations: Sequence[CertifiedFieldPopulation],
     thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
 ) -> tuple[CertifiedPhysicsAggregation, ...]:
     """Aggregate certified field-normalized results without volume weighting."""
+    return _aggregate_certified_fields(
+        field_results, field_populations, thresholds, branch_only=False
+    )
+
+
+def aggregate_ontology_branch(
+    field_results: Sequence[AtlasScaleObservation],
+    field_populations: Sequence[CertifiedFieldPopulation],
+    thresholds: MetricValidationThresholds = METRIC_VALIDATION_THRESHOLDS_V1,
+) -> tuple[CertifiedOntologyBranchAggregation, ...]:
+    """Aggregate only fixed branch catalogs; never claim broad Physics coverage."""
+    return tuple(
+        cast(CertifiedOntologyBranchAggregation, item)
+        for item in _aggregate_certified_fields(
+            field_results, field_populations, thresholds, branch_only=True
+        )
+    )
+
+
+def _aggregate_certified_fields(
+    field_results: Sequence[AtlasScaleObservation],
+    field_populations: Sequence[CertifiedFieldPopulation],
+    thresholds: MetricValidationThresholds,
+    *,
+    branch_only: bool,
+) -> tuple[CertifiedPhysicsAggregation, ...]:
 
     if any(
         not isinstance(item, CertifiedFieldPopulation) for item in field_populations
     ):
         raise CertificationError(
             "Physics aggregation requires certified field-population proofs"
+        )
+    if any(
+        isinstance(item.evidence, OntologyBranchPopulationEvidence) != branch_only
+        for item in field_populations
+    ):
+        raise CertificationError(
+            "Physics and ontology-branch population contracts cannot mix"
         )
     populations = {
         (
@@ -397,10 +741,18 @@ def aggregate_physics_wide(
             for field_id, weight in evidence.field_weights
         }
         _validate_weights(field_evidence_weights)
-        calculation = _aggregate_group(
-            tuple(item.calculation for item in field_observations),
-            field_evidence_weights,
-            thresholds,
+        calculation = (
+            _aggregate_branch_group(
+                tuple(item.calculation for item in field_observations),
+                evidence,
+                thresholds,
+            )
+            if isinstance(evidence, OntologyBranchPopulationEvidence)
+            else _aggregate_group(
+                tuple(item.calculation for item in field_observations),
+                field_evidence_weights,
+                thresholds,
+            )
         )
         proof_digest = canonical_digest(
             (
@@ -413,8 +765,13 @@ def aggregate_physics_wide(
                 calculation,
             )
         )
+        aggregation_type = (
+            CertifiedOntologyBranchAggregation
+            if branch_only
+            else CertifiedPhysicsAggregation
+        )
         aggregated.append(
-            CertifiedPhysicsAggregation(
+            aggregation_type(
                 calculation=calculation,
                 field_observations=field_observations,
                 field_population_proof=population,
