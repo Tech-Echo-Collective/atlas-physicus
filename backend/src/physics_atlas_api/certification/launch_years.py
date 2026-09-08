@@ -350,6 +350,21 @@ def _structural_view(
     attributions: tuple[LaunchAttributionResult, ...],
     kind: EvidenceKind,
 ) -> EvidenceCertificationDecision:
+    from .build_cache import memoize_immutable
+
+    return memoize_immutable(
+        "bounded-launch-structural-view-v1",
+        (paper, projection, attributions, kind),
+        lambda: _uncached_structural_view(paper, projection, attributions, kind),
+    )
+
+
+def _uncached_structural_view(
+    paper: LaunchCanonicalPaper,
+    projection: SourceYearPaperProjection,
+    attributions: tuple[LaunchAttributionResult, ...],
+    kind: EvidenceKind,
+) -> EvidenceCertificationDecision:
     if _projection(paper, attributions) != projection:
         raise CertificationError(
             "launch structural evidence differs from scientific projection"

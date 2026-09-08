@@ -1,6 +1,7 @@
 import math
 
 from .contracts import (
+    CERTIFICATION_POLICY_VERSION,
     CertificationError,
     CertificationState,
     CoverageCertification,
@@ -9,12 +10,35 @@ from .contracts import (
     EvidenceCertificationDecision,
     EvidenceKind,
 )
-from .rules import coverage_minimum, evidence_decision_is_current
+from .rules import coverage_minimum, evidence_decision_is_current, evidence_rule_version
 
 COVERAGE_SUBJECT_TYPE = "coverage-unit"
 
 
 def certify_coverage(
+    evidence_kind: EvidenceKind,
+    decisions: tuple[EvidenceCertificationDecision, ...],
+    population: CoveragePopulationEvidence,
+) -> CoverageCertification:
+    from .build_cache import build_verification_cache_active, memoize_immutable
+
+    if not build_verification_cache_active():
+        return _uncached_certify_coverage(evidence_kind, decisions, population)
+    return memoize_immutable(
+        "exact-coverage-certification-v1",
+        (
+            evidence_kind,
+            decisions,
+            population,
+            CERTIFICATION_POLICY_VERSION,
+            evidence_rule_version(evidence_kind),
+            coverage_minimum(evidence_kind),
+        ),
+        lambda: _uncached_certify_coverage(evidence_kind, decisions, population),
+    )
+
+
+def _uncached_certify_coverage(
     evidence_kind: EvidenceKind,
     decisions: tuple[EvidenceCertificationDecision, ...],
     population: CoveragePopulationEvidence,

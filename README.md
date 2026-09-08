@@ -105,6 +105,16 @@ Previous PA-059 validation: 130 backend tests, 33 frontend compatibility tests, 
 type checking and the production build pass. No new scientific data was acquired
 or activated; all 36,456,719 bytes of isolated local test/build material were removed.
 
+The six bounded traversals are complete: 2018–2023 contain
+2,306 / 2,412 / 2,787 / 2,580 / 2,545 / 2,728 records respectively (15,358 total).
+Enumeration is not certification or public activation. Preparation, common-window
+citation measurement, exact-five calculation and final dataset validation must
+finish before the public source is switched. Repeated pure coverage/structural
+checks now reuse exact immutable inputs within the existing bounded build cache;
+canonical JSON token emission is faster without changing scientific SHA-256,
+thresholds, formulas or missing-data semantics. No additional persistent provider
+store is introduced.
+
 The latest bounded evidence still leaves these completion requirements:
 
 - Resolve or explicitly withhold the seven identity-conflicted components among

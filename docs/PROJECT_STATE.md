@@ -24,8 +24,9 @@ institution mass before canonical exclusion. The 2020 traversal is complete:
 2,787 records, 95.299925% affiliation presence and 65.737948% resolved institution
 mass before canonical exclusion. The 2021 traversal is complete: 2,580 records,
 98.164154% affiliation presence and 71.871944% resolved institution mass before
-canonical exclusion. The 2022–2023 acquisition is still running with checksummed
-completed-page recovery. A DOI role conflict in an
+canonical exclusion. The 2022 and 2023 traversals are now complete with 2,545 and
+2,728 records: all six years contain 15,358 occurrences. Checksummed completed-page
+recovery preserved the interrupted acquisition. A DOI role conflict in an
 earlier attempt is retained as unresolved rather than terminating enumeration.
 No real exact-five observations or final Atlas Dataset have yet been produced.
 
@@ -69,6 +70,21 @@ provider DNS connection failure. Network access recovered, and the existing
 bounded resume path continues from those pages; it does not replace their
 recorded source evidence. A small field-selector correction removes only the
 duplicate domain-root button, preserving the nuclear branch and other fields.
+
+The selector checkpoint `27d598a` passes CI 34204725696. Six-year preparation is
+running; no prepared freeze, measured citation cohort or actual metric output has
+yet completed. An interrupted slow preparation exposed repeated typed coverage
+reconstruction. The narrow correction uses the existing exact immutable cache
+for structural and coverage results, with unchanged policy thresholds and
+fail-closed mutation checks. Scalar/member JSON tokens avoid repeated fragment
+allocation: the same 2,925-author source proof retains SHA-256
+`d2a3cab5af007f1118fc22250a5fc320c6f97d96cc7482237565ed15c7cf5f44`, measuring
+0.951→0.424 seconds for this bounded hashing method, not a full-year speed claim.
+The real preparation restarted from the same six retained temporary inputs.
+The current performance correction passes 1,351 backend tests, full Ruff/format
+and strict typing (115 source files), including exact result/digest reuse and
+altered source/result/threshold rejection. Commit/remote CI are pending. Real
+preparation remains active; passing tests do not supply public observations.
 
 Launch integration `7ab79b8` is pushed. CI 34186465032 passed frontend/containers
 and 1,295 backend tests; seven export-command tests exposed an installed-package

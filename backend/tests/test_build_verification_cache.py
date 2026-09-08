@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field, replace
 from datetime import date
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from test_automatic_identity_date_admission import _facts
@@ -12,6 +12,7 @@ from test_launch_metric_coverage import _build, _proofs
 from physics_atlas_api.certification import CertificationError, canonical_digest
 from physics_atlas_api.certification import automation as automatic_rules
 from physics_atlas_api.certification import build_cache as cache_rules
+from physics_atlas_api.certification import coverage as coverage_rules
 from physics_atlas_api.certification import years as year_rules
 from physics_atlas_api.certification.build_cache import (
     bounded_build_verification_cache,
@@ -326,6 +327,58 @@ def test_conditional_and_original_source_quality_never_share_cache() -> None:
         assert conditional.coverage == enumerated.coverage
         conditional.__post_init__()
     assert cache.stats.entries == 0
+
+
+@pytest.mark.parametrize("stream_large_keys", [False, True])
+def test_coverage_reuse_keeps_exact_result_and_rechecks_mutation_and_threshold(
+    monkeypatch: pytest.MonkeyPatch, stream_large_keys: bool
+) -> None:
+    covered = certify_launch_source_coverage(
+        _build([[_author(1, [_link("200")]), _author(2)]])
+    ).source_year
+    certificate = next(
+        item
+        for item in covered.coverage
+        if item.evidence_kind == "canonical-institution"
+    )
+    decisions = tuple(
+        item
+        for item in covered.evidence.coverage_decisions
+        if item.evidence_kind == certificate.evidence_kind
+    )
+    arguments = certificate.evidence_kind, decisions, certificate.population
+    expected = coverage_rules._uncached_certify_coverage(*arguments)
+    expected_digest = canonical_digest(expected)
+    with (
+        bounded_build_verification_cache(stream_large_keys=stream_large_keys),
+        patch.object(
+            coverage_rules,
+            "_uncached_certify_coverage",
+            wraps=coverage_rules._uncached_certify_coverage,
+        ) as rebuild,
+    ):
+        first = coverage_rules.certify_coverage(*arguments)
+        coverage_rules.validate_coverage_certification(certificate, decisions)
+        assert first == expected and canonical_digest(first) == expected_digest
+        assert rebuild.call_count == 1
+        object.__setattr__(first, "numerator", 999.0)
+        assert coverage_rules.certify_coverage(*arguments) == expected
+        assert rebuild.call_count == 2
+        monkeypatch.setattr(coverage_rules, "coverage_minimum", lambda _: 0.99)
+        with pytest.raises(ValueError, match="must match the v1 evidence policy"):
+            coverage_rules.certify_coverage(*arguments)
+        assert rebuild.call_count == 3
+        monkeypatch.undo()
+        original_digest = decisions[0].certified_value_digest
+        try:
+            object.__setattr__(decisions[0], "certified_value_digest", "f" * 64)
+            for _ in range(2):
+                with pytest.raises(CertificationError):
+                    coverage_rules.certify_coverage(*arguments)
+            assert rebuild.call_count == 5
+        finally:
+            object.__setattr__(decisions[0], "certified_value_digest", original_digest)
+        assert coverage_rules.certify_coverage(*arguments) == expected
 
 
 def test_paper_identity_view_reuses_exact_decision_not_mutated_facts_or_rule(

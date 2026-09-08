@@ -9,6 +9,19 @@ reports.
 
 ## 2026-09-08 — Conditional real-data launch integration (in progress)
 
+- Latest acquisition: all six years are complete, with 15,358 records; 2022/2023
+  add 2,545/2,728 after verified checkpoint recovery. Source `27d598a` passes
+  complete CI 34204725696. No real metric dataset or public activation yet.
+- A slow source-year preparation was interrupted without altering its acquired
+  inputs. The exact stack showed repeated source-attribution coverage validation.
+  Structural/coverage reuse stays inside the existing bounded immutable cache;
+  altered inputs/results/thresholds still fail. Exact JSON token emission keeps
+  the original scientific SHA values; the bounded 2,925-author proof measures
+  0.951→0.424 seconds, not an entire pipeline speed claim. Expanded-fragment
+  experiments did not help and were not adopted or persisted. Full validation
+  passes 1,351 backend tests, Ruff/format and strict typing (115 source files).
+  The resumed real preparation remains active; temporary cleanup is pending.
+
 - PA-060/061/062 retain unresolved source evidence while separating complete
   enumeration from observed-partition eligibility. Full-source verdicts and
   numerical scientific thresholds are unchanged; the five layers remain jointly

@@ -14,6 +14,7 @@ from physics_atlas_api.certification import (
     certify_metric_window,
 )
 from physics_atlas_api.certification import launch_years as launch_years_module
+from physics_atlas_api.certification.build_cache import bounded_build_verification_cache
 from physics_atlas_api.certification.launch_attribution import attribute_launch_record
 from physics_atlas_api.certification.launch_capture import (
     FetchedLaunchPage,
@@ -334,6 +335,85 @@ def test_structural_factory_reconstructs_once_without_changing_proof_or_digest(
         )
     with pytest.raises(CertificationError, match="does not reconstruct"):
         replace(current, certified_value_digest="0" * 64)
+
+
+@pytest.mark.parametrize("stream_large_keys", (False, True))
+@pytest.mark.parametrize(
+    "kind", ("canonical-paper-identity", "provenance-completeness")
+)
+def test_structural_view_reuse_preserves_proof_and_rejects_changed_inputs(
+    stream_large_keys: bool,
+    kind: str,
+) -> None:
+    captured, canonical, attributions = captured_fixture()
+    built = build_launch_source_year(
+        captured,
+        canonical,
+        attributions,
+        entity_type="institution",
+        evidence_cutoff=NOW + timedelta(seconds=2),
+    )
+    assert built.source_year is not None
+    original = next(
+        item
+        for item in built.source_year.evidence.structural_decisions
+        if isinstance(item, LaunchStructuralDecision) and item.evidence_kind == kind
+    )
+    arguments = (
+        original.source_paper,
+        original.source_projection,
+        original.attribution_results,
+        original.evidence_kind,
+    )
+    baseline = launch_years_module._uncached_structural_view(*arguments)
+    with (
+        bounded_build_verification_cache(
+            maximum_entries=512,
+            stream_large_keys=stream_large_keys,
+        ) as cache,
+        patch.object(
+            launch_years_module,
+            "_uncached_structural_view",
+            wraps=launch_years_module._uncached_structural_view,
+        ) as rebuild,
+    ):
+        recovered = launch_years_module._structural_view(*arguments)
+        original.__post_init__()
+        original.__post_init__()
+        assert rebuild.call_count == 1
+        assert recovered == baseline
+        assert recovered.decision_id == baseline.decision_id
+        assert replace(original).decision_id == original.decision_id
+        # Claimed decision fields are still compared on every admission.
+        with pytest.raises(CertificationError, match="does not reconstruct"):
+            replace(original, certified_value_digest="0" * 64)
+        # A mutated cached result is discarded, not accepted as authority.
+        object.__setattr__(recovered, "certified_value_digest", "f" * 64)
+        original.__post_init__()
+        assert rebuild.call_count == 2
+        assert launch_years_module._structural_view(*arguments) == baseline
+        changed = replace(
+            original.source_projection,
+            entity_shares=(),
+            unresolved_entity_mass=(
+                ("researcher", 1.0),
+                ("institution", 1.0),
+                ("country", 1.0),
+            ),
+        )
+        for _ in range(2):
+            with pytest.raises(
+                CertificationError, match="differs from scientific projection"
+            ):
+                launch_years_module._structural_view(
+                    original.source_paper,
+                    changed,
+                    original.attribution_results,
+                    original.evidence_kind,
+                )
+        assert rebuild.call_count == 4  # Rejections are never cached.
+        original.__post_init__()
+        assert cache.stats.peak_entries <= 512
 
 
 def test_enumerated_launch_year_keeps_conflicting_identity_and_full_unknown_mass() -> (

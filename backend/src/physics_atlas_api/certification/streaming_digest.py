@@ -19,6 +19,8 @@ from enum import Enum
 from fractions import Fraction
 from zoneinfo import ZoneInfo
 
+from .contracts import CertificationError
+
 _FRAGMENT_BYTES = 8 * 1024
 _CACHE_BYTES = 32 * 1024 * 1024
 _CACHE_ENTRIES = 4_096
@@ -35,6 +37,7 @@ class _CanonicalEncoder:
         self.fragment_bytes = 0
         self.active = set() if active is None else active
         self.pending: dict[tuple[int, bool], bytearray] = {}
+        self.member_tokens: dict[tuple[type, bool], tuple[tuple[str, bytes], ...]] = {}
 
     def chunk(self, payload: bytes) -> None:
         self.sink(payload)
@@ -48,12 +51,30 @@ class _CanonicalEncoder:
 
     @staticmethod
     def scalar(value: object, ensure_ascii: bool) -> bytes:
+        if type(value) is str:
+            encode = (
+                json.encoder.encode_basestring_ascii
+                if ensure_ascii
+                else json.encoder.encode_basestring
+            )
+            return encode(value).encode("utf-8")
+        if value is None:
+            return b"null"
+        if type(value) is bool:
+            return b"true" if value else b"false"
+        if type(value) is int:
+            return str(value).encode("ascii")
         return json.dumps(
             value, sort_keys=True, separators=(",", ":"), ensure_ascii=ensure_ascii
         ).encode("utf-8")
 
     def write(self, value: object, ensure_ascii: bool = False) -> bool:
-        from .contracts import CertificationError
+        # Immutable scalar leaves cannot cycle or contain mutable children.
+        # Emit the exact same JSON token without allocating a fragment collector
+        # and LRU entry for every field value of every proof.
+        if value is None or type(value) in {str, int, bool}:
+            self.chunk(self.scalar(value, ensure_ascii))
+            return True
 
         key = id(value), ensure_ascii
         previous = self.fragments.get(key)
@@ -83,8 +104,6 @@ class _CanonicalEncoder:
         return immutable
 
     def body(self, value: object, ensure_ascii: bool) -> bool:
-        from .contracts import CertificationError
-
         if is_dataclass(value) and not isinstance(value, type):
             members = sorted(fields(value), key=lambda member: member.name)
             parameters = getattr(type(value), "__dataclass_params__", None)
@@ -96,13 +115,21 @@ class _CanonicalEncoder:
                     member.compare and member.hash is not False for member in members
                 )
             )
+            token_key = type(value), ensure_ascii
+            tokens = self.member_tokens.get(token_key)
+            names = tuple(member.name for member in members)
+            if tokens is None or tuple(name for name, _ in tokens) != names:
+                tokens = tuple(
+                    (name, self.scalar(name, ensure_ascii) + b":") for name in names
+                )
+                if len(self.member_tokens) < 128:
+                    self.member_tokens[token_key] = tokens
             self.chunk(b"{")
-            for index, member in enumerate(members):
+            for index, (name, token) in enumerate(tokens):
                 if index:
                     self.chunk(b",")
-                self.chunk(self.scalar(member.name, ensure_ascii))
-                self.chunk(b":")
-                child_immutable = self.write(getattr(value, member.name), ensure_ascii)
+                self.chunk(token)
+                child_immutable = self.write(getattr(value, name), ensure_ascii)
                 immutable = immutable and child_immutable
             self.chunk(b"}")
             return immutable

@@ -24,7 +24,12 @@ from zoneinfo import ZoneInfo
 
 _MISSING = object()
 _EXPENSIVE_NAMESPACES = frozenset(
-    {"bounded-launch-source-projection-v1", "exact-source-year-evaluation-v1"}
+    {
+        "bounded-launch-source-projection-v1",
+        "bounded-launch-structural-view-v1",
+        "exact-source-year-evaluation-v1",
+        "exact-coverage-certification-v1",
+    }
 )
 _ACTIVE: ContextVar[BuildVerificationCache | None] = ContextVar(
     "atlas_build_verification_cache", default=None

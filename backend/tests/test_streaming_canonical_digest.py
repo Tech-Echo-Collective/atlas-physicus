@@ -4,7 +4,7 @@ import hashlib
 import json
 import random
 import tracemalloc
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, make_dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from enum import Enum
@@ -103,6 +103,32 @@ def test_generated_nested_values_keep_exact_persisted_sha() -> None:
             streaming_canonical_digest(value)
             == hashlib.sha256(legacy_bytes(value)).hexdigest()
         )
+
+
+def test_scalar_tokens_match_native_json_without_fragment_entries() -> None:
+    values = (None, False, True, 0, -7, 10**100, '"\\\n\t\u0000物理💫')
+    for ensure_ascii in (False, True):
+        for value in values:
+            encoded: list[bytes] = []
+            encoder = _CanonicalEncoder(encoded.append)
+            encoder.write(value, ensure_ascii)
+            assert b"".join(encoded) == json.dumps(
+                value, ensure_ascii=ensure_ascii, separators=(",", ":")
+            ).encode("utf-8")
+            assert not encoder.fragments and not encoder.pending
+
+
+def test_member_token_reuse_remains_bounded_and_keeps_actual_values() -> None:
+    encoded: list[bytes] = []
+    encoder = _CanonicalEncoder(encoded.append)
+    for index in range(140):
+        value_type = make_dataclass(f"Record{index}", [("value", object)], frozen=True)
+        for value in (None, 0, ("evidence", index)):
+            record = value_type(value)
+            encoded.clear()
+            encoder.write(record)
+            assert b"".join(encoded) == legacy_bytes(record)
+        assert len(encoder.member_tokens) <= 128
 
 
 def test_mutable_values_and_unsupported_overwritten_values_fail_closed() -> None:
