@@ -38,11 +38,54 @@ service. INSPIRE and arXiv supply literature evidence; ROR, ORCID, and Crossref
 are used only through constrained identifier-led workflows.
 
 The repository contains the deterministic Metric System v1 framework, explicit
-evidence certification, a separate 0–100 Atlas Scale, and a measured storage
-readiness gate. Representative scientific validation remains incomplete. The
+evidence certification and a separate 0–100 Atlas Scale. Scientific validation
+and the compact five-metric dataset launch remain incomplete. The
 five live metric layers remain jointly withheld, so the
 public map does not substitute zero or synthetic values for missing live
 observations. Full Physics expansion and v3.1 have not started.
+
+### Minimum remaining launch work
+
+On September 8, 2026, the owner authorized separate validation of **observed
+evidence coverage** and **unresolved attribution uncertainty** (PA-059).
+The opt-in `observed-attribution-coverage-v1` adapter now measures completeness
+conditional on actual conserved entity×field mass. Unknown attribution remains
+in the complete source projections and exported possible-contribution bounds;
+it is neither reassigned nor silently zeroed. These bounds are not statistical
+confidence intervals or metric-score intervals and cannot be summed across
+entities. Source-wide coverage still uses the full paper mass and the unchanged
+90%/95% evidence gates. Old proof versions remain unchanged; normalization and
+cross-field aggregation reject mixed coverage policies. This is an
+admission-contract change, not a metric formula change or evidence that the
+five-layer launch has passed.
+
+Focused validation: 130 backend tests, 33 frontend compatibility tests, lint,
+type checking and the production build pass. No new scientific data was acquired
+or activated; all 36,456,719 bytes of isolated local test/build material were removed.
+
+The latest bounded evidence still leaves these completion requirements:
+
+- Resolve or explicitly withhold the seven identity-conflicted components among
+  2,306 inspected 2018 nuclear-physics records without dropping their evidence.
+- Improve and remeasure canonical institution evidence. The 250-paper sample
+  reaches **67.354%**, below the unchanged **95%** threshold; this is not a
+  whole-year or production-wide estimate.
+- Establish six certified historical years for the candidate 2018–2023 window,
+  mature comparable citation cohorts, and the required eligible normalization
+  peers. Impact retains its 24-month maturity, 50-paper reference-cohort minimum
+  and 90% citation coverage; Activity, Impact and Momentum retain their respective
+  30-peer requirements.
+- Generate real, co-located observations for all five dimensions, verify the
+  preserved raw metrics and versioned 0–100 values, then publish the compact
+  dataset and regression-test the timeline, composite and existing Atlas UX.
+
+Use existing certification, calculators and frontend interfaces, with only
+targeted evidence acquisition and necessary adapter fixes. Mandatory human review,
+Full Physics completeness and legacy evidence-storage cleanup are **not** launch
+prerequisites. Unsupported fields, entities and periods remain missing; no partial
+metric activation is allowed. Current measurements and exact limitations are in
+the [minimum launch integration report](docs/validation/minimum-launch-integration-2026-09-06.md);
+implementation and deployment status belong in [project state](docs/PROJECT_STATE.md).
 
 ## Core principles
 
@@ -96,6 +139,8 @@ score.” Detailed formulas and limits belong in the
 
 ## Architecture
 
+The currently operated API-backed path is:
+
 ```text
 INSPIRE / arXiv / reviewed identifier lookups
   → immutable source evidence and update lineage
@@ -105,7 +150,7 @@ INSPIRE / arXiv / reviewed identifier lookups
   → explicit scientific evidence certification
   → exact eligible populations → certified raw metrics
   → metric-specific normalization → Atlas Scale
-  → reviewed Joint Activation Gate
+  → evidence-certified Joint Activation Gate
   → FastAPI → APIRepository → map-first React application
 ```
 
@@ -114,6 +159,12 @@ uses Python, FastAPI, SQLAlchemy, Alembic, and PostgreSQL.
 
 Full Physics loading additionally requires the independent Storage Budget
 Gate. Normal public map/API reads continue on the bounded production dataset.
+
+The first compact dataset launch reuses this scientific processing and publishes
+only certified, versioned Atlas observations and necessary entity/provenance
+metadata to the existing frontend. Raw provider and intermediate build material
+is ephemeral, not a new permanent scholarly mirror. That dataset is not yet the
+ordinary public source; implementation support does not imply deployment.
 
 ## Data and provenance
 

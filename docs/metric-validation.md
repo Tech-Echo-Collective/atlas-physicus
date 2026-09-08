@@ -40,6 +40,16 @@ a formula executes. The exact states and complete-year rule are documented in
 Coverage denominators retain unresolved and missing eligible mass. The system
 does not compute coverage only over successfully resolved records.
 
+PA-059 adds the explicit opt-in `observed-attribution-coverage-v1` **per-entity**
+contract, not a replacement for these full-source gates. Its denominator is
+conserved observed entity×field mass; missing metric evidence inside that mass
+still counts against coverage. Unknown possible contributions remain separately
+bound to every original source projection and disclosed with proof references.
+They are overlapping contribution bounds, not confidence intervals or metric
+score bounds. Legacy denominators/defaults and numerical thresholds are unchanged;
+normalization and field aggregation must not mix coverage policies. See the
+[automatic certification contract](automatic-certification.md#observed-coverage-separate-uncertainty-pa-059).
+
 ## Metric-specific minimums
 
 | Dimension | Entity evidence minimum | Additional requirement |

@@ -3,10 +3,20 @@
 from dataclasses import replace
 
 import pytest
+from certification_helpers import certify_normalization_populations
 from test_automatic_field_population import field_observations  # noqa: F401
 from test_session_metric_presentation import _result
 
-from physics_atlas_api.certification import CertificationError
+from physics_atlas_api.certification import (
+    CertificationError,
+    CertifiedMetricWindow,
+    build_certified_metric_partition,
+    certify_coverage,
+)
+from physics_atlas_api.certification.populations import (
+    OBSERVED_ATTRIBUTION_COVERAGE_VERSION,
+    derive_metric_population,
+)
 from physics_atlas_api.fields import PHYSICS_FIELD_ONTOLOGY_V1
 from physics_atlas_api.metrics.aggregation import (
     ONTOLOGY_BRANCH_AGGREGATION_VERSION,
@@ -17,9 +27,12 @@ from physics_atlas_api.metrics.aggregation import (
     certify_field_population,
     derive_ontology_branch_population,
 )
+from physics_atlas_api.metrics.calculators import calculate_connectivity
 from physics_atlas_api.metrics.presentation import (
     AtlasScaleObservation,
+    CertifiedMetricCalculation,
     apply_atlas_scale,
+    bind_metric_calculation,
 )
 from physics_atlas_api.metrics.thresholds import METRIC_VALIDATION_THRESHOLDS_V1
 
@@ -152,4 +165,90 @@ def test_branch_arithmetic_preserves_leaf_impact_session_and_rejects_mixing(
     with pytest.raises(ValueError, match="identical versions"):
         _aggregate_branch_group(
             (first, changed), evidence, METRIC_VALIDATION_THRESHOLDS_V1
+        )
+
+
+def _observed_field(observation: AtlasScaleObservation) -> AtlasScaleObservation:
+    proof = observation.certification_proof
+    assert isinstance(proof, CertifiedMetricCalculation)
+    original = proof.partition
+    window = original.window_proof
+    assert isinstance(window, CertifiedMetricWindow)
+    population = derive_metric_population(
+        window,
+        entity_id=observation.calculation.entity_id,
+        field_id=observation.calculation.field_id,
+        assessed_at=window.cutoff,
+        coverage_policy=OBSERVED_ATTRIBUTION_COVERAGE_VERSION,
+    )
+    decisions = original.certification.evidence_decisions
+    coverage = tuple(
+        certify_coverage(
+            item.evidence_kind,
+            tuple(
+                decision
+                for decision in decisions
+                if decision.subject_type == "coverage-unit"
+                and decision.evidence_kind == item.evidence_kind
+            ),
+            replace(
+                item.population,
+                source_manifest_digest=population.certification.projection_digest,
+            ),
+        )
+        for item in original.certification.coverage
+    )
+    certified = build_certified_metric_partition(
+        original.partition,
+        metric_id="collaboration",
+        decisions=decisions,
+        coverage=coverage,
+        window=window,
+        population=population,
+    )
+    calculated = bind_metric_calculation(calculate_connectivity(certified), certified)
+    return apply_atlas_scale(
+        (calculated,),
+        normalization_populations=certify_normalization_populations((calculated,)),
+    )[0]
+
+
+def test_branch_aggregation_rejects_mixed_coverage_policies_between_fields(
+    field_observations: tuple[AtlasScaleObservation, ...],  # noqa: F811
+) -> None:
+    selected = nuclear_fields(field_observations)
+    branch = PHYSICS_FIELD_ONTOLOGY_V1.get("nuclear")
+    legacy = aggregate_ontology_branch(
+        selected,
+        (
+            certify_field_population(
+                derive_ontology_branch_population(branch, selected)
+            ),
+        ),
+    )[0]
+    observed = tuple(_observed_field(item) for item in selected)
+    homogeneous = aggregate_ontology_branch(
+        observed,
+        (
+            certify_field_population(
+                derive_ontology_branch_population(branch, observed)
+            ),
+        ),
+    )[0]
+    assert homogeneous.calculation.raw_value == legacy.calculation.raw_value
+    assert (
+        homogeneous.calculation.normalized_value == legacy.calculation.normalized_value
+    )
+
+    mixed = (selected[0], observed[1])
+    mixed_population = certify_field_population(
+        derive_ontology_branch_population(branch, mixed)
+    )
+    with pytest.raises(CertificationError, match="mixes population coverage policies"):
+        aggregate_ontology_branch(mixed, (mixed_population,))
+    with pytest.raises(CertificationError, match="mixes population coverage policies"):
+        replace(
+            legacy,
+            field_observations=mixed,
+            field_population_proof=mixed_population,
         )

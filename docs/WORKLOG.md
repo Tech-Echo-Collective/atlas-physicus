@@ -7,6 +7,29 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-08 — Separate observed coverage from retained attribution uncertainty
+
+- PA-059 records explicit owner authorization. Added opt-in automatic population
+  versions, conditional observed denominators and proof-derived compact unknown
+  contribution bounds. Source projections, provenance, unknown mass, source-wide
+  gates, formulas and legacy proof structures/defaults remain unchanged.
+- Both partition validators use the versioned ledger; normalization and cross-field
+  aggregation independently reject old/new policy mixtures. Missing formula
+  evidence still fails coverage;
+  absent observed mass is unavailable. README now states the implemented contract,
+  measured evidence blockers and minimum remaining launch work without claiming
+  new data or public activation.
+- Validation: 130 focused backend cases and 33 frontend compatibility cases pass;
+  full Ruff/format/mypy (103 source files), frontend typecheck/lint and production
+  build pass. Existing optional-pilot bundle warning is unchanged. The pushed
+  commit's remote results are tracked in
+  [CI](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/workflows/ci.yml);
+  local tests alone are not a remote CI claim.
+- Cleanup PASS: removed all 36,456,719 temporary logical bytes from the sole
+  `/private/tmp/atlas-coverage-split.MZ5Abu` directory. Maximum observed allocation
+  was 40,341,504 bytes; no new scientific/build leftovers. No provider acquisition,
+  broad replay, production mutation or release-tag change occurred.
+
 ## 2026-09-08 — CI closure and production recheck
 
 - Confirmed local/remote `main` at `5a8e033`, with the previous implementation

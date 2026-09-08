@@ -11,6 +11,7 @@ from ..certification import CertificationError, CertifiedMetricWindow, canonical
 from .presentation import (
     CertifiedMetricCalculation,
     NormalizationPopulationEvidence,
+    _calculation_population_coverage_policy,
     _normalization_cohort_key,
     _normalization_population_content_digest,
 )
@@ -54,6 +55,13 @@ def derive_normalization_population(
     key = _normalization_cohort_key(calculations[0].calculation)
     if any(_normalization_cohort_key(item.calculation) != key for item in calculations):
         raise CertificationError("automatic normalization mixes comparison cohorts")
+    if (
+        len({_calculation_population_coverage_policy(item) for item in calculations})
+        != 1
+    ):
+        raise CertificationError(
+            "automatic normalization mixes population coverage policies"
+        )
     if any(item.thresholds != calculations[0].thresholds for item in calculations):
         raise CertificationError(
             "automatic normalization mixes threshold configurations"

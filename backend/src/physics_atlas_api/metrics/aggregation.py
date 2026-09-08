@@ -10,7 +10,10 @@ from ..certification import CertificationError, canonical_digest
 from ..fields import PHYSICS_FIELD_ONTOLOGY_V1, PHYSICS_FIELD_ONTOLOGY_VERSION
 from ..fields.ontology import FieldDefinition
 from .calculators import MetricCalculationResult, citation_session_normalization_key
-from .presentation import AtlasScaleObservation
+from .presentation import (
+    AtlasScaleObservation,
+    _calculation_population_coverage_policy,
+)
 from .thresholds import (
     METRIC_VALIDATION_THRESHOLDS_V1,
     MetricValidationThresholds,
@@ -528,6 +531,8 @@ class CertifiedPhysicsAggregation:
     proof_digest: str
 
     def __post_init__(self) -> None:
+        from .presentation import CertifiedMetricCalculation
+
         if not isinstance(self.calculation, MetricCalculationResult):
             raise CertificationError(
                 "Physics aggregation requires an exact calculation result"
@@ -554,6 +559,18 @@ class CertifiedPhysicsAggregation:
         if any(item.thresholds != self.thresholds for item in self.field_observations):
             raise CertificationError(
                 "Physics aggregation threshold proof differs from field inputs"
+            )
+        coverage_policies = set()
+        for observation in self.field_observations:
+            proof = observation.certification_proof
+            if not isinstance(proof, CertifiedMetricCalculation):
+                raise CertificationError(
+                    "Physics aggregation requires field-level calculation proofs"
+                )
+            coverage_policies.add(_calculation_population_coverage_policy(proof))
+        if len(coverage_policies) != 1:
+            raise CertificationError(
+                "Physics aggregation mixes population coverage policies"
             )
         evidence = self.field_population_proof.evidence
         is_branch = isinstance(evidence, OntologyBranchPopulationEvidence)

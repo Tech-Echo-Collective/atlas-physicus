@@ -11,6 +11,10 @@ from ..certification import (
     CertifiedMetricPartition,
     canonical_digest,
 )
+from ..certification.populations import (
+    CertifiedMetricPopulation,
+    metric_population_coverage_policy,
+)
 from .calculators import (
     CitationReferenceCohort,
     MetricCalculationResult,
@@ -228,6 +232,15 @@ def bind_metric_calculation(
     )
 
 
+def _calculation_population_coverage_policy(
+    calculation: CertifiedMetricCalculation,
+) -> str:
+    population = calculation.partition.population_proof
+    if not isinstance(population, CertifiedMetricPopulation):
+        raise CertificationError("coverage policy requires a certified population")
+    return metric_population_coverage_policy(population.certification.evidence)
+
+
 @dataclass(frozen=True)
 class AtlasScaleObservation:
     """Presentation-only view over a reconstructable scientific raw result."""
@@ -303,6 +316,16 @@ class AtlasScaleObservation:
             ):
                 raise CertificationError(
                     "Atlas normalization proof mixes comparison cohorts"
+                )
+            coverage_policy = _calculation_population_coverage_policy(
+                self.certification_proof
+            )
+            if any(
+                _calculation_population_coverage_policy(item) != coverage_policy
+                for item in self.normalization_proofs
+            ):
+                raise CertificationError(
+                    "Atlas normalization proof mixes population coverage policies"
                 )
             population = self.normalization_population_proof
             if not isinstance(population, CertifiedNormalizationPopulation) or (

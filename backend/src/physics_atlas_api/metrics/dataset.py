@@ -19,6 +19,12 @@ from pydantic import Field
 
 from .. import schemas
 from ..certification import CertificationError, canonical_digest
+from ..certification.populations import (
+    OBSERVED_ATTRIBUTION_COVERAGE_VERSION,
+    CertifiedMetricPopulation,
+    metric_population_attribution_bounds,
+    metric_population_coverage_policy,
+)
 from ..certification.years import CertifiedMetricWindow
 from .activation import MetricSystemActivationEvidence, assess_joint_metric_activation
 from .aggregation import CertifiedPhysicsAggregation
@@ -155,6 +161,18 @@ def _observation_payload(
         "mappingPolicyVersion": result.mapping_policy_version,
         "citationPolicyVersion": result.citation_policy_version,
     }
+    attribution = _observed_attribution_disclosure(observation)
+    if attribution:
+        parameters["attributionCoverage"] = {
+            "policyVersion": OBSERVED_ATTRIBUTION_COVERAGE_VERSION,
+            "interpretation": (
+                "Coverage is conditional on observed entity/field attribution, "
+                "not completeness of the ecosystem. Unresolved mass is a possible "
+                "contribution bound, not a confidence interval or metric score bound. "
+                "Bounds can overlap; do not sum them across entities or fields."
+            ),
+            "populations": attribution,
+        }
     key = (
         result.entity_type,
         result.entity_id,
@@ -194,6 +212,36 @@ def _observation_payload(
     if result.field_id != "physics":
         payload["fieldId"] = result.field_id
     return payload
+
+
+def _observed_attribution_disclosure(
+    observation: AtlasScaleObservation,
+) -> list[dict[str, Any]]:
+    """Compact proof-derived disclosure, leaving historical exports unchanged."""
+    proof = observation.certification_proof
+    if isinstance(proof, CertifiedMetricCalculation):
+        population = proof.partition.population_proof
+        if not isinstance(population, CertifiedMetricPopulation):
+            raise CertificationError(
+                "attribution disclosure requires a certified population"
+            )
+        if metric_population_coverage_policy(population.certification.evidence) != (
+            OBSERVED_ATTRIBUTION_COVERAGE_VERSION
+        ):
+            return []
+        return [
+            {
+                "fieldId": proof.calculation.field_id,
+                **asdict(metric_population_attribution_bounds(population)),
+            }
+        ]
+    if isinstance(proof, CertifiedPhysicsAggregation):
+        return [
+            item
+            for field in proof.field_observations
+            for item in _observed_attribution_disclosure(field)
+        ]
+    raise CertificationError("attribution disclosure requires certified observations")
 
 
 def _verify_observation(

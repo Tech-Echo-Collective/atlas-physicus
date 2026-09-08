@@ -22,6 +22,14 @@ AUTOMATIC_METRIC_POPULATION_VERSION = "source-window-metric-population-v1"
 AUTOMATIC_BRANCH_DIVERSITY_POPULATION_VERSION = (
     "source-window-branch-diversity-population-v1"
 )
+AUTOMATIC_OBSERVED_METRIC_POPULATION_VERSION = (
+    "source-window-observed-metric-population-v1"
+)
+AUTOMATIC_OBSERVED_BRANCH_DIVERSITY_POPULATION_VERSION = (
+    "source-window-observed-branch-diversity-population-v1"
+)
+POSSIBLE_ATTRIBUTION_COVERAGE_VERSION = "possible-attribution-coverage-v1"
+OBSERVED_ATTRIBUTION_COVERAGE_VERSION = "observed-attribution-coverage-v1"
 _AUTOMATIC_UNRESOLVED_REASON = (
     "source-window affiliation or field mass remains unresolved"
 )
@@ -290,8 +298,14 @@ def metric_population_coverage_unit_id(
 def metric_population_coverage_ledger(
     evidence: PopulationEvidence,
 ) -> tuple[MetricPopulationCoverageUnit, ...]:
-    """Derive the full denominator ledger from the exact metric population."""
+    """Derive the versioned denominator, without changing source projections.
 
+    PA-059 measures completeness conditional on observed attribution only for
+    explicitly opted-in populations. Their unresolved possible mass remains in
+    the exact source proof and independently recoverable uncertainty summary.
+    """
+
+    policy = metric_population_coverage_policy(evidence)
     units: list[MetricPopulationCoverageUnit] = []
     for projection in sorted(evidence.projections, key=lambda item: item.paper_id):
         if projection.attribution_weight > 0:
@@ -306,7 +320,7 @@ def metric_population_coverage_ledger(
                 )
             )
         unresolved_mass = projection.coverage_weight - projection.attribution_weight
-        if unresolved_mass > 1e-12:
+        if unresolved_mass > 1e-12 and policy == POSSIBLE_ATTRIBUTION_COVERAGE_VERSION:
             units.append(
                 MetricPopulationCoverageUnit(
                     unit_id=metric_population_coverage_unit_id(
@@ -401,7 +415,12 @@ class AutomaticMetricPopulationEvidence:
     def __post_init__(self) -> None:
         if (
             self.assessment_version
-            != _automatic_population_version(self.metric_id, self.field_id)
+            not in {
+                _automatic_population_version(self.metric_id, self.field_id),
+                _automatic_population_version(
+                    self.metric_id, self.field_id, OBSERVED_ATTRIBUTION_COVERAGE_VERSION
+                ),
+            }
             or not isinstance(self.assessed_at, datetime)
             or self.assessed_at.tzinfo is None
             or self.assessed_at.utcoffset() is None
@@ -444,6 +463,65 @@ class AutomaticMetricPopulationEvidence:
 
 
 type PopulationEvidence = MetricPopulationEvidence | AutomaticMetricPopulationEvidence
+
+
+def metric_population_coverage_policy(evidence: PopulationEvidence) -> str:
+    """Read the proof-bound policy; never infer it from observed percentages."""
+    if isinstance(evidence, AutomaticMetricPopulationEvidence):
+        evidence.__post_init__()
+        if evidence.assessment_version in {
+            AUTOMATIC_OBSERVED_METRIC_POPULATION_VERSION,
+            AUTOMATIC_OBSERVED_BRANCH_DIVERSITY_POPULATION_VERSION,
+        }:
+            return OBSERVED_ATTRIBUTION_COVERAGE_VERSION
+    elif not isinstance(evidence, MetricPopulationEvidence):
+        raise CertificationError("coverage policy requires typed population evidence")
+    return POSSIBLE_ATTRIBUTION_COVERAGE_VERSION
+
+
+@dataclass(frozen=True)
+class MetricPopulationAttributionBounds:
+    """Contribution-mass bounds, not confidence intervals or metric score bounds.
+
+    Possible unknown mass can overlap across entities: never sum these bounds
+    across institutions. Exact source-window projections remain authoritative.
+    """
+
+    policy_version: str
+    population_certification_id: str
+    projection_digest: str
+    observed_mass: float
+    unresolved_possible_mass: float
+    possible_mass: float
+    source_paper_count: int
+    observed_paper_count: int
+
+
+def metric_population_attribution_bounds(
+    population: CertifiedMetricPopulation,
+) -> MetricPopulationAttributionBounds:
+    """Reconstruct disclosure from a verified proof, never a caller's estimate."""
+    if not isinstance(population, CertifiedMetricPopulation):
+        raise CertificationError("attribution bounds require a certified population")
+    population.__post_init__()
+    evidence = population.certification.evidence
+    return MetricPopulationAttributionBounds(
+        policy_version=metric_population_coverage_policy(evidence),
+        population_certification_id=population.certification.certification_id,
+        projection_digest=population.certification.projection_digest,
+        observed_mass=math.fsum(
+            item.attribution_weight for item in evidence.projections
+        ),
+        unresolved_possible_mass=math.fsum(
+            item.coverage_weight - item.attribution_weight
+            for item in evidence.projections
+        ),
+        possible_mass=math.fsum(item.coverage_weight for item in evidence.projections),
+        source_paper_count=len(evidence.projections),
+        observed_paper_count=sum(
+            item.attribution_weight > 0 for item in evidence.projections
+        ),
+    )
 
 
 @dataclass(frozen=True)
@@ -728,6 +806,7 @@ def derive_metric_population(
     entity_id: str,
     field_id: str,
     assessed_at: datetime,
+    coverage_policy: str = POSSIBLE_ATTRIBUTION_COVERAGE_VERSION,
 ) -> CertifiedMetricPopulation:
     """Derive every source-paper decision; never accept a favorable subset.
 
@@ -741,6 +820,9 @@ def derive_metric_population(
     if not isinstance(entity_id, str) or not entity_id.strip():
         raise CertificationError("automatic population entity identifier is invalid")
     context = window.certification
+    assessment_version = _automatic_population_version(
+        context.metric_id, field_id, coverage_policy
+    )
     _validate_automatic_population_field(field_id, context.metric_id)
     projections: list[MetricPopulationProjection] = []
     decisions: list[EvidenceCertificationDecision] = []
@@ -842,32 +924,50 @@ def derive_metric_population(
             decisions=tuple(sorted(decisions, key=lambda item: item.subject_id)),
             assessed_at=assessed_at,
             category_universe=category,
-            assessment_version=_automatic_population_version(
-                context.metric_id, field_id
-            ),
+            assessment_version=assessment_version,
         ),
         window,
     )
 
 
-def _automatic_population_version(metric_id: str, field_id: str) -> str:
+def _automatic_population_version(
+    metric_id: str,
+    field_id: str,
+    coverage_policy: str = POSSIBLE_ATTRIBUTION_COVERAGE_VERSION,
+) -> str:
+    if coverage_policy not in {
+        POSSIBLE_ATTRIBUTION_COVERAGE_VERSION,
+        OBSERVED_ATTRIBUTION_COVERAGE_VERSION,
+    }:
+        raise CertificationError("unsupported metric population coverage policy")
+    observed = coverage_policy == OBSERVED_ATTRIBUTION_COVERAGE_VERSION
     if (
         metric_id == "research_diversity"
         and PHYSICS_FIELD_ONTOLOGY_V1.contains(field_id)
         and PHYSICS_FIELD_ONTOLOGY_V1.get(field_id).node_kind == "branch"
     ):
-        return AUTOMATIC_BRANCH_DIVERSITY_POPULATION_VERSION
-    return AUTOMATIC_METRIC_POPULATION_VERSION
+        return (
+            AUTOMATIC_OBSERVED_BRANCH_DIVERSITY_POPULATION_VERSION
+            if observed
+            else AUTOMATIC_BRANCH_DIVERSITY_POPULATION_VERSION
+        )
+    return (
+        AUTOMATIC_OBSERVED_METRIC_POPULATION_VERSION
+        if observed
+        else AUTOMATIC_METRIC_POPULATION_VERSION
+    )
 
 
 def _population_field_weight(
     evidence: PopulationEvidence,
     field_weights: tuple[tuple[str, float], ...],
 ) -> float:
-    if (
-        isinstance(evidence, AutomaticMetricPopulationEvidence)
-        and evidence.assessment_version == AUTOMATIC_BRANCH_DIVERSITY_POPULATION_VERSION
-    ):
+    if isinstance(
+        evidence, AutomaticMetricPopulationEvidence
+    ) and evidence.assessment_version in {
+        AUTOMATIC_BRANCH_DIVERSITY_POPULATION_VERSION,
+        AUTOMATIC_OBSERVED_BRANCH_DIVERSITY_POPULATION_VERSION,
+    }:
         return branch_diversity_field_projection(evidence.field_id, field_weights)[0]
     return dict(field_weights).get(evidence.field_id, 0.0)
 

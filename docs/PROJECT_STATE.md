@@ -34,11 +34,22 @@ authority sample, exact-ROR retention raises canonical institution coverage from
 sample results, not whole-year institution coverage. Six certified years, mature
 comparable cohorts and real exact-five normalized observations are not established.
 
-The current per-entity admission rule also includes the global unknown mass in
-each entity's possible-coverage denominator. That intentional worst-case rule is
-not silently replaced by the source-year fractional-coverage repair. Separating
-observed coverage from retained uncertainty bounds requires a versioned policy
-decision; it remains pending, not an implemented relaxation.
+PA-059 now authorizes separate observed-coverage and attribution-uncertainty
+validation. The opt-in `observed-attribution-coverage-v1` adapter keeps all source
+projections and possible unknown mass, but measures conditional per-entity coverage
+over actual entity×field mass. Source-wide 90%/95% gates, formulas and historical
+requirements remain unchanged. Both partition boundaries reconstruct the policy;
+normalization and cross-field aggregation reject mixed policies; compact export
+discloses the bounds. Focused validation passes 130 backend cases, 33 frontend
+compatibility cases, full lint/type checking and production build. All 36,456,719
+temporary logical bytes were removed from the sole build directory (40,341,504
+bytes maximum observed allocation, below 2 GB). No new evidence or metrics were
+acquired/activated. The pushed commit's separate remote validation is recorded in
+[GitHub CI](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/workflows/ci.yml),
+not inferred from these local checks.
+Legacy versions/defaults remain intact. This closes the pending policy decision,
+not the real-evidence blockers or exact-five launch. The concise remaining scope
+is in [README](../README.md#minimum-remaining-launch-work).
 
 The API/database were healthy at 01:30:59 UTC on September 8, expected public-origin
 CORS was present and public metric observations were zero. Web `63fc454`/source pin
@@ -49,7 +60,8 @@ passes. The shared-pure-function correction is pushed as `5a8e033`; its complete
 [CI 34008750463](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/34008750463)
 passes backend/PostgreSQL, frontend and container jobs. The 105-case local recheck
 and full lint/format/mypy (103 source files) also pass. This closes the CI failure,
-not the scientific activation gate; the coverage-policy decision remains pending.
+not the scientific activation gate. The later PA-059 change requires its own
+focused validation/CI and does not retroactively change that run's scope.
 The final local run passes 420 focused backend cases, 139 frontend cases and seven
 pipeline cases, full lint/type checking and production build. Local cleanup is
 PASS: all **151,511,633** cumulative temporary logical bytes were removed,

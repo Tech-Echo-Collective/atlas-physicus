@@ -295,6 +295,28 @@ is not evidence that the corrected path passes the 95% gate.
 [ROR registry scope](https://ror.org/registry/),
 [ROR organizational scope guidance](https://ror.org/blog/2026-06-24-three-tips-for-requesting-ror-id/).
 
+## Observed coverage and attribution uncertainty — 2026-09-08
+
+**PA-059:** The owner explicitly authorizes validating observed evidence coverage
+separately from unresolved attribution uncertainty. The opt-in
+`observed-attribution-coverage-v1` population uses actual conserved entity×field
+mass as the conditional per-entity coverage denominator. Missing citations or
+relationships within that mass still reduce coverage; zero observed mass is
+unavailable, not measured zero or 100% coverage.
+
+The exact source window, every paper projection, unresolved states/reasons and
+possible attribution mass remain intact. Full-source 90%/95% evidence gates,
+scientific formulas, peer/cohort minimums and historical requirements are unchanged.
+Unknown mass is never assigned to an entity or removed from source-wide accounting.
+The exported bounds describe potential contributions, not statistical confidence
+intervals or metric score bounds; they overlap and must not be added across entities
+or fields. Observed completeness is not total ecosystem completeness.
+
+New automatic leaf/branch population versions bind this policy to certification;
+legacy population structures, versions, default behavior and historical hashes
+remain unchanged. Comparison peers must share a coverage policy. Exact-five
+activation remains a separate evidence gate, not a consequence of this approval.
+
 ## Current activation decision
 
 The v3.0.4 production activation begins with the implemented `hep-th-v1`

@@ -52,7 +52,7 @@ merged to make coverage pass.
 PA-033 already permits `Σ mapped weights + explicit unmapped mass = 1`.
 A conserved partial ledger can prove its accounting and support its positive
 known leaf contributions without certifying the unknown remainder. Its metric
-population retains the existing conservative denominator:
+population retains the existing possible-contribution calculation:
 
 ```text
 known contribution = entity share × known field weight
@@ -68,6 +68,26 @@ mass against the complete declared denominator and retain the existing 90%
 minimum. The older whole-paper binary coverage path and historical hashes stay
 unchanged. Unknown labels remain unmapped; this change adds no ontology labels,
 provider mapping rules or inference from embedded cross-provider metadata.
+
+### Observed coverage, separate uncertainty (PA-059)
+
+`derive_metric_population(..., coverage_policy="observed-attribution-coverage-v1")`
+explicitly selects new automatic leaf/branch population versions. Their per-entity
+coverage denominator is the positive known contribution above; missing formula
+evidence within that denominator still fails the original coverage threshold.
+The legacy default continues to include possible unknown mass in that denominator.
+No existing serialized proof structure or source projection changes.
+
+Both independent partition validators reconstruct the selected ledger. A verified
+population also reconstructs observed mass, possible unresolved mass, possible
+total, counts and exact proof/digest references for compact dataset disclosure.
+These are overlapping contribution bounds, not confidence intervals or score
+bounds. A zero observed denominator stays unavailable. Normalization rejects
+mixed policies, and source-year/window certification still validates the complete
+source universe and unchanged 90%/95% gates before per-entity admission.
+
+This separates measurement from uncertainty; it does not certify unresolved
+institutions, create missing source years, or activate any public metric.
 
 This completion is under focused integration validation; the measured 250-record
 example in the [bounded report](validation/minimum-launch-integration-2026-09-06.md)
