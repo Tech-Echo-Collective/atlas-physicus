@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 from urllib.parse import urlencode
+from uuid import uuid4
 
 from .certification.build_cache import bounded_build_verification_cache
 from .certification.citation_sessions import (
@@ -221,10 +222,7 @@ def capture_citations(root: Path) -> None:
         raise CertificationError("a certified frozen launch is required")
     if any(
         (root / name).exists() or (root / name).is_symlink()
-        for name in (
-            "measured-citations.pickle.gz",
-            "citation-acquisition-receipts.json",
-        )
+        for name in ("measured-citations.pickle.gz",)
     ):
         raise ValueError(
             "measured citation state already exists; never overwrite a cutoff"
@@ -241,6 +239,10 @@ def capture_citations(root: Path) -> None:
             for item in populations
         ):
             raise CertificationError("frozen citation identity inventories differ")
+        # Failed attempts retain their actual requests without preventing a fresh
+        # measurement over the same frozen population. Completed sessions remain
+        # immutable, and no partial earlier page enters the next attempt.
+        receipt_path = root / f"citation-acquisition-receipts-{uuid4().hex}.json"
         transport = LaunchTransport()
         connector = InspireConnector(
             transport,  # type: ignore[arg-type]
@@ -307,12 +309,8 @@ def capture_citations(root: Path) -> None:
             )
         finally:
             transport.client.close()
-            receipt_path = root / "citation-acquisition-receipts.json"
-            if receipt_path.exists():
-                raise RuntimeError("citation acquisition lineage already exists")
-            receipt_path.write_text(
-                json.dumps(transport.receipts, separators=(",", ":")), encoding="utf-8"
-            )
+            with receipt_path.open("x", encoding="utf-8") as stream:
+                json.dump(transport.receipts, stream, separators=(",", ":"))
 
 
 def calculate(root: Path) -> None:
@@ -537,7 +535,7 @@ def calculate(root: Path) -> None:
         _progress("metric-calculation-complete", **summary, checkpointBytes=size)
 
 
-def export(root: Path) -> None:
+def export(root: Path, *, geographic_reference: Path) -> None:
     """Materialize final assets only after scientific and map-UX readiness.
 
     This still does not publish, change deployment configuration or activate the
@@ -558,10 +556,9 @@ def export(root: Path) -> None:
     calculated = _load(root, "calculated-launch.pickle.gz")
     if not isinstance(calculated, CalculatedLaunch):
         raise CertificationError("actual calculated launch is required")
-    reference_path = (
-        Path(__file__).resolve().parents[3] / "src/data/reference/geographic-views.json"
-    )
-    policy = json.loads(reference_path.read_text(encoding="utf-8"))
+    # Installed wheels have no relationship to a frontend checkout. The operator
+    # supplies the exact display-only reference; never infer a repository path.
+    policy = json.loads(geographic_reference.read_text(encoding="utf-8"))
     if policy.get("version") != "atlas-geographic-view-policy-v1":
         raise CertificationError("unsupported display-only geographic policy")
     provenance = schemas.Provenance(
@@ -609,15 +606,29 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ephemeral-root", type=Path, required=True)
     parser.add_argument(
+        "--geographic-reference",
+        type=Path,
+        help="Explicit versioned geographic-views.json; required for export only",
+    )
+    parser.add_argument(
         "stage", choices=("prepare", "citations", "calculate", "export")
     )
     arguments = parser.parse_args()
     stage = cast(str, arguments.stage)
+    if stage == "export":
+        if arguments.geographic_reference is None:
+            parser.error("export requires --geographic-reference")
+        export(
+            arguments.ephemeral_root,
+            geographic_reference=arguments.geographic_reference,
+        )
+        return
+    if arguments.geographic_reference is not None:
+        parser.error("--geographic-reference is only applicable to export")
     {
         "prepare": prepare,
         "citations": capture_citations,
         "calculate": calculate,
-        "export": export,
     }[stage](arguments.ephemeral_root)
 
 

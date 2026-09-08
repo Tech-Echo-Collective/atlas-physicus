@@ -19,6 +19,9 @@ NAMES = (
     "scientific-evidence.json.gz",
     "launch-export-summary.json",
 )
+GEOGRAPHIC_REFERENCE = (
+    Path(__file__).resolve().parents[2] / "src/data/reference/geographic-views.json"
+)
 
 
 @pytest.fixture
@@ -61,7 +64,7 @@ def test_export_refuses_existing_or_symlink_before_loading(
     else:
         target.write_bytes(b"existing-test-artifact-must-not-change")
     with pytest.raises(ValueError, match="already exist; never overwrite"):
-        launch_pipeline.export(tmp_path)
+        launch_pipeline.export(tmp_path, geographic_reference=GEOGRAPHIC_REFERENCE)
     load.assert_not_called()
     build.assert_not_called()
     progress.assert_not_called()
@@ -74,7 +77,7 @@ def test_export_rejects_wrong_checkpoint_type(tmp_path: Path, command) -> None: 
     _, _, load, build, _ = command
     load.return_value = {"fixture": "not a typed calculated launch"}
     with pytest.raises(CertificationError, match="actual calculated launch"):
-        launch_pipeline.export(tmp_path)
+        launch_pipeline.export(tmp_path, geographic_reference=GEOGRAPHIC_REFERENCE)
     load.assert_called_once_with(tmp_path, "calculated-launch.pickle.gz")
     build.assert_not_called()
     assert not list(tmp_path.iterdir())
@@ -95,7 +98,7 @@ def test_export_requires_country_composite_and_real_timeline(
     _, result, _, build, progress = command
     build.return_value = replace(result, summary={**result.summary, **change})
     with pytest.raises(CertificationError, match=reason):
-        launch_pipeline.export(tmp_path)
+        launch_pipeline.export(tmp_path, geographic_reference=GEOGRAPHIC_REFERENCE)
     build.assert_called_once()
     progress.assert_not_called()
     assert not list(tmp_path.iterdir())
@@ -112,7 +115,7 @@ def test_export_checks_total_budget_before_any_asset_write(
     write = Mock(side_effect=AssertionError("budget must be checked before writes"))
     monkeypatch.setattr(launch_pipeline, "_publish_checkpoint", write)
     with pytest.raises(RuntimeError, match="budget; not written"):
-        launch_pipeline.export(tmp_path)
+        launch_pipeline.export(tmp_path, geographic_reference=GEOGRAPHIC_REFERENCE)
     write.assert_not_called()
     progress.assert_not_called()
     assert not list(tmp_path.iterdir())
@@ -125,7 +128,7 @@ def test_export_rejects_unexpected_asset_inventory(tmp_path: Path, command) -> N
         assets=(("dataset", "unexpected.json", b"test-only-bytes"),),
     )
     with pytest.raises(CertificationError, match="unexpected final asset inventory"):
-        launch_pipeline.export(tmp_path)
+        launch_pipeline.export(tmp_path, geographic_reference=GEOGRAPHIC_REFERENCE)
     assert not list(tmp_path.iterdir())
 
 
@@ -142,7 +145,7 @@ def test_export_rejects_unknown_geographic_policy_before_building(
 
     monkeypatch.setattr(Path, "read_text", policy)
     with pytest.raises(CertificationError, match="unsupported display-only"):
-        launch_pipeline.export(tmp_path)
+        launch_pipeline.export(tmp_path, geographic_reference=GEOGRAPHIC_REFERENCE)
     build.assert_not_called()
     assert not list(tmp_path.iterdir())
 
@@ -163,7 +166,13 @@ def test_export_publishes_exact_three_assets_and_summary_atomically(
         link(source, destination)
 
     monkeypatch.setattr(launch_build.os, "link", checked_link)
-    launch_pipeline.export(tmp_path)
+    # Reproduce installed-wheel module layout without depending on that layout.
+    monkeypatch.setattr(
+        launch_pipeline,
+        "__file__",
+        "/opt/venv/lib/python3.12/site-packages/physics_atlas_api/launch_pipeline.py",
+    )
+    launch_pipeline.export(tmp_path, geographic_reference=GEOGRAPHIC_REFERENCE)
     assert linked == list(NAMES)
     assert {path.name for path in tmp_path.iterdir()} == set(NAMES)
     load.assert_called_once_with(tmp_path, "calculated-launch.pickle.gz")
@@ -171,11 +180,7 @@ def test_export_publishes_exact_three_assets_and_summary_atomically(
     assert build.call_args.args == (calculated,)
     parameters = build.call_args.kwargs
     assert parameters["generated_at"].utcoffset() is not None
-    policy_path = (
-        Path(launch_pipeline.__file__).resolve().parents[3]
-        / "src/data/reference/geographic-views.json"
-    )
-    policy = json.loads(policy_path.read_text())
+    policy = json.loads(GEOGRAPHIC_REFERENCE.read_text())
     views = parameters["geographic_views"]
     assert [view.id for view in views] == [view["id"] for view in policy["views"]]
     for view, expected in zip(views, policy["views"], strict=True):
@@ -196,7 +201,30 @@ def test_main_dispatches_export_only_to_explicit_root(
     command = Mock()
     monkeypatch.setattr(launch_pipeline, "export", command)
     monkeypatch.setattr(
-        "sys.argv", ["launch-pipeline", "--ephemeral-root", str(tmp_path), "export"]
+        "sys.argv",
+        [
+            "launch-pipeline",
+            "--ephemeral-root",
+            str(tmp_path),
+            "export",
+            "--geographic-reference",
+            str(GEOGRAPHIC_REFERENCE),
+        ],
     )
     launch_pipeline.main()
-    command.assert_called_once_with(tmp_path)
+    command.assert_called_once_with(tmp_path, geographic_reference=GEOGRAPHIC_REFERENCE)
+
+
+def test_export_cli_requires_explicit_reference_before_running(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    command = Mock()
+    monkeypatch.setattr(launch_pipeline, "export", command)
+    monkeypatch.setattr(
+        "sys.argv", ["launch-pipeline", "--ephemeral-root", str(tmp_path), "export"]
+    )
+    with pytest.raises(SystemExit) as error:
+        launch_pipeline.main()
+    assert error.value.code == 2
+    assert "requires --geographic-reference" in capsys.readouterr().err
+    command.assert_not_called()

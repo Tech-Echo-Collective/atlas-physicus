@@ -151,7 +151,6 @@ def test_cli_uses_stable_module_entry_and_checkpoint_class(
     [
         ("prepare", "prepared-launch-summary.json"),
         ("prepare", "prepared-launch.pickle.gz"),
-        ("citations", "citation-acquisition-receipts.json"),
         ("citations", "measured-citations.pickle.gz"),
     ],
 )
@@ -254,10 +253,9 @@ def test_capture_keeps_exact_ids_timestamps_and_missing_not_zero(
     counts = [item.non_self_citation_count for item in rows]
     assert counts[0] == 0 and counts[1] is None
     assert len(counts) == 12
-    assert (
-        json.loads((tmp_path / "citation-acquisition-receipts.json").read_text())
-        == transport.receipts
-    )
+    receipts = tuple(tmp_path.glob("citation-acquisition-receipts-*.json"))
+    assert len(receipts) == 1
+    assert json.loads(receipts[0].read_text()) == transport.receipts
     transport.client.close.assert_called_once()
     assert len(transport.captured_urls) == 1
 
@@ -270,8 +268,43 @@ def test_wrong_membership_never_writes_measured_checkpoint(
     with pytest.raises((CertificationError, ValueError)):
         launch_pipeline.capture_citations(tmp_path)
     assert not (tmp_path / "measured-citations.pickle.gz").exists()
-    assert (tmp_path / "citation-acquisition-receipts.json").is_file()
+    assert len(tuple(tmp_path.glob("citation-acquisition-receipts-*.json"))) == 1
     transport.client.close.assert_called_once()
+
+
+def test_failed_citation_attempt_can_retry_without_overwriting_any_receipt(
+    prepared_launch, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:  # type: ignore[no-untyped-def]
+    legacy = tmp_path / "citation-acquisition-receipts.json"
+    legacy.write_bytes(b"[]")
+    failed = fake_transport(prepared_launch, corrupt_membership=True)
+    successful = fake_transport(prepared_launch)
+    transports = iter((failed, successful))
+    factory = Mock(side_effect=lambda: next(transports))
+    monkeypatch.setattr(launch_pipeline, "LaunchTransport", factory)
+    with pytest.raises((CertificationError, ValueError)):
+        launch_pipeline.capture_citations(tmp_path)
+    first = tuple(tmp_path.glob("citation-acquisition-receipts-*.json"))
+    assert len(first) == 1
+    original_bytes = first[0].read_bytes()
+    assert json.loads(original_bytes) == failed.receipts
+    assert not (tmp_path / "measured-citations.pickle.gz").exists()
+
+    launch_pipeline.capture_citations(tmp_path)
+    assert len(tuple(tmp_path.glob("citation-acquisition-receipts-*.json"))) == 2
+    assert first[0].read_bytes() == original_bytes and legacy.read_bytes() == b"[]"
+    restored = launch_pipeline._load(tmp_path, "measured-citations.pickle.gz")
+    assert restored[0].pages[0].requested_at == successful.started
+    assert restored[0].frozen_population == (
+        prepared_launch.frozen_populations[0].measurement_population
+    )
+    # A successfully completed session, unlike a failure receipt, still stops
+    # reacquisition before any additional transport is constructed.
+    with pytest.raises(ValueError, match="already exists"):
+        launch_pipeline.capture_citations(tmp_path)
+    assert factory.call_count == 2
+    failed.client.close.assert_called_once()
+    successful.client.close.assert_called_once()
 
 
 def test_batch_dispatch_is_exact_and_reuses_pages_for_both_existing_certifiers(

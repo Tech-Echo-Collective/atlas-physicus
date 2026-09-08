@@ -28,6 +28,13 @@ reports.
 - This source checkpoint does not move a tag or activate the public heatmap.
   New temporary inputs/checkpoints/builds stay in the single owner-private launch
   directory below the 2 GB disk cap; cleanup is pending until task completion.
+- Integration `7ab79b8` CI 34186465032 passed frontend/containers and 1,295 backend
+  tests. Seven export tests failed only because an installed package cannot infer
+  a frontend checkout path from its module location. Export now requires an
+  explicit geographic reference; 32 focused pipeline/export tests pass. Citation
+  failures retain unique attempt receipts without blocking a clean retry of the
+  same frozen population. Prior failed receipts and successful cutoffs remain
+  immutable; source acquisition is unaffected.
 
 ## 2026-09-08 — Separate observed coverage from retained attribution uncertainty
 

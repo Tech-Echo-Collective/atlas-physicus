@@ -261,4 +261,9 @@ Run the health/status checks and inspect representative provenance and identity 
 6. Rebuild and start `migrate`, `api`, then `caddy`; validate health and representative reads.
 7. Restart the worker only when its code, schema, and bounded scope match the restored database.
 
-Keep the public Pages build pointed at the last known-good HTTPS API during a backend rollback, or remove `VITE_ATLAS_API_URL` in a reviewed frontend deployment to return to the retained static/pilot fallback. Do not silently mix fallback and live observations.
+Keep the public Pages build pointed at the last known-good HTTPS API during a
+backend rollback, or restore the previous verified frontend deployment and its
+explicit data-source configuration. Removing `VITE_ATLAS_API_URL` does not enable
+a public static/pilot fallback: without a configured certified dataset, missing
+configuration fails closed. Never substitute synthetic/pilot evidence or mix
+API and certified-dataset observations during rollback.

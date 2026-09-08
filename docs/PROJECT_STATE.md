@@ -23,8 +23,14 @@ still running with checksummed completed-page recovery. A DOI role conflict in a
 earlier attempt is retained as unresolved rather than terminating enumeration.
 No real exact-five observations or final Atlas Dataset have yet been produced.
 
-Current source baseline `b54b64e` passed CI 34178037122; Web `63fc454` passed Pages
-33967823884. This source checkpoint does not activate public data. Local checks pass 1,278
+Launch integration `7ab79b8` is pushed. CI 34186465032 passed frontend/containers
+and 1,295 backend tests; seven export-command tests exposed an installed-package
+path assumption. The focused fix requires an explicit display-only geographic
+reference, and 32 pipeline/export checks pass. Failed citation attempts also keep
+separate immutable receipts so a fresh measurement may retry the same frozen
+population. The previous full-green source is `b54b64e` / CI 34178037122;
+Web `63fc454` passed Pages 33967823884. These source changes do not activate public
+data. Earlier local full checks passed 1,278
 backend tests, 144 frontend tests, seven pipeline tests, full frontend type/lint
 and build, plus 52 final adapter/cache/export checks and strict backend typing.
 These checks validate implementation, not a real metric launch. All new scientific and
