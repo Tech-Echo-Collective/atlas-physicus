@@ -305,3 +305,33 @@ population, not all scholarship in the field. Old complete-field cohorts retain
 their strict default and historical result shape. Comparison and normalization
 keys prohibit mixing these two reference-universe meanings, even if their
 numeric counts happen to coincide.
+
+## Unambiguous observed researcher subset
+
+`unambiguous-observed-native-researchers-v1` is a separate, opt-in producer for
+conditional observed institution/country partitions. It does not replace the
+PA-061 producer or the strict researcher-level identity default. It consumes
+only native IDs supported at exactly one paper-author position, with no
+within-position contradiction or ambiguous co-asserted ORCID relationship.
+Repeated native IDs, ORCIDs repeated across positions, and ORCIDs claiming
+multiple native IDs quarantine the affected identities and positions. Names are
+never used to resolve, merge, or choose between those assertions.
+
+The original byline, source facts, conflicting identifiers, affiliation shares,
+and complete fractional denominator are unchanged. The producer certifies only
+the remaining observed ID tuple, with explicit omitted/conflicted positions and
+reason codes retained beside its version and source references. This is
+deterministic quarantine of unsupported facts, not certification of the disputed
+identities or a claim of complete author coverage. An empty tuple is a known
+empty *supported subset*, not evidence that the paper has no authors; the
+unchanged minimum-five gate still withholds insufficient portfolios.
+
+The metric input, compact evidence rehydration, and conditional public entity
+export use that same tuple. Quarantined positions produce no verified researcher
+profile, authorship, or researcher-affiliation link. The paper and its supported
+institutions remain present. Current metrics, coverage thresholds, reference
+cohorts, field conservation, and fractional attribution are not relaxed.
+Legacy inputs/producers keep their earlier tuple and hashes.
+Both public partition admission and independent proof validation enforce the
+conditional geographic scope and reject mixed researcher-subset policies inside
+a partition; bridge configuration alone is not an authorization boundary.

@@ -896,6 +896,229 @@ def automatic_known_researcher_decision(
     )
 
 
+UNAMBIGUOUS_RESEARCHER_RULE_VERSION = "unambiguous-observed-native-researchers-v1"
+
+
+@dataclass(frozen=True)
+class UnambiguousResearcherSubset:
+    """An observed lower bound, not a complete or globally resolved byline."""
+
+    researcher_ids: tuple[str, ...]
+    admitted_author_positions: tuple[int, ...]
+    omitted_author_positions: tuple[int, ...]
+    conflicted_author_positions: tuple[int, ...]
+    quarantined_native_ids: tuple[str, ...]
+    omission_reasons: tuple[tuple[int, tuple[str, ...]], ...]
+    version: str = UNAMBIGUOUS_RESEARCHER_RULE_VERSION
+
+
+def unambiguous_researcher_subset(
+    facts: SourceBoundPaperFacts,
+) -> UnambiguousResearcherSubset:
+    from .build_cache import memoize_immutable
+
+    return memoize_immutable(
+        "unambiguous-observed-researcher-subset-v1",
+        (facts, UNAMBIGUOUS_RESEARCHER_RULE_VERSION, AUTOMATIC_RESEARCHER_RULE_VERSION),
+        lambda: _unambiguous_researcher_subset(facts),
+    )
+
+
+def _unambiguous_researcher_subset(
+    facts: SourceBoundPaperFacts,
+) -> UnambiguousResearcherSubset:
+    if not isinstance(facts, SourceBoundPaperFacts):
+        raise CertificationError("observed subset requires exact source-bound facts")
+    facts.__post_init__()
+    evaluations = tuple(_researcher_evaluation(author) for author in facts.authors)
+    natives_by_position: dict[int, set[str]] = {}
+    positions_by_native: dict[str, set[int]] = {}
+    positions_by_orcid: dict[str, set[int]] = {}
+    natives_by_orcid: dict[str, set[str]] = {}
+    reasons: dict[int, set[str]] = {}
+    quarantined: set[str] = set()
+    conflicted: set[int] = set()
+    for position, evaluation in enumerate(evaluations, start=1):
+        value = evaluation.value
+        assert isinstance(value, ResolvedResearcherIdentifiers)
+        natives = {
+            identifier
+            for scheme, identifier in value.identifiers
+            if scheme == "inspire-author"
+        }
+        natives_by_position[position] = natives
+        for native in natives:
+            positions_by_native.setdefault(native, set()).add(position)
+        for scheme, identifier in value.identifiers:
+            if scheme == "orcid":
+                positions_by_orcid.setdefault(identifier, set()).add(position)
+                natives_by_orcid.setdefault(identifier, set()).update(natives)
+        if evaluation.state != "certified" or len(natives) != 1:
+            reasons.setdefault(position, set()).add(
+                "conflicting-paper-native-identifiers"
+                if evaluation.state == "conflicted"
+                else "missing-or-invalid-paper-native-identity"
+            )
+            quarantined.update(natives)
+            if evaluation.state == "conflicted":
+                conflicted.add(position)
+    for native, positions in positions_by_native.items():
+        if len(positions) > 1:
+            quarantined.add(native)
+            conflicted.update(positions)
+            for position in positions:
+                reasons.setdefault(position, set()).add("native-id-repeated-in-byline")
+    for orcid, positions in positions_by_orcid.items():
+        natives = natives_by_orcid[orcid]
+        if len(natives) > 1 or len(positions) > 1:
+            quarantined.update(natives)
+            conflicted.update(positions)
+            reason = (
+                "orcid-claims-multiple-native-identities"
+                if len(natives) > 1
+                else "orcid-repeated-in-byline"
+            )
+            for position in positions:
+                reasons.setdefault(position, set()).add(reason)
+    ids, admitted = [], []
+    for position in range(1, len(evaluations) + 1):
+        natives = natives_by_position[position]
+        if natives & quarantined:
+            reasons.setdefault(position, set()).add("native-id-in-ambiguous-component")
+            if any(
+                other in conflicted
+                for native in natives
+                for other in positions_by_native[native]
+            ):
+                conflicted.add(position)
+        if position in reasons:
+            continue
+        # No deduplication masquerades as resolution: every admitted native ID
+        # has exactly one supported source position and no conflicting links.
+        native = next(iter(natives))
+        ids.append(f"inspire-author:{native}")
+        admitted.append(position)
+    return UnambiguousResearcherSubset(
+        tuple(sorted(ids)),
+        tuple(admitted),
+        tuple(sorted(reasons)),
+        tuple(sorted(conflicted)),
+        tuple(f"inspire-author:{native}" for native in sorted(quarantined)),
+        tuple(
+            (position, tuple(sorted(values)))
+            for position, values in sorted(reasons.items())
+        ),
+    )
+
+
+def _unambiguous_researcher_view(
+    facts: SourceBoundPaperFacts, entity_type: str
+) -> EvidenceCertificationDecision:
+    if entity_type not in {"institution", "country"}:
+        raise CertificationError(
+            "unambiguous observed subset requires geographic scope"
+        )
+    subset = unambiguous_researcher_subset(facts)
+    return EvidenceCertificationDecision(
+        subject_type="paper",
+        subject_id=facts.context.paper_id,
+        evidence_kind="researcher-identity",
+        state="certified",
+        rule_version=UNAMBIGUOUS_RESEARCHER_RULE_VERSION,
+        dataset_version=facts.context.dataset_version,
+        acquisition_scope=facts.context.acquisition_scope,
+        evidence=(facts.reference,),
+        certified_value_digest=canonical_digest(
+            {
+                "paper_id": facts.context.paper_id,
+                "researcher_ids": subset.researcher_ids,
+            }
+        ),
+        reasons=(),
+    )
+
+
+@dataclass(frozen=True, kw_only=True)
+class AutomaticUnambiguousResearcherDecision(AutomaticKnownResearcherDecision):
+    """Certify the consumed subset; conflicting original assertions stay unknown."""
+
+    def __post_init__(self) -> None:
+        EvidenceCertificationDecision.__post_init__(self)
+        expected = _unambiguous_researcher_view(self.source_facts, self.entity_type)
+        if any(
+            getattr(self, item.name) != getattr(expected, item.name)
+            for item in fields(EvidenceCertificationDecision)
+        ):
+            raise CertificationError(
+                "unambiguous researcher subset does not reconstruct"
+            )
+
+    @property
+    def subset(self) -> UnambiguousResearcherSubset:
+        return unambiguous_researcher_subset(self.source_facts)
+
+    @property
+    def omitted_author_positions(self) -> tuple[int, ...]:
+        return self.subset.omitted_author_positions
+
+    @property
+    def conflicted_author_positions(self) -> tuple[int, ...]:
+        return self.subset.conflicted_author_positions
+
+
+def automatic_unambiguous_researcher_decision(
+    facts: SourceBoundPaperFacts,
+    *,
+    entity_type: Literal["institution", "country"],
+) -> AutomaticUnambiguousResearcherDecision:
+    view = _unambiguous_researcher_view(facts, entity_type)
+    return AutomaticUnambiguousResearcherDecision(
+        **{
+            item.name: getattr(view, item.name)
+            for item in fields(EvidenceCertificationDecision)
+        },
+        source_facts=facts,
+        entity_type=entity_type,
+    )
+
+
+def verify_unambiguous_researcher_scope(
+    decisions: tuple[EvidenceCertificationDecision, ...], window: object
+) -> None:
+    """Once-per-partition scope guard; not an alternative window validator."""
+    from .years import CertifiedMetricWindow, ConditionalObservedSourceYearEvidence
+
+    selected = tuple(
+        item
+        for item in decisions
+        if isinstance(item, AutomaticUnambiguousResearcherDecision)
+    )
+    if not selected:
+        return
+    if (
+        not isinstance(window, CertifiedMetricWindow)
+        or window.certification.entity_type not in {"institution", "country"}
+        or not window.source_years
+        or not all(
+            isinstance(year.evidence, ConditionalObservedSourceYearEvidence)
+            for year in window.source_years
+        )
+        or any(
+            item.entity_type != window.certification.entity_type for item in selected
+        )
+    ):
+        raise CertificationError(
+            "unambiguous observed researchers require a conditional geographic window"
+        )
+    if any(
+        item.subject_type == "paper"
+        and item.evidence_kind == "researcher-identity"
+        and not isinstance(item, AutomaticUnambiguousResearcherDecision)
+        for item in decisions
+    ):
+        raise CertificationError("metric partition mixes observed researcher policies")
+
+
 def verify_automatic_source_binding(
     decision: EvidenceCertificationDecision,
     projection: object,

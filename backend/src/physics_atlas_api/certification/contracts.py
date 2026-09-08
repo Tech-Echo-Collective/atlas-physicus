@@ -664,6 +664,7 @@ class CertifiedMetricPartition[PartitionT]:
         from .automation import (
             verify_automatic_date_axis,
             verify_automatic_source_binding,
+            verify_unambiguous_researcher_scope,
         )
         from .citations import impact_comparable_paper_ids
         from .coverage import COVERAGE_SUBJECT_TYPE, validate_coverage_certification
@@ -847,6 +848,7 @@ class CertifiedMetricPartition[PartitionT]:
                 "metric partition paper projection proof does not match"
             )
         decisions = self.certification.evidence_decisions
+        verify_unambiguous_researcher_scope(decisions, self.window_proof)
         verify_automatic_date_axis(decisions, self.window_proof.source_years)
         if any(
             not evidence_decision_is_current(item)

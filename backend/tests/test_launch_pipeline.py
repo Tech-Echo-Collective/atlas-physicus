@@ -386,6 +386,7 @@ def test_calculation_preserves_unsupported_windows_and_never_fabricates_scores(
     assert calculated.prepared == prepared_launch
     assert not any(item.value is not None for item in calculated.observations)
     assert calculated.diagnostics
+    assert calculated.diagnostics[0]["entityType"] == "country"
     summary = json.loads((tmp_path / "calculated-launch-summary.json").read_text())
     assert summary["numericObservationCounts"] == {}
     assert summary["coLocatedFiveMetricGroups"] == 0

@@ -18,7 +18,8 @@ reports.
   Fixed fatal DOI-role conflict handling and loss of observed-reference citation
   semantics during branch aggregation. Completed-page checksums permit bounded
   acquisition recovery without provider-payload persistence.
-- Fresh 2018 acquisition completed (2,306 records); 2019–2023 remains active.
+- Fresh 2018/2019/2020 acquisition completed (2,306/2,412/2,787 records);
+  2021–2023 remains active.
   This is not six certified years or a successful metric release. Original
   source-wide failures remain distinct from conditional released-input coverage.
 - Local checks: 1,278 backend tests, 144 frontend tests and seven pipeline tests
@@ -35,6 +36,20 @@ reports.
   failures retain unique attempt receipts without blocking a clean retry of the
   same frozen population. Prior failed receipts and successful cutoffs remain
   immutable; source acquisition is unaffected.
+- Portability/retry correction `4e6ad6c` passes complete CI 34187549200.
+  Public API/database health is still OK at 04:54 UTC; live metric observations
+  remain zero. PA-063 adds exact source-ID quarantine shared by geographic
+  calculations, compact recovery and UI. It retains every original assertion,
+  unknown position and attribution denominator; existing thresholds remain.
+  Focused validation passes 54 integration, 23 admission/scope and 23 comparison
+  cases. New and legacy identity-input policies cannot mix in a partition,
+  normalization cohort or field aggregation. Full local validation passes 1,318
+  backend tests, Ruff/format and strict typing (114 source files); these checks
+  are not a real five-metric observation claim.
+- Actual 2018 UI projection: 177,369,453 JSON bytes / 15,706,925 gzip bytes;
+  authorship and affiliation rows dominate. This exceeds the existing 64 MiB
+  transport cap before metrics. The in-memory measurement retained no scientific
+  files; minimal on-demand delivery is pending, not a six-year capacity claim.
 
 ## 2026-09-08 — Separate observed coverage from retained attribution uncertainty
 

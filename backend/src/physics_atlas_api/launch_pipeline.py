@@ -337,8 +337,11 @@ def calculate(root: Path) -> None:
     with bounded_build_verification_cache(
         maximum_entries=20_000, maximum_key_nodes=1_000_000, stream_large_keys=True
     ) as cache:
-        for population, session in zip(
-            prepared.frozen_populations, sessions, strict=True
+        # Exercise the global-map release path before the larger institution
+        # cohort. This changes scheduling only, not any frozen inventory or rule.
+        for population, session in sorted(
+            zip(prepared.frozen_populations, sessions, strict=True),
+            key=lambda pair: pair[0].source_years[0].evidence.entity_type != "country",
         ):
             entity_type = population.source_years[0].evidence.entity_type
             cohorts: list[CertifiedSessionCitationCohort] = []

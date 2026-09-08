@@ -18,8 +18,10 @@ from .. import schemas
 from ..fields import PHYSICS_FIELD_ONTOLOGY_V1
 from ..metrics.dataset import AtlasDatasetEntities
 from .automation import (
+    UNAMBIGUOUS_RESEARCHER_RULE_VERSION,
     ResolvedResearcherIdentifiers,
     automatic_known_researcher_decision,
+    unambiguous_researcher_subset,
 )
 from .contracts import CertificationError, EvidenceReference, canonical_digest
 from .fields import automatic_field_ledger
@@ -195,6 +197,7 @@ def build_launch_entities(
     *,
     geographic_views: tuple[schemas.GeographicViewOut, ...],
     source_snapshots: tuple[schemas.SourceSnapshotOut, ...] = (),
+    researcher_projection_version: str | None = None,
 ) -> LaunchEntitiesBuild:
     """Return all supported UI facts and exact size, without truncation or I/O.
 
@@ -202,6 +205,8 @@ def build_launch_entities(
     provenance IDs link there to original checksums, not mutable source URLs.
     Missing labels/coordinates remain unavailable, not generated replacements.
     """
+    if researcher_projection_version not in {None, UNAMBIGUOUS_RESEARCHER_RULE_VERSION}:
+        raise CertificationError("unsupported UI researcher projection version")
     if not papers or len({paper.paper_id for paper in papers}) != len(papers):
         raise CertificationError(
             "launch UI projection requires unique canonical papers"
@@ -322,7 +327,12 @@ def build_launch_entities(
             continue
         occurrence = primary
         result = results[occurrence.reference]
-        safe_authors = (
+        subset = (
+            unambiguous_researcher_subset(occurrence.source_facts)
+            if researcher_projection_version is not None
+            else None
+        )
+        safe_authors = subset is not None or (
             automatic_known_researcher_decision(
                 occurrence.source_facts, entity_type="institution"
             ).state
@@ -339,6 +349,10 @@ def build_launch_entities(
             known = dict(value.identifiers).get("inspire-author")
             if (
                 not safe_authors
+                or (
+                    subset is not None
+                    and author.author_position not in subset.admitted_author_positions
+                )
                 or assessment.decision.state != "certified"
                 or known is None
             ):

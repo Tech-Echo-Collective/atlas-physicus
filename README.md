@@ -225,6 +225,16 @@ queryable canonical state or content-addressed warm/cold artifacts—so derived
 results can be reconstructed. Provider data remains subject to its own terms
 and licensing.
 
+Conditional observed datasets use `unambiguous-observed-native-researchers-v1`
+for institution/country researcher counts: conflicting or repeated native IDs
+and ambiguous ORCID links are quarantined, while independently supported IDs
+remain usable. Original author positions, conflicting assertions, and fractional
+attribution denominators are retained. This certifies an observed subset, not a
+complete byline; an empty subset means unknown people, not zero authors. The
+minimum-five-researcher requirement and all five metric formulas/thresholds are
+unchanged. Public profiles use the same admitted subset. See the
+[automatic certification methodology](docs/automatic-certification.md).
+
 ## Public access
 
 - Atlas: <https://atlas.techecho.org/>

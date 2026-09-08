@@ -138,7 +138,7 @@ def test_conservation_missing_and_compact_certification_are_preserved(retained_c
     broken = json.loads(built.content)
     key = next(iter(broken["partitions"]))
     paper_id = broken["partitions"][key]["papers"][0]
-    broken["papers"][paper_id]["known_researcher_ids"] = []
+    broken["papers"][paper_id]["unambiguous_researcher_subset"]["researcher_ids"] = []
     with pytest.raises(CertificationError, match="checksum mismatch"):
         rehydrate_launch_metric_input(broken, key)
 

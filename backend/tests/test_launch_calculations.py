@@ -75,6 +75,7 @@ def _year(  # type: ignore[no-untyped-def]
     missing_researcher: bool = False,
     paper_count: int = 2,
     uncertain_peer: bool = False,
+    conflicting_researcher: bool = False,
 ):
     connector = InspireConnector(Mock(), "https://inspirehep.net/api")
     plan = bounded_launch_source_plan(
@@ -85,6 +86,10 @@ def _year(  # type: ignore[no-untyped-def]
     ]
     if missing_researcher:
         authors[0].pop("recid")
+    if conflicting_researcher:
+        authors.extend((_author(1, [_link("200")]), _author(6, [_link("201")])))
+        for author in authors:
+            author["full_name"] = f"Synthetic source author {author['recid']}"
     payload = json.dumps(
         {
             "hits": {

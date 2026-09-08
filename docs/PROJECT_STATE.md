@@ -18,17 +18,38 @@ must pass the unchanged thresholds and five metrics together. The source-backed
 calculation/compact-evidence/Pages adapters are implemented and being validated.
 The completed fresh 2018 traversal has 2,306 records, 95.905997% paper-time
 affiliation presence and 68.614414% resolved institution mass **before canonical
-conflict exclusion**, not final certified coverage. The 2019–2023 acquisition is
-still running with checksummed completed-page recovery. A DOI role conflict in an
+conflict exclusion**, not final certified coverage. The 2019 traversal is also
+complete: 2,412 records, 94.891433% affiliation presence and 67.104458% resolved
+institution mass before canonical exclusion. The 2020 traversal is complete:
+2,787 records, 95.299925% affiliation presence and 65.737948% resolved institution
+mass before canonical exclusion. The 2021–2023 acquisition is still running with
+checksummed completed-page recovery. A DOI role conflict in an
 earlier attempt is retained as unresolved rather than terminating enumeration.
 No real exact-five observations or final Atlas Dataset have yet been produced.
+
+PA-063 isolates ambiguous author-ID assertions instead of withholding unrelated
+supported author identities on the same paper. It preserves original bylines,
+unknowns and attribution mass. The conditional calculator, compact recovery and
+UI consume the same versioned supported subset; legacy-window injection and
+mixed-policy normalization/aggregation are rejected. Full local validation passes
+1,318 backend tests, Ruff/format and strict typing (114 source files). This is not
+complete author-identity coverage.
+
+An actual 2018 UI projection measures 177,369,453 JSON bytes (15,706,925 gzip
+bytes), above the existing 64 MiB transport cap before metrics. Authorship and
+affiliation relationships account for 143,194,246 bytes. This is a measured
+delivery blocker, not a scientific failure; bounded on-demand representation
+is being investigated without truncating profiles or changing observations.
+The measurement created no scientific output files and is not a six-year estimate.
 
 Launch integration `7ab79b8` is pushed. CI 34186465032 passed frontend/containers
 and 1,295 backend tests; seven export-command tests exposed an installed-package
 path assumption. The focused fix requires an explicit display-only geographic
 reference, and 32 pipeline/export checks pass. Failed citation attempts also keep
 separate immutable receipts so a fresh measurement may retry the same frozen
-population. The previous full-green source is `b54b64e` / CI 34178037122;
+population. The correction is pushed as `4e6ad6c` and its complete
+CI 34187549200 passes, including installed-package/PostgreSQL compatibility.
+The previous full-green source is `b54b64e` / CI 34178037122;
 Web `63fc454` passed Pages 33967823884. These source changes do not activate public
 data. Earlier local full checks passed 1,278
 backend tests, 144 frontend tests, seven pipeline tests, full frontend type/lint

@@ -3,7 +3,11 @@ from collections import defaultdict
 
 from ..attribution import FRACTIONAL_ATTRIBUTION_V1
 from ..fields import PHYSICS_FIELD_ONTOLOGY_VERSION, PROVIDER_FIELD_MAPPING_VERSION
-from .automation import verify_automatic_date_axis, verify_automatic_source_binding
+from .automation import (
+    verify_automatic_date_axis,
+    verify_automatic_source_binding,
+    verify_unambiguous_researcher_scope,
+)
 from .citations import impact_comparable_paper_ids
 from .contracts import (
     CERTIFICATION_POLICY_VERSION,
@@ -277,6 +281,7 @@ def build_certified_metric_partition[PartitionT](
         item for item in decisions if item.decision_id not in superseded_ids
     )
     current_by_id = {item.decision_id: item for item in current_decisions}
+    verify_unambiguous_researcher_scope(current_decisions, window)
     verify_automatic_date_axis(current_decisions, window.source_years)
     for decision in current_decisions:
         if not evidence_decision_is_current(decision):

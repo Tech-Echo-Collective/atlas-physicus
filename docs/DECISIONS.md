@@ -376,6 +376,34 @@ explicitly disclosed. Unsupported fields/entities/periods stay missing. This
 supersedes only the full-source quality prerequisite for this opt-in release
 authority, not any numeric threshold, scientific formula or full-Physics claim.
 
+## Ambiguous byline identity quarantine — 2026-09-08
+
+**PA-063:** Under the owner's minimum-necessary scientific launch authorization,
+the conditional geographic release may consume a versioned **unambiguous
+observed native-researcher subset**, rather than treating any ambiguous author
+assertion as proof that every other author on the paper is unknowable.
+`unambiguous-observed-native-researchers-v1` retains only supported native IDs
+whose source positions and identifier links are unambiguous. Repeated native IDs,
+conflicting assertions and contradictory ORCID/native links are quarantined;
+the implementation must not merge people or choose a preferred assertion.
+
+All original byline positions, source assertions, conflict reasons, provenance
+and fractional attribution denominators remain intact. A certificate binds only
+the exact consumed subset, not the complete byline or the quarantined identities.
+An empty subset means no supported known IDs, not zero authors. The existing
+five-known-researcher portfolio minimum and every other v1 threshold/formula
+remain unchanged. Papers and supported institution affiliations are not discarded
+because an unrelated author identity is unresolved.
+
+This opt-in is limited to conditional institution/country calculations and their
+UI identity projection. Legacy PA-061/default producers and researcher-level
+certification remain unchanged. Compact retained facts preserve both the original
+assertions and the consumed versioned subset with omitted/conflicted positions
+and reasons, so input reconstruction cannot silently substitute the old tuple.
+Public profiles must not present quarantined identity links as verified. This is
+evidence isolation, not complete researcher disambiguation or a full-ecosystem
+completeness claim; actual metric/normalization gates still decide publication.
+
 ## Current activation decision
 
 The v3.0.4 production activation begins with the implemented `hep-th-v1`

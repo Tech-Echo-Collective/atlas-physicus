@@ -34,8 +34,11 @@ from ..metrics.presentation import (
     certify_normalization_population,
 )
 from .automation import (
+    UNAMBIGUOUS_RESEARCHER_RULE_VERSION,
     automatic_known_researcher_decision,
     automatic_paper_identity_decision,
+    automatic_unambiguous_researcher_decision,
+    unambiguous_researcher_subset,
 )
 from .citations import (
     CITATION_POLICY_VERSION,
@@ -103,6 +106,17 @@ class LaunchPaperBinding:
     citation_observation: CitationObservationCertification | None = None
 
 
+@dataclass(frozen=True)
+class UnambiguousLaunchPaperBinding(LaunchPaperBinding):
+    researcher_projection_version: str = UNAMBIGUOUS_RESEARCHER_RULE_VERSION
+
+    def __post_init__(self) -> None:
+        if self.entity_type not in {"institution", "country"} or (
+            self.researcher_projection_version != UNAMBIGUOUS_RESEARCHER_RULE_VERSION
+        ):
+            raise CertificationError("unsupported observed researcher binding")
+
+
 def _paper(
     proof: LaunchStructuralDecision, binding: LaunchPaperBinding
 ) -> AttributedPaperEvidence:
@@ -123,6 +137,8 @@ def _paper(
         )
     occurrence = proof.source_paper.occurrences[0]
     facts = occurrence.source_facts
+    if isinstance(binding, UnambiguousLaunchPaperBinding):
+        binding.__post_init__()
     document_type = occurrence.identity.document_type
     if document_type != "article":
         raise CertificationError(
@@ -176,7 +192,11 @@ def _paper(
         publication_date=source.publication_date,
         document_type=document_type,
         attribution_weight=entity_weight * field_weight,
-        researcher_ids=facts.researcher_ids,
+        researcher_ids=(
+            unambiguous_researcher_subset(facts).researcher_ids
+            if isinstance(binding, UnambiguousLaunchPaperBinding)
+            else facts.researcher_ids
+        ),
         citation_count=count,
         citation_observed_at=observed_at,
         collaborative=launch_relationship_status(proof, "researcher"),
@@ -548,11 +568,19 @@ def _launch_partition_inputs(
         raise CertificationError("launch bridge lacks exact complete source provenance")
     papers: list[AttributedPaperEvidence] = []
     decisions: list[EvidenceCertificationDecision] = []
+    unambiguous_observed = context.entity_type in {"institution", "country"} and all(
+        isinstance(year.evidence, ConditionalObservedSourceYearEvidence)
+        for year in window.source_years
+    )
     for projection in population.certification.evidence.projections:
         if projection.status != "included":
             continue
         proof = proofs[projection.paper_id]
-        binding = LaunchPaperBinding(
+        binding = (
+            UnambiguousLaunchPaperBinding
+            if unambiguous_observed
+            else LaunchPaperBinding
+        )(
             cast(MetricEntityType, context.entity_type),
             entity_id,
             field_id,
@@ -570,7 +598,11 @@ def _launch_partition_inputs(
                 "country",
             }:
                 decisions.append(
-                    automatic_known_researcher_decision(
+                    (
+                        automatic_unambiguous_researcher_decision
+                        if unambiguous_observed
+                        else automatic_known_researcher_decision
+                    )(
                         facts,
                         entity_type=cast(
                             Literal["institution", "country"], context.entity_type

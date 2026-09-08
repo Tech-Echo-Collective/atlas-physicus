@@ -13,6 +13,7 @@ from .calculators import MetricCalculationResult, citation_session_normalization
 from .presentation import (
     AtlasScaleObservation,
     _calculation_population_coverage_policy,
+    _require_homogeneous_researcher_identity_policy,
 )
 from .thresholds import (
     METRIC_VALIDATION_THRESHOLDS_V1,
@@ -587,6 +588,16 @@ class CertifiedPhysicsAggregation:
             raise CertificationError(
                 "Physics aggregation mixes population coverage policies"
             )
+        _require_homogeneous_researcher_identity_policy(
+            tuple(
+                calculation
+                for field in self.field_observations
+                for calculation in (
+                    field.certification_proof,
+                    *field.normalization_proofs,
+                )
+            )
+        )
         evidence = self.field_population_proof.evidence
         is_branch = isinstance(evidence, OntologyBranchPopulationEvidence)
         if is_branch != isinstance(self, CertifiedOntologyBranchAggregation):

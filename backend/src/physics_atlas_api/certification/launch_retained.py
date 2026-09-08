@@ -23,6 +23,12 @@ from ..metrics.calculators import (
     MetricPartitionInput,
 )
 from ..metrics.presentation import AtlasScaleObservation, CertifiedMetricCalculation
+from .automation import (
+    UNAMBIGUOUS_RESEARCHER_RULE_VERSION,
+    AutomaticUnambiguousResearcherDecision,
+    UnambiguousResearcherSubset,
+    unambiguous_researcher_subset,
+)
 from .contracts import (
     CertificationError,
     CoverageCertification,
@@ -152,6 +158,10 @@ class _Export:
         for name in ("producer_version", "automatic_rule_version"):
             if hasattr(decision, name):
                 row[name] = _plain(getattr(decision, name))
+        if isinstance(decision, AutomaticUnambiguousResearcherDecision):
+            row["observed_researcher_subset"] = _flat(
+                decision.subset, UnambiguousResearcherSubset
+            )
         return self.put("decisions", key, row)
 
     def coverage(self, coverage: CoverageCertification) -> str:
@@ -185,6 +195,7 @@ class _Export:
             kind: None for kind in ("researcher", "institution", "country")
         }
         row["known_researcher_ids"] = []
+        row["unambiguous_researcher_subset"] = None
         row["document_type"] = None
         row["attribution"] = []
         if proof is not None:
@@ -218,6 +229,10 @@ class _Export:
                     ],
                     "author_count": facts.author_count,
                     "known_researcher_ids": list(facts.researcher_ids),
+                    "unambiguous_researcher_subset": _flat(
+                        unambiguous_researcher_subset(facts),
+                        UnambiguousResearcherSubset,
+                    ),
                     "author_identity_facts": [
                         {
                             "appearance_id": author.appearance_id,
@@ -252,6 +267,10 @@ class _Export:
             if source.component.status == "matched" and len(source.occurrences) == 1:
                 row["known_researcher_ids"] = list(
                     source.occurrences[0].source_facts.researcher_ids
+                )
+                row["unambiguous_researcher_subset"] = _flat(
+                    unambiguous_researcher_subset(source.occurrences[0].source_facts),
+                    UnambiguousResearcherSubset,
                 )
                 row["document_type"] = source.occurrences[0].identity.document_type
             if proof.state == "certified":
@@ -483,6 +502,11 @@ class _Export:
         row["papers"] = [paper.paper_id for paper in partition.papers]
         row["branch_diversity"] = proof.calculation.metric_id == "research_diversity"
         row["citation_cohorts"] = cohorts
+        if any(
+            isinstance(decision, AutomaticUnambiguousResearcherDecision)
+            for decision in certified.certification.evidence_decisions
+        ):
+            row["researcher_projection_version"] = UNAMBIGUOUS_RESEARCHER_RULE_VERSION
         self.put("partitions", input_digest, row)
         certificate = certified.certification
         self.put(
@@ -653,6 +677,14 @@ def rehydrate_launch_metric_input(
         raise CertificationError("unsupported retained evidence version")
     try:
         record = dict(document["partitions"][input_digest])
+        researcher_projection_version = record.pop(
+            "researcher_projection_version", None
+        )
+        if researcher_projection_version not in {
+            None,
+            UNAMBIGUOUS_RESEARCHER_RULE_VERSION,
+        }:
+            raise CertificationError("unsupported retained researcher projection")
         branch = record.pop("branch_diversity")
         cohorts = [
             document["citationCohorts"][key] for key in record.pop("citation_cohorts")
@@ -665,6 +697,13 @@ def rehydrate_launch_metric_input(
         papers = []
         for paper_id in record.pop("papers"):
             source = document["papers"][paper_id]
+            if researcher_projection_version is not None and (
+                record["entity_type"] not in {"institution", "country"}
+                or not isinstance(source.get("unambiguous_researcher_subset"), dict)
+                or source["unambiguous_researcher_subset"].get("version")
+                != researcher_projection_version
+            ):
+                raise CertificationError("retained researcher subset lineage differs")
             publication = date.fromisoformat(source["publication_date"])
             field_weights = tuple(
                 (field, float(weight)) for field, weight in source["field_weights"]
@@ -689,7 +728,11 @@ def rehydrate_launch_metric_input(
                     publication,
                     source["document_type"],
                     entity_weight * field_weight,
-                    tuple(source["known_researcher_ids"]),
+                    tuple(
+                        source["unambiguous_researcher_subset"]["researcher_ids"]
+                        if researcher_projection_version is not None
+                        else source["known_researcher_ids"]
+                    ),
                     None if citation is None else citation["non_self_citation_count"],
                     None
                     if citation is None or citation["observed_at"] is None

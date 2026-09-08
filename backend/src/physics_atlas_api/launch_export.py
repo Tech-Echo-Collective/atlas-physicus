@@ -18,6 +18,7 @@ from typing import Any
 
 from . import schemas
 from .attribution import FRACTIONAL_ATTRIBUTION_V1
+from .certification.automation import UNAMBIGUOUS_RESEARCHER_RULE_VERSION
 from .certification.contracts import CertificationError
 from .certification.launch_entities import build_launch_entities
 from .certification.launch_retained import build_launch_retained
@@ -260,6 +261,7 @@ def build_launch_export(
         calculated.prepared.canonical.papers,
         calculated.prepared.attributions,
         geographic_views=geographic_views,
+        researcher_projection_version=UNAMBIGUOUS_RESEARCHER_RULE_VERSION,
     )
     retained = build_launch_retained(
         scope.source_years,

@@ -99,6 +99,7 @@ def _validate_normalization_population(
     )
 
     if isinstance(evidence, AutomaticNormalizationPopulationEvidence):
+        _require_homogeneous_researcher_identity_policy(evidence.calculations)
         validate_automatic_normalization_population(evidence)
         return
     if len(evidence.cohort_key) != 15 or any(
@@ -241,6 +242,56 @@ def _calculation_population_coverage_policy(
     return metric_population_coverage_policy(population.certification.evidence)
 
 
+def _calculation_researcher_identity_policy(
+    calculation: object,
+) -> str:
+    """PA-063 changes consumed identities, not the numerical normalization key.
+
+    Preserve the pre-existing homogeneous legacy family. Only the explicitly
+    opted-in unambiguous-subset producer introduces a new comparison boundary.
+    The actual typed decisions and rule must agree; coincident numerical values
+    do not make differently selected researcher inputs interchangeable.
+    """
+    from ..certification.automation import (
+        UNAMBIGUOUS_RESEARCHER_RULE_VERSION,
+        AutomaticUnambiguousResearcherDecision,
+    )
+
+    if not isinstance(calculation, CertifiedMetricCalculation):
+        raise CertificationError("researcher policy requires a certified calculation")
+    decisions = tuple(
+        item
+        for item in calculation.partition.certification.evidence_decisions
+        if item.subject_type == "paper" and item.evidence_kind == "researcher-identity"
+    )
+    subset = tuple(
+        item
+        for item in decisions
+        if isinstance(item, AutomaticUnambiguousResearcherDecision)
+    )
+    if not subset:
+        return "legacy-researcher-identity-producers"
+    if len(subset) != len(decisions) or any(
+        item.rule_version != UNAMBIGUOUS_RESEARCHER_RULE_VERSION for item in subset
+    ):
+        raise CertificationError(
+            "normalization calculation mixes researcher identity producer policies"
+        )
+    return UNAMBIGUOUS_RESEARCHER_RULE_VERSION
+
+
+def _require_homogeneous_researcher_identity_policy(
+    calculations: tuple[object, ...],
+) -> None:
+    if (
+        len({_calculation_researcher_identity_policy(item) for item in calculations})
+        > 1
+    ):
+        raise CertificationError(
+            "normalization mixes researcher identity producer policies"
+        )
+
+
 @dataclass(frozen=True)
 class AtlasScaleObservation:
     """Presentation-only view over a reconstructable scientific raw result."""
@@ -327,6 +378,9 @@ class AtlasScaleObservation:
                 raise CertificationError(
                     "Atlas normalization proof mixes population coverage policies"
                 )
+            _require_homogeneous_researcher_identity_policy(
+                (self.certification_proof, *self.normalization_proofs)
+            )
             population = self.normalization_population_proof
             if not isinstance(population, CertifiedNormalizationPopulation) or (
                 population.evidence.cohort_key
@@ -365,6 +419,16 @@ class AtlasScaleObservation:
                 raise CertificationError(
                     "Atlas Physics value differs from its aggregation proof"
                 )
+            _require_homogeneous_researcher_identity_policy(
+                tuple(
+                    calculation
+                    for field in self.certification_proof.field_observations
+                    for calculation in (
+                        field.certification_proof,
+                        *field.normalization_proofs,
+                    )
+                )
+            )
         else:
             raise CertificationError("Atlas observation lacks certification proof")
         if (
