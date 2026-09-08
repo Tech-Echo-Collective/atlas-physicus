@@ -34,6 +34,9 @@ current research catalog, including 11 absent from the old 1:110m map. Small
 country navigation targets and city-state camera zoom preserve map access
 regardless of land area or missing metric values. Geographic provenance and
 reproduction are documented in [the geography policy](geography-policy.md).
+Published as Web `e05d0b0` with source pin `bdd1507`; Pages run `34228677640`
+succeeded. Public Singapore geometry, close zoom and the NUS institution node
+are verified; all 135 research locations have a retained source outline.
 
 ## Immediate public heatmap preview — owner-directed September 8
 

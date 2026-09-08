@@ -16,6 +16,10 @@ country navigation targets and allow useful city-state zoom. Research attributio
 and metrics are unchanged. Regression checks cover Singapore, Malta, Monaco,
 Bahrain, Andorra, Liechtenstein, San Marino, Vatican and Tuvalu, including
 selection without an observation and existing combined/antimeridian views.
+Source type/lint/build, 186 frontend tests, seven pipeline tests and 22 Web tests
+pass. Web `e05d0b0` (source pin `bdd1507`) passed Pages run `34228677640`.
+The public Singapore route renders its full outline and NUS node; the small-country
+entry, automatic close zoom and unchanged observed values were checked in-browser.
 
 ## 2026-09-08 — Map loading performance
 
