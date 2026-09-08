@@ -166,6 +166,7 @@ export const affiliationSchema = z
     id: entityIdSchema,
     researcherId: entityIdSchema,
     institutionId: entityIdSchema,
+    paperId: optionalFromNullable(entityIdSchema),
     researchGroupId: optionalFromNullable(entityIdSchema),
     startDate: optionalFromNullable(temporalDateSchema),
     endDate: optionalFromNullable(temporalDateSchema),
@@ -581,6 +582,83 @@ export const metricWeightConfigurationSchema = z
     }
   });
 
+const certificationStateSchema = z.enum(['certified', 'needs_review', 'withheld', 'conflicted', 'insufficient_evidence']);
+const sourceCoverageSchema = z.object({
+  kind: z.enum(['paper-time-affiliation', 'canonical-institution', 'citation-observation', 'field-classification', 'collaboration-relationship']),
+  numerator: z.number().nonnegative(),
+  denominator: z.number().nonnegative(),
+  ratio: z.number().min(0).max(1).nullable(),
+  minimum: z.number(),
+  status: certificationStateSchema,
+  reasons: z.array(z.string()),
+}).superRefine((value, context) => {
+  const minimum = value.kind === 'canonical-institution' ? 0.95 : 0.9;
+  const ratio = value.denominator > 0 ? value.numerator / value.denominator : null;
+  if (value.numerator > value.denominator || value.minimum !== minimum ||
+    (ratio === null ? value.ratio !== null : value.ratio === null || Math.abs(ratio - value.ratio) > 1e-10) ||
+    (value.status === 'certified' && (ratio === null || ratio < minimum))) {
+    context.addIssue({ code: 'custom', message: 'Source coverage does not retain its measured mass and unchanged threshold.' });
+  }
+});
+
+export const datasetScopeMetadataSchema = z.object({
+  version: z.enum(['certified-ontology-branch-release-v1', 'conditional-observed-ontology-branch-release-v1']),
+  rootFieldId: fieldIdSchema,
+  leafFieldIds: z.array(fieldIdSchema),
+  boundaryKind: z.literal('ontology-branch'),
+  certificationDigest: z.string().regex(/^[a-f0-9]{64}$/),
+  interpretation: z.string().min(1).optional(),
+  momentumCaveat: z.string().min(1).optional(),
+  observedCoverage: z.object({
+    paper_time_affiliation: z.number().min(0.9).max(1),
+    canonical_institution: z.number().min(0.95).max(1),
+    citation: z.number().min(0.9).max(1),
+    field_attribution: z.number().min(0.9).max(1),
+  }).optional(),
+  sourceYearQuality: z.array(z.object({
+    entityType: z.enum(['country', 'institution', 'researcher']),
+    year: z.number().int(),
+    cutoff: z.string().datetime({ offset: true }),
+    status: certificationStateSchema,
+    reasons: z.array(z.string()),
+    certificationId: z.string().regex(/^source-year-[a-f0-9]{64}$/),
+    paperCount: z.number().int().positive(),
+    coverage: z.array(sourceCoverageSchema).min(1),
+  })).min(6).optional(),
+  citationCohorts: z.array(z.object({
+    certificationId: z.string().min(1),
+    fieldId: fieldIdSchema,
+    publicationYear: z.number().int(),
+    documentType: z.string().min(1),
+    sessionId: z.string().min(1),
+    measurementStartedAt: z.string().datetime({ offset: true }),
+    measurementEndedAt: z.string().datetime({ offset: true }),
+    referenceMembershipVersion: z.string().min(1),
+    referencePopulation: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+  })).optional(),
+  normalizationCohorts: z.array(z.object({
+    certificationDigest: z.string().regex(/^[a-f0-9]{64}$/),
+    metricId: z.string().min(1),
+    entityType: z.enum(['country', 'institution', 'researcher']),
+    fieldId: fieldIdSchema,
+    period: z.string().regex(/^\d{4}$/),
+    policyVersion: z.string().min(1),
+    sourcePeerCount: z.number().int().nonnegative(),
+    eligiblePeerCount: z.number().int().nonnegative(),
+    numericRawPeerCount: z.number().int().nonnegative(),
+    excludedPeerCount: z.number().int().nonnegative(),
+    excludedReasonCounts: z.record(z.string(), z.number().int().nonnegative()),
+    peerInventoryDigest: z.string().regex(/^[a-f0-9]{64}$/),
+    interpretation: z.string().min(1),
+  }).refine((value) => value.eligiblePeerCount + value.excludedPeerCount === value.sourcePeerCount &&
+    value.numericRawPeerCount <= value.eligiblePeerCount, 'Normalization peer counts must conserve the source inventory.')).optional(),
+}).superRefine((value, context) => {
+  if (value.version === 'conditional-observed-ontology-branch-release-v1' &&
+    (!value.interpretation || !value.momentumCaveat || !value.observedCoverage || !value.sourceYearQuality)) {
+    context.addIssue({ code: 'custom', message: 'Conditional observations require original source quality and interpretation disclosure.' });
+  }
+});
+
 export const datasetMetadataSchema = z.object({
   schemaVersion: z.string().min(1),
   datasetKind: z.enum([
@@ -590,13 +668,7 @@ export const datasetMetadataSchema = z.object({
   ]),
   deliveryMode: z.literal('versioned-dataset').optional(),
   releaseManifestUrl: z.url().optional(),
-  datasetScope: z.object({
-    version: z.literal('certified-ontology-branch-release-v1'),
-    rootFieldId: fieldIdSchema,
-    leafFieldIds: z.array(fieldIdSchema),
-    boundaryKind: z.literal('ontology-branch'),
-    certificationDigest: z.string().regex(/^[a-f0-9]{64}$/),
-  }).optional(),
+  datasetScope: datasetScopeMetadataSchema.optional(),
   defaultFieldId: fieldIdSchema.optional(),
   period: z.string().regex(/^\d{4}$/),
   generatedAt: z.string().datetime({ offset: true }),
@@ -780,7 +852,18 @@ export const atlasDatasetSchema = z
       });
     });
 
+    const paperAuthorKeys = new Set(dataset.authorships.map(
+      (item) => JSON.stringify([item.paperId, item.researcherId]),
+    ));
     dataset.affiliations.forEach((affiliation, index) => {
+      if (affiliation.paperId && (!paperIds.has(affiliation.paperId) ||
+        !paperAuthorKeys.has(JSON.stringify([affiliation.paperId, affiliation.researcherId])))) {
+        context.addIssue({
+          code: 'custom',
+          path: ['affiliations', index, 'paperId'],
+          message: 'Paper-time affiliation requires the exact paper and its author',
+        });
+      }
       if (!researcherIds.has(affiliation.researcherId)) {
         context.addIssue({
           code: 'custom',

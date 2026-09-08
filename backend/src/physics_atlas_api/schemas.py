@@ -151,6 +151,8 @@ class AffiliationOut(ApiModel):
     id: str
     researcher_id: str
     institution_id: str
+    # A paper-native assertion is not a continuous employment interval.
+    paper_id: str | None = None
     research_group_id: str | None = None
     start_date: str | None = None
     end_date: str | None = None

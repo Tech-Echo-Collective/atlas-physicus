@@ -458,7 +458,10 @@ def citation_session_normalization_key(
     result: MetricCalculationResult,
 ) -> tuple[str, ...]:
     """Keep non-atomic sessions separate without changing any legacy cohort key."""
-    from ..certification.measurement_windows import SESSION_CITATION_POLICY_VERSION
+    from ..certification.measurement_windows import (
+        OBSERVED_POSITIVE_FIELD_CITATION_MEMBERSHIP_VERSION,
+        SESSION_CITATION_POLICY_VERSION,
+    )
 
     if (
         result.metric_id != "research_impact"
@@ -503,7 +506,26 @@ def citation_session_normalization_key(
         raise CertificationError(
             "measurement-window interval exceeds the evidence horizon"
         )
-    return session_id, start_text, end_text
+    membership = result.components.get("citation_reference_membership_version")
+    if membership is None:
+        if any(
+            key in result.components
+            for key in (
+                "citation_reference_universe",
+                "citation_reference_complete_field_universe",
+            )
+        ):
+            raise CertificationError("citation reference membership version is missing")
+        return session_id, start_text, end_text
+    if (
+        membership != OBSERVED_POSITIVE_FIELD_CITATION_MEMBERSHIP_VERSION
+        or result.components.get("citation_reference_universe")
+        != "observed-positive-field-membership"
+        or result.components.get("citation_reference_complete_field_universe")
+        is not False
+    ):
+        raise CertificationError("observed citation reference semantics are invalid")
+    return session_id, start_text, end_text, membership
 
 
 def _impact_reference_key(
@@ -570,6 +592,7 @@ def calculate_impact_raw(
     from ..certification.measurement_windows import (
         SESSION_CITATION_POLICY_VERSION,
         CertifiedSessionCitationCohort,
+        citation_reference_result_metadata,
         require_session_cohort,
         session_comparison_key,
     )
@@ -823,6 +846,7 @@ def calculate_impact_raw(
             ),
             "maturity_ineligible_papers": ineligible_maturity,
             "unavailable_reference_cohorts": unavailable_cohort,
+            **citation_reference_result_metadata(session_cohorts),
         },
         parameters={},
         input_count=eligible_count,

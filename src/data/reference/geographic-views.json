@@ -1,0 +1,15 @@
+{
+  "version": "atlas-geographic-view-policy-v1",
+  "source": "docs/geography-policy.md; existing geographic-view configuration",
+  "interpretation": "Display membership only. Institution location and scientific attribution remain separate.",
+  "views": [
+    { "id": "geographic-view-us", "countryId": "country-us", "geometryIsoNumerics": ["840"], "locationCountryIds": ["country-us"] },
+    { "id": "geographic-view-gb", "countryId": "country-gb", "geometryIsoNumerics": ["826"], "locationCountryIds": ["country-gb"] },
+    { "id": "geographic-view-ch", "countryId": "country-ch", "geometryIsoNumerics": ["756"], "locationCountryIds": ["country-ch"] },
+    { "id": "geographic-view-de", "countryId": "country-de", "geometryIsoNumerics": ["276"], "locationCountryIds": ["country-de"] },
+    { "id": "geographic-view-jp", "countryId": "country-jp", "geometryIsoNumerics": ["392"], "locationCountryIds": ["country-jp"] },
+    { "id": "geographic-view-cn", "countryId": "country-cn", "geometryIsoNumerics": ["156", "158"], "locationCountryIds": ["country-cn", "country-tw"] },
+    { "id": "geographic-view-ca", "countryId": "country-ca", "geometryIsoNumerics": ["124"], "locationCountryIds": ["country-ca"] },
+    { "id": "geographic-view-au", "countryId": "country-au", "geometryIsoNumerics": ["036"], "locationCountryIds": ["country-au"] }
+  ]
+}

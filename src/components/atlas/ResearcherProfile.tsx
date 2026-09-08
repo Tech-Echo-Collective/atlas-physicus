@@ -140,16 +140,18 @@ export function ResearcherProfile({
                       historyEntry.institutionId}
                   </strong>
                   <span>
-                    {historyEntry.startDate ?? historyEntry.startYear ?? 'Start unknown'}
-                    {' → '}
-                    {historyEntry.endDate ?? historyEntry.endYear ?? 'present / unknown'}
+                    {historyEntry.paperId ? (
+                      <>Paper-time evidence · {historyEntry.startDate ?? historyEntry.startYear ?? 'Date unavailable'} (not an employment period)</>
+                    ) : (
+                      <>{historyEntry.startDate ?? historyEntry.startYear ?? 'Start unknown'}
+                        {' → '}{historyEntry.endDate ?? historyEntry.endYear ?? 'present / unknown'}</>
+                    )}
                   </span>
                   <small>
-                    {Math.round(
-                      (historyEntry.confidence ??
-                        historyEntry.provenance.confidence ??
-                        0) * 100,
-                    )}% relationship confidence · {historyEntry.source ?? historyEntry.provenance.source}
+                    {(historyEntry.confidence ?? historyEntry.provenance.confidence) === undefined
+                      ? 'Confidence not quantified'
+                      : `${Math.round((historyEntry.confidence ?? historyEntry.provenance.confidence)! * 100)}% relationship confidence`}
+                    {' · '}{historyEntry.source ?? historyEntry.provenance.source}
                   </small>
                 </li>
               ))}

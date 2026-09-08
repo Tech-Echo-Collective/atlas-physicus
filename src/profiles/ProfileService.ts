@@ -128,7 +128,9 @@ export class ProfileService {
         affiliations.some(
           (affiliation) =>
             affiliation.researcherId === authorship.researcherId &&
-            affiliationIncludesYear(affiliation, paper.year),
+            (affiliation.paperId
+              ? affiliation.paperId === paper.id
+              : affiliationIncludesYear(affiliation, paper.year)),
         ),
       );
     });

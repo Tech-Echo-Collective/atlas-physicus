@@ -5,6 +5,7 @@ import { atlasDatasetSchema } from '../domain/schemas';
 import { buildCompositeMetricObservations, defaultMetricWeightConfiguration } from '../metrics/CompositeMetric';
 import { resolveAtlasLocation } from '../navigation/AtlasNavigation';
 import { getDatasetPresentation } from './DatasetPresentation';
+import { observationFieldForView } from './ObservedScope';
 import { certifiedAtlasReleaseVersion, loadCertifiedAtlasRepository } from './CertifiedAtlasDataset';
 
 const origin = 'https://atlas.example.test';
@@ -90,7 +91,7 @@ function scopedTransportFixture() {
 async function fixtureTransport(
   dataset = transportFixture(),
   corrupt = false,
-  datasetScope?: ReturnType<typeof scopedTransportFixture>['scope'],
+  datasetScope?: unknown,
 ) {
   const text = JSON.stringify(dataset);
   const bytes = new TextEncoder().encode(text);
@@ -247,5 +248,90 @@ describe('certified dataset transport', () => {
     await expect(loadCertifiedAtlasRepository(manifestUrl,
       (await fixtureTransport(dataset, false, scope)).fetcher))
       .rejects.toThrow('co-located');
+  });
+
+  function conditionalFixture() {
+    const { dataset, scope } = scopedTransportFixture();
+    return { dataset, scope: {
+      ...scope,
+      version: 'conditional-observed-ontology-branch-release-v1',
+      interpretation: 'Conditional recorded observations, not complete ecosystem estimates.',
+      momentumCaveat: 'Changes in coverage may affect apparent Momentum.',
+      observedCoverage: { paper_time_affiliation: 0.95, canonical_institution: 0.98,
+        citation: 0.92, field_attribution: 0.99 },
+      citationCohorts: [{ certificationId: 'transport-only-citation-cohort',
+        fieldId: 'nucl-th', publicationYear: 2021, documentType: 'article',
+        sessionId: 'transport-only-session', measurementStartedAt: '2026-09-08T00:00:00Z',
+        measurementEndedAt: '2026-09-08T00:01:00Z',
+        referenceMembershipVersion: 'transport-only-membership',
+        referencePopulation: { completeFieldUniverse: false, knownReferencePaperCount: 100,
+          unknownTargetMembershipPaperCount: 3 } }],
+      normalizationCohorts: [{ certificationDigest: 'e'.repeat(64),
+        metricId: 'research_activity_score', entityType: 'country', fieldId: 'nucl-th', period: '2023',
+        policyVersion: 'transport-only-normalization-population', sourcePeerCount: 50,
+        eligiblePeerCount: 40, numericRawPeerCount: 35, excludedPeerCount: 10,
+        excludedReasonCounts: { 'insufficient_evidence': 10 }, peerInventoryDigest: 'f'.repeat(64),
+        interpretation: 'Conditional on certified observed peers, not full-source completeness.' }],
+      sourceYearQuality: scope.sourceYearProofs.map((proof) => ({
+        ...proof, cutoff: '2026-09-08T00:00:00Z', paperCount: 100,
+        status: 'insufficient_evidence',
+        reasons: ['One or more required source quality gates failed.'],
+        coverage: [{ kind: 'canonical-institution', numerator: 68, denominator: 100,
+          ratio: 0.68, minimum: 0.95, status: 'insufficient_evidence',
+          reasons: ['Insufficient canonical institution coverage.'] }],
+      })),
+    } };
+  }
+
+  it('preserves honest source insufficiency independently of exact observed release coverage', async () => {
+    const { dataset, scope } = conditionalFixture();
+    const repository = await loadCertifiedAtlasRepository(manifestUrl,
+      (await fixtureTransport(dataset, false, scope)).fetcher);
+    const actual = await repository.loadDataset();
+    expect(actual.metadata.datasetScope?.sourceYearQuality?.[0].coverage[0].ratio).toBe(0.68);
+    expect(actual.metadata.datasetScope?.sourceYearQuality?.[0].status).toBe('insufficient_evidence');
+    expect(actual.metadata.datasetScope?.observedCoverage?.canonical_institution).toBe(0.98);
+    expect(actual.metadata.datasetScope?.momentumCaveat).toContain('coverage');
+    expect(actual.metadata.datasetScope?.citationCohorts?.[0].referencePopulation.completeFieldUniverse).toBe(false);
+    expect(actual.metadata.datasetScope?.normalizationCohorts?.[0].excludedPeerCount).toBe(10);
+    expect(actual.metadata.defaultFieldId).toBe('nuclear');
+    const navigation = resolveAtlasLocation({ pathname: '/', search: '' }, actual);
+    expect(navigation.selectedDomainId).toBe('physics');
+    expect(navigation.selectedFieldId).toBeNull();
+    expect(observationFieldForView(actual, 'physics', null)).toBe('nuclear');
+    expect(observationFieldForView(actual, 'physics', 'nucl-th')).toBe('nucl-th');
+    expect(observationFieldForView(actual, 'physics', 'hep-th')).toBe('hep-th');
+    expect(observationFieldForView(actual, 'chemistry', null)).toBeUndefined();
+    // Overview alias is presentation only: no copy/relabel to overall Physics.
+    expect(actual.metricObservations.every((item) => item.fieldId === 'nuclear')).toBe(true);
+    expect(await repository.findMetricObservations({ entityType: 'country', scienceDomainId: 'physics', period: '2023' })).toEqual([]);
+    expect(buildCompositeMetricObservations(actual.metricObservations,
+      defaultMetricWeightConfiguration, actual.metricDefinitions)).toHaveLength(4);
+  });
+
+  it('fails closed on absent, altered or misrepresented conditional quality evidence', async () => {
+    const changes = [
+      (scope: ReturnType<typeof conditionalFixture>['scope']) => ({ ...scope, sourceYearQuality: undefined }),
+      (scope: ReturnType<typeof conditionalFixture>['scope']) => ({ ...scope, momentumCaveat: undefined }),
+      (scope: ReturnType<typeof conditionalFixture>['scope']) => ({ ...scope, sourceYearQuality: scope.sourceYearQuality.slice(1) }),
+      (scope: ReturnType<typeof conditionalFixture>['scope']) => ({ ...scope, observedCoverage: { ...scope.observedCoverage, canonical_institution: 0.949 } }),
+      (scope: ReturnType<typeof conditionalFixture>['scope']) => ({ ...scope, normalizationCohorts: scope.normalizationCohorts.map((cohort) => ({
+        ...cohort, excludedPeerCount: 0,
+      })) }),
+      (scope: ReturnType<typeof conditionalFixture>['scope']) => ({ ...scope, sourceYearQuality: scope.sourceYearQuality.map((year) => ({
+        ...year, status: 'certified',
+      })) }),
+      (scope: ReturnType<typeof conditionalFixture>['scope']) => ({ ...scope, sourceYearQuality: scope.sourceYearQuality.map((year) => ({
+        ...year, coverage: year.coverage.map((coverage) => ({ ...coverage, ratio: 1 })),
+      })) }),
+      (scope: ReturnType<typeof conditionalFixture>['scope']) => ({ ...scope, sourceYearQuality: scope.sourceYearQuality.map((year) => ({
+        ...year, coverage: year.coverage.map((coverage) => ({ ...coverage, minimum: 0.5 })),
+      })) }),
+    ];
+    for (const change of changes) {
+      const { dataset, scope } = conditionalFixture();
+      await expect(loadCertifiedAtlasRepository(manifestUrl,
+        (await fixtureTransport(dataset, false, change(scope))).fetcher)).rejects.toThrow();
+    }
   });
 });

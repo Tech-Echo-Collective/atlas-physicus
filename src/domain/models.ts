@@ -198,6 +198,8 @@ export interface Affiliation extends Provenanced {
   id: string;
   researcherId: string;
   institutionId: string;
+  /** An exact paper-time assertion, not evidence of continuous employment. */
+  paperId?: string;
   researchGroupId?: string;
   /** ISO 8601 date or reduced-precision year/month. */
   startDate?: string;
@@ -323,6 +325,25 @@ export interface MetricWeightConfiguration {
   weights: Record<MetricId, number>;
 }
 
+export interface SourceYearQuality {
+  entityType: 'country' | 'institution' | 'researcher';
+  year: number;
+  cutoff: string;
+  status: 'certified' | 'needs_review' | 'withheld' | 'conflicted' | 'insufficient_evidence';
+  reasons: string[];
+  certificationId: string;
+  paperCount: number;
+  coverage: {
+    kind: 'paper-time-affiliation' | 'canonical-institution' | 'citation-observation' | 'field-classification' | 'collaboration-relationship';
+    numerator: number;
+    denominator: number;
+    ratio: number | null;
+    minimum: number;
+    status: SourceYearQuality['status'];
+    reasons: string[];
+  }[];
+}
+
 export interface DatasetMetadata extends Provenanced {
   schemaVersion: string;
   datasetKind: 'synthetic-demo' | 'inspire-hep-pilot' | 'live-api';
@@ -331,11 +352,46 @@ export interface DatasetMetadata extends Provenanced {
   releaseManifestUrl?: string;
   /** Explicit first-release branch; never an alias for overall Physics. */
   datasetScope?: {
-    version: 'certified-ontology-branch-release-v1';
+    version: 'certified-ontology-branch-release-v1' | 'conditional-observed-ontology-branch-release-v1';
     rootFieldId: string;
     leafFieldIds: string[];
     boundaryKind: 'ontology-branch';
     certificationDigest: string;
+    interpretation?: string;
+    momentumCaveat?: string;
+    observedCoverage?: {
+      paper_time_affiliation: number;
+      canonical_institution: number;
+      citation: number;
+      field_attribution: number;
+    };
+    sourceYearQuality?: SourceYearQuality[];
+    citationCohorts?: {
+      certificationId: string;
+      fieldId: string;
+      publicationYear: number;
+      documentType: string;
+      sessionId: string;
+      measurementStartedAt: string;
+      measurementEndedAt: string;
+      referenceMembershipVersion: string;
+      referencePopulation: Record<string, string | number | boolean>;
+    }[];
+    normalizationCohorts?: {
+      certificationDigest: string;
+      metricId: string;
+      entityType: string;
+      fieldId: string;
+      period: string;
+      policyVersion: string;
+      sourcePeerCount: number;
+      eligiblePeerCount: number;
+      numericRawPeerCount: number;
+      excludedPeerCount: number;
+      excludedReasonCounts: Record<string, number>;
+      peerInventoryDigest: string;
+      interpretation: string;
+    }[];
   };
   defaultFieldId?: string;
   period: string;

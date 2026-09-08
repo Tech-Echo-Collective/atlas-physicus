@@ -32,6 +32,7 @@ from .fields import (
 )
 from .launch_attribution import LAUNCH_ATTRIBUTION_VERSION, LaunchAttributionResult
 from .launch_capture import LAUNCH_CAPTURE_VERSION, CapturedLaunchYear
+from .launch_identity import LaunchDuplicateResolvedOccurrence
 from .launch_inputs import (
     LaunchCanonicalInputs,
     LaunchCanonicalPaper,
@@ -39,7 +40,9 @@ from .launch_inputs import (
     canonicalize_launch_inputs,
 )
 from .years import (
+    ENUMERATED_LAUNCH_SOURCE_YEAR_RULE_VERSION,
     CertifiedSourceYear,
+    EnumeratedLaunchSourceYearEvidence,
     SourceEntityType,
     SourceYearEvidence,
     SourceYearPaperProjection,
@@ -207,6 +210,19 @@ def _projection(
     paper: LaunchCanonicalPaper,
     attributions: tuple[LaunchAttributionResult, ...],
 ) -> SourceYearPaperProjection:
+    from .build_cache import memoize_immutable
+
+    return memoize_immutable(
+        "bounded-launch-source-projection-v1",
+        (paper, attributions),
+        lambda: _uncached_projection(paper, attributions),
+    )
+
+
+def _uncached_projection(
+    paper: LaunchCanonicalPaper,
+    attributions: tuple[LaunchAttributionResult, ...],
+) -> SourceYearPaperProjection:
     # Recompute the existing strong-ID component; never accept a caller's matched flag.
     if canonicalize_launch_inputs(paper.occurrences).papers != (paper,):
         raise CertificationError("launch canonical identity does not reconstruct")
@@ -300,6 +316,11 @@ def _structural_values(
     )
     context = paper.occurrences[0].source_facts.context
     references = set(projection.occurrence_references)
+    references.update(
+        reference
+        for occurrence in paper.occurrences
+        for reference in occurrence.identity_references
+    )
     if kind == "provenance-completeness":
         references.update(
             ref
@@ -387,6 +408,7 @@ def build_launch_source_year(
     *,
     entity_type: SourceEntityType,
     evidence_cutoff: datetime,
+    identity_completeness_policy: str | None = None,
 ) -> LaunchSourceYearBuild:
     """Freeze exact membership, not affiliation/citation metric readiness.
 
@@ -396,6 +418,11 @@ def build_launch_source_year(
     """
     from .field_mass import certify_source_field_mass
 
+    if identity_completeness_policy not in {
+        None,
+        ENUMERATED_LAUNCH_SOURCE_YEAR_RULE_VERSION,
+    }:
+        raise CertificationError("unsupported launch identity completeness policy")
     if not isinstance(captured, CapturedLaunchYear) or not isinstance(
         canonical_inputs, LaunchCanonicalInputs
     ):
@@ -410,6 +437,11 @@ def build_launch_source_year(
         or evidence_cutoff.utcoffset() is None
         or not captured.requests
         or any(item.received_at > evidence_cutoff for item in captured.requests)
+        or any(
+            item.duplicate_authority.received_at > evidence_cutoff
+            for item in captured.occurrences
+            if isinstance(item, LaunchDuplicateResolvedOccurrence)
+        )
         or captured.manifest_digest
         != canonical_digest(
             (
@@ -515,7 +547,12 @@ def build_launch_source_year(
     counts["field_coverage"] = (
         coverage.numerator / coverage.denominator if coverage.denominator else None
     )
-    evidence = SourceYearEvidence(
+    evidence_type = (
+        EnumeratedLaunchSourceYearEvidence
+        if identity_completeness_policy is not None
+        else SourceYearEvidence
+    )
+    evidence = evidence_type(
         calendar_year=captured.plan.calendar_year,
         entity_type=entity_type,
         cutoff=evidence_cutoff,

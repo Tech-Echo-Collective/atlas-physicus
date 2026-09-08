@@ -66,4 +66,24 @@ describe('ProfileService', () => {
     expect(profiles.getResearcherProfile('missing')).toBeNull();
     expect(profiles.getResearchGroupProfile('missing')).toBeNull();
   });
+
+  it('does not turn one paper-time affiliation into employment for another paper that year', () => {
+    const scoped = structuredClone(dataset);
+    const author = scoped.authorships[0];
+    const first = scoped.papers.find((paper) => paper.id === author.paperId)!;
+    const affiliation = scoped.affiliations.find(
+      (entry) => entry.researcherId === author.researcherId,
+    )!;
+    const second = { ...first, id: 'paper-separate-same-year' };
+    scoped.papers = [first, second];
+    scoped.authorships = [author, { ...author, id: 'authorship-separate', paperId: second.id }];
+    scoped.affiliations = [{ ...affiliation, paperId: first.id,
+      startDate: `${first.year}-01-01`, endDate: `${first.year}-01-01` }];
+    const profiles = new ProfileService(atlasDatasetSchema.parse(scoped));
+    expect(profiles.getInstitutionProfile(affiliation.institutionId)?.papers.map((paper) => paper.id))
+      .toEqual([first.id]);
+    expect(profiles.getResearcherProfile(author.researcherId)?.papers).toHaveLength(2);
+    scoped.affiliations[0].paperId = 'unknown-paper';
+    expect(() => atlasDatasetSchema.parse(scoped)).toThrow(/exact paper and its author/);
+  });
 });

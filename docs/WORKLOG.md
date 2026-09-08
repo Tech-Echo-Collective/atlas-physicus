@@ -7,6 +7,28 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-08 — Conditional real-data launch integration (in progress)
+
+- PA-060/061/062 retain unresolved source evidence while separating complete
+  enumeration from observed-partition eligibility. Full-source verdicts and
+  numerical scientific thresholds are unchanged; the five layers remain jointly
+  withheld until actual compatible observations exist.
+- Added source-to-calculator integration, compact retained scientific facts,
+  source-backed UI entity projection and the final three-asset export boundary.
+  Fixed fatal DOI-role conflict handling and loss of observed-reference citation
+  semantics during branch aggregation. Completed-page checksums permit bounded
+  acquisition recovery without provider-payload persistence.
+- Fresh 2018 acquisition completed (2,306 records); 2019–2023 remains active.
+  This is not six certified years or a successful metric release. Original
+  source-wide failures remain distinct from conditional released-input coverage.
+- Local checks: 1,278 backend tests, 144 frontend tests and seven pipeline tests
+  pass, plus frontend type/lint/build, 52 final adapter/cache/export checks and
+  strict backend typing. Current remote green baselines remain source
+  `b54b64e` / CI 34178037122 and Web `63fc454` / Pages 33967823884.
+- This source checkpoint does not move a tag or activate the public heatmap.
+  New temporary inputs/checkpoints/builds stay in the single owner-private launch
+  directory below the 2 GB disk cap; cleanup is pending until task completion.
+
 ## 2026-09-08 — Separate observed coverage from retained attribution uncertainty
 
 - PA-059 records explicit owner authorization. Added opt-in automatic population

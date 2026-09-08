@@ -59,6 +59,7 @@ export function createDefaultAtlasNavigation(
 ): AtlasNavigationState {
   const domain = dataset.scienceDomains[0];
   const defaultFieldId = dataset.metadata.deliveryMode === 'versioned-dataset' &&
+    dataset.metadata.datasetScope?.version !== 'conditional-observed-ontology-branch-release-v1' &&
     dataset.metadata.defaultFieldId === dataset.metadata.datasetScope?.rootFieldId &&
     domain?.fieldIds.includes(dataset.metadata.defaultFieldId ?? '')
     ? dataset.metadata.defaultFieldId ?? null

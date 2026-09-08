@@ -341,6 +341,7 @@ def build_certified_metric_partition[PartitionT](
             verify_automatic_source_binding(
                 decision,
                 window_projections[paper_certification.paper_id],
+                entity_type=entity_type,
             )
             expected_digest = paper_evidence_value_digest(
                 partition, paper, decision.evidence_kind

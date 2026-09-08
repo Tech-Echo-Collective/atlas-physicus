@@ -91,4 +91,29 @@ describe('DataProvenancePanel', () => {
     expect(markup).not.toContain('Loading live status');
     expect(markup).not.toContain('Live status &amp; methodology');
   });
+
+  it('makes conditional annual source coverage and the Momentum caveat visible', () => {
+    const markup = renderToStaticMarkup(<DataProvenancePanel defaultOpen metadata={{
+      ...dataset.metadata,
+      datasetScope: {
+        version: 'conditional-observed-ontology-branch-release-v1',
+        rootFieldId: 'nuclear', leafFieldIds: ['nucl-th', 'nucl-ex'],
+        boundaryKind: 'ontology-branch', certificationDigest: 'a'.repeat(64),
+        interpretation: 'Conditional observations, not complete ecosystem estimates.',
+        momentumCaveat: 'Changes in evidence coverage may affect apparent change.',
+        sourceYearQuality: [{ entityType: 'country', year: 2020, paperCount: 100,
+          cutoff: '2026-09-08T00:00:00Z', certificationId: `source-year-${'b'.repeat(64)}`,
+          status: 'insufficient_evidence', reasons: ['Insufficient source coverage'],
+          coverage: [{ kind: 'canonical-institution',
+            numerator: 68, denominator: 100, ratio: 0.68, minimum: 0.95,
+            status: 'insufficient_evidence', reasons: ['Insufficient canonical coverage'] }] }],
+      },
+    }} />);
+    expect(markup).toContain('68.00%');
+    expect(markup).toContain('insufficient evidence');
+    expect(markup).toContain('2020');
+    expect(markup).toContain('not complete ecosystem estimates');
+    expect(markup).toContain('coverage may affect apparent change');
+    expect(markup).toContain('Annual source quality and measurement cutoffs');
+  });
 });

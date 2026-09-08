@@ -256,3 +256,52 @@ activation, fabricated historical observation, broad load or v3.1 follows from
 this change. Public API failure must show unavailable/neutral, never substitute
 synthetic observations. Temporary work stays in one <2 GB directory and is
 removed after validation; no legacy evidence is a prerequisite for this work.
+
+## Observed researcher inventory (PA-061)
+
+The opt-in `observed-paper-native-researchers-v1` decision certifies only the exact
+supported native researcher-ID tuple consumed by institution/country metrics.
+It does **not** certify a complete author roster. An unrelated missing or conflicted
+author slot remains explicitly omitted, with its original source facts, reasons
+and position retained; it does not invalidate independently supported identities.
+Repeated IDs or ORCID contradictions involving a retained identity still fail
+closed. A supported empty ID tuple records zero **known identities**, not zero
+authors; unknown positions remain unknown. It cannot bypass the unchanged
+portfolio minimum of five researchers or create a zero-valued metric observation.
+
+The existing minimum of five identifiable researchers, metric formulas and all
+coverage requirements remain unchanged. The partition's entity type is bound in
+both admission validators; this decision cannot authorize researcher-level
+attribution or replace its stricter complete-identity default. Legacy automatic
+decisions, versions and historical hashes remain unchanged. Partial observed
+identity coverage must never be presented as completeness of the research roster.
+
+## Conditional observed citation reference membership (PA-062)
+
+`observed-positive-field-citation-membership-v1` is an explicit opt-in reference
+universe for PA-062 conditional observations, not a complete-field claim. It is
+accepted only with typed conditional-qualified source years. Before citation
+requests, the frozen authority retains every source projection and identifies
+unmeasurable source identities. The declared observed reference members are the
+papers with a supported canonical identity, positive known target-field mapping,
+exact year and source-recorded document type. Membership is independent of
+citation counts. Actual response fields/dates/document types must still match
+those frozen facts.
+
+Unknown possible field members, unmeasurable identities and unmapped field mass
+remain in source evidence and compact cohort disclosure. They are neither
+classified as definite nonmembers nor converted to complete coverage. The public
+reference metadata gives the known member count, source-year count, unknown
+membership count, unmeasurable counts and unmapped mass, and explicitly states
+`completeFieldUniverse: false`. These counts are cohort-specific and must not be
+summed across overlapping fields as unique papers.
+
+Every known reference member still requires its actual mature non-self citation
+count; one missing count withholds that reference cohort rather than shrinking
+its denominator. The 50-paper reference minimum, 24-month maturity, common
+retrospective session, entity citation coverage threshold and existing Impact
+arithmetic remain unchanged. Its reference mean describes the declared recorded
+population, not all scholarship in the field. Old complete-field cohorts retain
+their strict default and historical result shape. Comparison and normalization
+keys prohibit mixing these two reference-universe meanings, even if their
+numeric counts happen to coincide.

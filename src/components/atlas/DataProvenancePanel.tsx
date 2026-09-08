@@ -227,6 +227,72 @@ export function DataProvenancePanel({
           )}
 
           <p>{metadata.disclaimer}</p>
+          {metadata.datasetScope?.version === 'conditional-observed-ontology-branch-release-v1' && (
+            <div className="conditional-source-quality">
+              <h3>Observed coverage, not full-source completeness</h3>
+              <p>{metadata.datasetScope.interpretation}</p>
+              <p>{metadata.datasetScope.momentumCaveat}</p>
+              <p>
+                Released observations meet the existing 95% canonical-institution
+                and 90% evidence coverage gates within their exact observed
+                entity, field and period. The broader source may remain insufficient;
+                that uncertainty is not a zero value or a complete ecosystem estimate.
+              </p>
+              <details>
+                <summary>Annual source quality and measurement cutoffs</summary>
+                <ul>
+                  {metadata.datasetScope.sourceYearQuality?.map((year) => (
+                    <li key={`${year.entityType}:${year.year}:${year.cutoff}`}>
+                      <strong>{year.year} · {year.entityType}</strong>
+                      {' — '}{year.status.replaceAll('_', ' ')}
+                      <p>{year.paperCount.toLocaleString()} source papers · cutoff {formatTimestamp(year.cutoff)}</p>
+                      <ul>
+                        {year.coverage.map((coverage) => (
+                          <li key={coverage.kind}>
+                            {coverage.kind.replaceAll('-', ' ')}:{' '}
+                            {coverage.ratio === null ? 'Missing' : `${(coverage.ratio * 100).toFixed(2)}%`}
+                            {' '}({coverage.numerator.toFixed(2)} / {coverage.denominator.toFixed(2)} mass;
+                            {' '}{coverage.status.replaceAll('_', ' ')})
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+              {!!metadata.datasetScope.citationCohorts?.length && (
+                <details>
+                  <summary>Retrospective citation reference cohorts</summary>
+                  <p>Historical papers measured in a recorded present-day interval, not reconstructed historical citation counts.</p>
+                  <ul>
+                    {metadata.datasetScope.citationCohorts.map((cohort) => (
+                      <li key={cohort.certificationId}>
+                        {cohort.fieldId} · {cohort.publicationYear} · {cohort.documentType}
+                        <p>{String(cohort.referencePopulation.knownReferencePaperCount)} recorded reference papers.
+                          {cohort.referencePopulation.completeFieldUniverse === false && ' This is not the complete field universe.'}</p>
+                        <p>Measured {formatTimestamp(cohort.measurementStartedAt)} – {formatTimestamp(cohort.measurementEndedAt)}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {!!metadata.datasetScope.normalizationCohorts?.length && (
+                <details>
+                  <summary>Observed normalization peers</summary>
+                  <ul>
+                    {metadata.datasetScope.normalizationCohorts.map((cohort) => (
+                      <li key={cohort.certificationDigest}>
+                        {cohort.fieldId} · {cohort.period} · {cohort.entityType} · {cohort.metricId}
+                        <p>{cohort.eligiblePeerCount} certified peers / {cohort.sourcePeerCount} source entities;
+                          {' '}{cohort.numericRawPeerCount} numeric raw values; {cohort.excludedPeerCount} ineligible.</p>
+                        <p>{cohort.interpretation}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
+          )}
           {metadata.deliveryMode === 'versioned-dataset' && metadata.releaseManifestUrl && (
             <p>
               <a href={metadata.releaseManifestUrl} target="_blank" rel="noreferrer">

@@ -14,6 +14,7 @@ import math
 import re
 from dataclasses import dataclass, fields
 from datetime import UTC, date, datetime
+from typing import Literal, cast
 
 from ..connectors.base import SourceRecord, normalize_external_id
 from ..fields.mapping import (
@@ -700,6 +701,24 @@ def _automatic_paper_identity_view(
     facts: SourceBoundPaperFacts,
     kind: EvidenceKind,
 ) -> EvidenceCertificationDecision:
+    from .build_cache import memoize_immutable
+
+    return memoize_immutable(
+        "automatic-paper-identity-view-v1",
+        (
+            facts,
+            kind,
+            AUTOMATIC_DATE_RULE_VERSION,
+            AUTOMATIC_RESEARCHER_RULE_VERSION,
+        ),
+        lambda: _uncached_automatic_paper_identity_view(facts, kind),
+    )
+
+
+def _uncached_automatic_paper_identity_view(
+    facts: SourceBoundPaperFacts,
+    kind: EvidenceKind,
+) -> EvidenceCertificationDecision:
     if not isinstance(facts, SourceBoundPaperFacts):
         raise CertificationError(
             "automatic paper admission requires source-bound facts"
@@ -734,18 +753,181 @@ def automatic_paper_identity_decision(
     )
 
 
+AUTOMATIC_KNOWN_RESEARCHER_RULE_VERSION = "observed-paper-native-researchers-v1"
+
+
+def _known_researcher_view(
+    facts: SourceBoundPaperFacts, entity_type: str
+) -> EvidenceCertificationDecision:
+    """Certify the observed tuple (possibly empty), not roster completeness.
+
+    An empty supported-ID set contributes no known people to the portfolio's
+    unchanged minimum-five check. It is not evidence of zero actual authors;
+    missing inventories and every omitted source slot remain in ``source_facts``.
+    """
+    if not isinstance(facts, SourceBoundPaperFacts) or entity_type not in {
+        "institution",
+        "country",
+    }:
+        raise CertificationError(
+            "observed researchers require institution/country scope"
+        )
+    facts.__post_init__()
+    ids = facts.researcher_ids
+    native_ids = {value.removeprefix("inspire-author:") for value in ids}
+    positions_by_native: dict[str, set[int]] = {}
+    native_by_orcid: dict[str, set[str]] = {}
+    for position, assessment in enumerate(facts.researcher_assessments):
+        value = assessment.value
+        assert isinstance(value, ResolvedResearcherIdentifiers)
+        natives = {
+            identifier
+            for scheme, identifier in value.identifiers
+            if scheme == "inspire-author"
+        }
+        for native in natives:
+            positions_by_native.setdefault(native, set()).add(position)
+        for scheme, identifier in value.identifiers:
+            if scheme == "orcid":
+                native_by_orcid.setdefault(identifier, set()).update(natives)
+    conflicting_known = (
+        len(ids) != len(set(ids))
+        or (
+            not ids
+            and any(
+                item.decision.state == "conflicted"
+                for item in facts.researcher_assessments
+            )
+        )
+        or any(
+            len(positions) > 1 and native in native_ids
+            for native, positions in positions_by_native.items()
+        )
+        or any(
+            len(natives) > 1 and bool(natives & native_ids)
+            for natives in native_by_orcid.values()
+        )
+    )
+    state: CertificationState = "certified"
+    reasons: tuple[str, ...] = ()
+    if conflicting_known:
+        state, reasons = (
+            "conflicted",
+            (
+                "observed researcher identities repeat or conflict "
+                "within source author evidence",
+            ),
+        )
+    return EvidenceCertificationDecision(
+        subject_type="paper",
+        subject_id=facts.context.paper_id,
+        evidence_kind="researcher-identity",
+        state=state,
+        rule_version=AUTOMATIC_KNOWN_RESEARCHER_RULE_VERSION,
+        dataset_version=facts.context.dataset_version,
+        acquisition_scope=facts.context.acquisition_scope,
+        evidence=(facts.reference,),
+        certified_value_digest=canonical_digest(
+            {
+                "paper_id": facts.context.paper_id,
+                "researcher_ids": ids,
+            }
+        ),
+        reasons=reasons,
+    )
+
+
+@dataclass(frozen=True, kw_only=True)
+class AutomaticKnownResearcherDecision(EvidenceCertificationDecision):
+    source_facts: SourceBoundPaperFacts
+    entity_type: Literal["institution", "country"]
+
+    def __post_init__(self) -> None:
+        EvidenceCertificationDecision.__post_init__(self)
+        expected = _known_researcher_view(self.source_facts, self.entity_type)
+        if any(
+            getattr(self, item.name) != getattr(expected, item.name)
+            for item in fields(EvidenceCertificationDecision)
+        ):
+            raise CertificationError(
+                "observed researcher decision does not reconstruct"
+            )
+
+    @property
+    def omitted_author_positions(self) -> tuple[int, ...]:
+        return tuple(
+            position
+            for position, assessment in enumerate(
+                self.source_facts.researcher_assessments, start=1
+            )
+            if assessment.decision.state != "certified"
+            or not any(
+                scheme == "inspire-author"
+                for scheme, _ in cast(
+                    ResolvedResearcherIdentifiers, assessment.value
+                ).identifiers
+            )
+        )
+
+    @property
+    def conflicted_author_positions(self) -> tuple[int, ...]:
+        return tuple(
+            position
+            for position, assessment in enumerate(
+                self.source_facts.researcher_assessments, start=1
+            )
+            if assessment.decision.state == "conflicted"
+        )
+
+
+def automatic_known_researcher_decision(
+    facts: SourceBoundPaperFacts,
+    *,
+    entity_type: Literal["institution", "country"],
+) -> AutomaticKnownResearcherDecision:
+    view = _known_researcher_view(facts, entity_type)
+    return AutomaticKnownResearcherDecision(
+        **{
+            item.name: getattr(view, item.name)
+            for item in fields(EvidenceCertificationDecision)
+        },
+        source_facts=facts,
+        entity_type=entity_type,
+    )
+
+
 def verify_automatic_source_binding(
     decision: EvidenceCertificationDecision,
     projection: object,
+    *,
+    entity_type: str | None = None,
 ) -> None:
     """Bind opt-in decision to its canonical year's exact source occurrence.
 
     Physical storage locations may change; the provider/record/snapshot/content
     identity may not. Legacy reviewed decisions retain their existing contract.
     """
-    if not isinstance(decision, AutomaticPaperIdentityDecision):
+    from .launch_calculations import LaunchPaperDecision
+
+    if isinstance(decision, LaunchPaperDecision):
+        decision.__post_init__()
+        if decision.source_proof.source_projection != projection:
+            raise CertificationError(
+                "launch formula evidence differs from its exact source projection"
+            )
+        return
+    if not isinstance(
+        decision, (AutomaticPaperIdentityDecision, AutomaticKnownResearcherDecision)
+    ):
         return
     decision.__post_init__()
+    if (
+        isinstance(decision, AutomaticKnownResearcherDecision)
+        and entity_type != decision.entity_type
+    ):
+        raise CertificationError(
+            "observed researcher evidence cannot change entity scope"
+        )
     facts = decision.source_facts
     references = getattr(projection, "occurrence_references", ())
     if getattr(

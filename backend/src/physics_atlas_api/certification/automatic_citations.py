@@ -445,16 +445,6 @@ def _derive_citation_observations(
     source_snapshot_id: str,
     response_sha256: str,
 ) -> tuple[CitationObservationCertification, ...]:
-    if any(
-        row.unresolved_membership
-        or row.publication_date is None
-        or not row.field_ids
-        or row.document_type is None
-        for row in records
-    ):
-        raise CertificationError(
-            "unresolved source records prevent exact cohort membership"
-        )
     field_id, year, document_type = cohort_key
     if (
         not PHYSICS_FIELD_ONTOLOGY_V1.contains(field_id)
@@ -465,13 +455,35 @@ def _derive_citation_observations(
         raise CertificationError("automatic citation cohort key is invalid")
     observations: list[CitationObservationCertification] = []
     for row in records:
-        assert row.publication_date is not None
-        if (
-            field_id not in row.field_ids
-            or row.publication_date.year != year
-            or row.document_type != document_type
+        # One exact negative dimension proves non-membership. An unrelated year
+        # or document type must not poison this cohort's independent evidence.
+        if (row.publication_date is not None and row.publication_date.year != year) or (
+            row.document_type is not None and row.document_type != document_type
         ):
             continue
+        # A positive mapped field is known membership even if other field mass
+        # remains unmapped. Keep that uncertainty in the unchanged source record;
+        # it cannot imply membership/non-membership of a different field.
+        unresolved = tuple(
+            reason
+            for reason in row.unresolved_membership
+            if not (
+                field_id in row.field_ids
+                and reason == "provider field classification has unmapped mass"
+            )
+        )
+        if (
+            unresolved
+            or row.publication_date is None
+            or not row.field_ids
+            or row.document_type is None
+        ):
+            raise CertificationError(
+                "unresolved source records prevent exact cohort membership"
+            )
+        if field_id not in row.field_ids:
+            continue
+        assert row.publication_date is not None
         observations.append(
             certify_citation_observation(
                 CitationObservationEvidence(

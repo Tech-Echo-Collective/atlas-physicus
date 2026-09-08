@@ -6,6 +6,7 @@ import {
 } from '../../data/APIRepository';
 import { loadAtlasDataset } from '../../data/loadAtlasDataset';
 import { getDatasetPresentation } from '../../data/DatasetPresentation';
+import { observationFieldForView } from '../../data/ObservedScope';
 import {
   AtlasDataSourceRequestGate,
   assessDataSourceObservations,
@@ -873,6 +874,9 @@ export function AtlasExplorer() {
     visualizationMetricDefinitions,
   ]);
 
+  const visualizationFieldId = dataset
+    ? observationFieldForView(dataset, selectedDomainId, selectedFieldId)
+    : undefined;
   const availableYears = useMemo(() => {
     if (!dataset) {
       return [];
@@ -884,8 +888,8 @@ export function AtlasExplorer() {
           .filter(
             (observation) =>
               observation.entityType === 'country' &&
-              (selectedFieldId
-                ? observation.fieldId === selectedFieldId
+              (visualizationFieldId
+                ? observation.fieldId === visualizationFieldId
                 : observation.scienceDomainId === selectedDomainId &&
                   observation.fieldId === undefined),
           )
@@ -895,11 +899,12 @@ export function AtlasExplorer() {
   }, [
     dataset,
     selectedDomainId,
-    selectedFieldId,
+    visualizationFieldId,
     visualizationObservations,
   ]);
   const timelineYears = useMemo(() => {
-    if (dataset?.metadata.datasetKind !== 'live-api') {
+    if (dataset?.metadata.datasetKind !== 'live-api' ||
+      dataset.metadata.deliveryMode === 'versioned-dataset') {
       return availableYears;
     }
     const currentDatasetYear = Number(dataset.metadata.period);
@@ -913,15 +918,15 @@ export function AtlasExplorer() {
       visualizationObservations.filter(
         (observation) =>
           observation.entityType === 'country' &&
-          (selectedFieldId
-            ? observation.fieldId === selectedFieldId
+          (visualizationFieldId
+            ? observation.fieldId === visualizationFieldId
             : observation.scienceDomainId === selectedDomainId &&
               observation.fieldId === undefined) &&
           observation.period === String(selectedYear),
       ),
     [
       selectedDomainId,
-      selectedFieldId,
+      visualizationFieldId,
       selectedYear,
       visualizationObservations,
     ],
@@ -956,8 +961,8 @@ export function AtlasExplorer() {
       (observation) =>
         observation.entityType === 'institution' &&
         countryInstitutionIds.has(observation.entityId) &&
-        (selectedFieldId
-          ? observation.fieldId === selectedFieldId
+        (visualizationFieldId
+          ? observation.fieldId === visualizationFieldId
           : observation.scienceDomainId === selectedDomainId &&
             observation.fieldId === undefined) &&
         observation.period === String(selectedYear),
@@ -967,7 +972,7 @@ export function AtlasExplorer() {
     geographicInstitutions,
     selectedCountryId,
     selectedDomainId,
-    selectedFieldId,
+    visualizationFieldId,
     selectedYear,
     visualizationObservations,
   ]);
@@ -990,6 +995,12 @@ export function AtlasExplorer() {
   const activeField = selectedFieldId
     ? visibleFields.find((field) => field.id === selectedFieldId) ?? null
     : null;
+  const observedDomainScope = !selectedFieldId && visualizationFieldId
+    ? visibleFields.find((field) => field.id === visualizationFieldId) ?? null
+    : null;
+  const activeScopeLabel = activeField?.label ?? (observedDomainScope
+    ? `${activeDomain?.label ?? 'Physics'} — recorded ${observedDomainScope.label} subset`
+    : activeDomain?.label ?? 'Physics');
   const activeMetricDefinition = dataset.metricDefinitions.find(
     (definition) => definition.id === selectedMetricId,
   );
@@ -1059,8 +1070,8 @@ export function AtlasExplorer() {
         (observation) =>
           observation.entityType === 'institution' &&
           observation.entityId === selectedInstitution.id &&
-          (selectedFieldId
-            ? observation.fieldId === selectedFieldId
+          (visualizationFieldId
+            ? observation.fieldId === visualizationFieldId
             : observation.scienceDomainId === selectedDomainId &&
               observation.fieldId === undefined),
       )
@@ -1727,7 +1738,7 @@ export function AtlasExplorer() {
             {activeField.id}
           </button>
         ) : (
-          <strong>All Physics</strong>
+          <strong>{observedDomainScope ? `Recorded ${observedDomainScope.label} subset` : 'All Physics'}</strong>
         )}
         {isFieldOverviewOpen ? (
           <>
@@ -1826,7 +1837,9 @@ export function AtlasExplorer() {
           loadingSourceId={requestedDataSourceId}
           error={sourceError}
           notice={sourceNotice ?? (dataset.metadata.datasetScope
-            ? `Certified ${dataset.fields.find((field) => field.id === dataset.metadata.datasetScope?.rootFieldId)?.label ?? dataset.metadata.datasetScope.rootFieldId} scope only. Overall Physics and unsupported fields remain neutral; missing is not zero.`
+            ? dataset.metadata.datasetScope.version === 'conditional-observed-ontology-branch-release-v1'
+              ? `Conditional recorded ${dataset.fields.find((field) => field.id === dataset.metadata.datasetScope?.rootFieldId)?.label ?? dataset.metadata.datasetScope.rootFieldId} subset, not a complete ecosystem estimate. Source quality and historical coverage are disclosed under Data provenance; missing is not zero.`
+              : `Certified ${dataset.fields.find((field) => field.id === dataset.metadata.datasetScope?.rootFieldId)?.label ?? dataset.metadata.datasetScope.rootFieldId} scope only. Overall Physics and unsupported fields remain neutral; missing is not zero.`
             : null)}
           onSelect={selectDataSource}
         />
@@ -1843,7 +1856,7 @@ export function AtlasExplorer() {
         />
         <div className="active-field-note">
           <span>{activeField ? 'Active field' : 'Domain heatmap'}</span>
-          <strong>{activeField?.label ?? activeDomain?.label}</strong>
+          <strong>{activeScopeLabel}</strong>
           <p>{activeField?.description ?? activeDomain?.description}</p>
           {activeField && (
             <button
@@ -1864,9 +1877,7 @@ export function AtlasExplorer() {
           countryObservation={selectedCountryObservation}
           institutionObservations={institutionObservations}
           metricLabel={activeMetricLabel}
-          activeScopeLabel={
-            activeField?.label ?? activeDomain?.label ?? 'Physics'
-          }
+          activeScopeLabel={activeScopeLabel}
           selectedYear={selectedYear}
           datasetKind={dataset.metadata.datasetKind}
           onBackToWorld={returnToWorld}
@@ -1951,7 +1962,7 @@ export function AtlasExplorer() {
             {activeMetricLabel}
           </span>
           <span>
-            {selectedYear} · {activeField?.id ?? activeDomain?.label}
+            {selectedYear} · {observedDomainScope ? `Recorded ${observedDomainScope.label} subset` : activeField?.id ?? activeDomain?.label}
           </span>
         </div>
         <div className="legend-gradient" aria-hidden="true" />

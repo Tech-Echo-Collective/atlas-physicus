@@ -11,6 +11,28 @@ documentation.
 
 ## Current task: minimum launch integration and actual evidence blockers
 
+Active September 8 launch work (not yet a public release): PA-060/061/062 now
+separate enumerated source membership, supported researcher inputs and conditional
+observed publication. Source-wide failures remain public; published partitions
+must pass the unchanged thresholds and five metrics together. The source-backed
+calculation/compact-evidence/Pages adapters are implemented and being validated.
+The completed fresh 2018 traversal has 2,306 records, 95.905997% paper-time
+affiliation presence and 68.614414% resolved institution mass **before canonical
+conflict exclusion**, not final certified coverage. The 2019–2023 acquisition is
+still running with checksummed completed-page recovery. A DOI role conflict in an
+earlier attempt is retained as unresolved rather than terminating enumeration.
+No real exact-five observations or final Atlas Dataset have yet been produced.
+
+Current source baseline `b54b64e` passed CI 34178037122; Web `63fc454` passed Pages
+33967823884. This source checkpoint does not activate public data. Local checks pass 1,278
+backend tests, 144 frontend tests, seven pipeline tests, full frontend type/lint
+and build, plus 52 final adapter/cache/export checks and strict backend typing.
+These checks validate implementation, not a real metric launch. All new scientific and
+build material is isolated under `/private/tmp/atlas-live-launch.n5YcW3`; cleanup
+is pending while the launch is active. Existing evidence, production history and
+release tags remain untouched. Replace this in-progress snapshot with actual
+dataset, CI, deployment and cleanup results at completion.
+
 PA-054 removes mandatory human approval; PA-055 permits explicitly retrospective
 citation measurement intervals. Neither removes unresolved source evidence or
 scientific thresholds. PA-056 admits a declared, limited ontology branch with all

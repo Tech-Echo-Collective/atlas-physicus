@@ -50,6 +50,7 @@ INSPIRE_DOI_MATERIALS = frozenset(
     }
 )
 RELATED_DOI_MATERIALS = frozenset({"erratum", "addendum"})
+LAUNCH_DOI_ROLE_CONFLICT_VERSION = "source-doi-role-conflict-withheld-v1"
 
 
 @dataclass(frozen=True)
@@ -157,15 +158,9 @@ class LaunchSourceOccurrence:
             for item in self.doi_assertions
             if not item.is_related_document and item.identifier is not None
         }
-        related_dois = {
-            item.identifier
-            for item in self.doi_assertions
-            if item.is_related_document and item.identifier is not None
-        }
-        if expected_dois & related_dois:
-            raise CertificationError(
-                "source DOI has conflicting primary and related-document roles"
-            )
+        # Contradictory but well-formed provider assertions are retained evidence,
+        # not a broken transport page. Canonicalization withholds the complete
+        # linked component; never pick a role or silently discard the occurrence.
         if expected_dois != {
             item for item in self.identity.identifiers if item.scheme == "doi"
         }:
@@ -188,6 +183,25 @@ class LaunchSourceOccurrence:
     @property
     def content_digest(self) -> str:
         return canonical_digest(self)
+
+    @property
+    def identity_references(self) -> tuple[EvidenceReference, ...]:
+        """Identity authority, separate from the acquired paper inventory."""
+        return (self.reference,)
+
+    @property
+    def doi_role_conflicts(self) -> tuple[StrongIdentifier, ...]:
+        primary = {
+            item.identifier
+            for item in self.doi_assertions
+            if not item.is_related_document and item.identifier is not None
+        }
+        related = {
+            item.identifier
+            for item in self.doi_assertions
+            if item.is_related_document and item.identifier is not None
+        }
+        return tuple(sorted(primary & related))
 
 
 @dataclass(frozen=True)
@@ -505,6 +519,15 @@ def canonicalize_launch_inputs(
         (item.identity for item in by_id.values()),
         enable_secondary_merge=False,
     )
+    components = tuple(
+        sorted(
+            (
+                _withhold_doi_role_conflict(component, by_id)
+                for component in plan.components
+            ),
+            key=lambda item: item.candidate_id,
+        )
+    )
     papers = tuple(
         LaunchCanonicalPaper(
             component=component,
@@ -516,12 +539,47 @@ def canonicalize_launch_inputs(
                 for item in component.occurrences
             ),
         )
-        for component in plan.components
+        for component in components
     )
     return LaunchCanonicalInputs(
         papers=papers,
         occurrence_count=len(by_id),
         duplicate_occurrences=len(occurrences) - len(by_id),
-        merge_digest=plan.digest,
+        merge_digest=plan.digest
+        if components == plan.components
+        else canonical_digest(
+            (LAUNCH_DOI_ROLE_CONFLICT_VERSION, plan.digest, components)
+        ),
         merge_policy_version=plan.policy_version,
+    )
+
+
+def _withhold_doi_role_conflict(
+    component: CanonicalPaperComponent,
+    occurrences: dict[str, LaunchSourceOccurrence],
+) -> CanonicalPaperComponent:
+    """Keep the ambiguous identity component, never an approved merged work.
+
+    A primary/related DOI overlap does not establish which assertion is correct.
+    Preserve all members and assertions under one unresolved merge candidate.
+    Ordinary components retain their exact historical identities and digests.
+    """
+    conflicts = tuple(
+        (item.occurrence_id, occurrences[item.occurrence_id].doi_assertions)
+        for item in component.occurrences
+        if occurrences[item.occurrence_id].doi_role_conflicts
+    )
+    if not conflicts:
+        return component
+    digest = canonical_digest(
+        (LAUNCH_DOI_ROLE_CONFLICT_VERSION, component.digest, conflicts)
+    )
+    return replace(
+        component,
+        candidate_id=f"paper-candidate-{digest[:24]}",
+        canonical_id=None,
+        status="needs_review",
+        primary_identifier=None,
+        conflict_schemes=tuple(sorted({*component.conflict_schemes, "doi"})),
+        digest=digest,
     )

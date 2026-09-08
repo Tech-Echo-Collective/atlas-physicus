@@ -317,6 +317,65 @@ legacy population structures, versions, default behavior and historical hashes
 remain unchanged. Comparison peers must share a coverage policy. Exact-five
 activation remains a separate evidence gate, not a consequence of this approval.
 
+## Complete enumeration versus identity certification — 2026-09-08
+
+**PA-060:** Under the owner's global minimum-necessary launch authorization,
+`enumerated-source-year-with-unresolved-identity-v1` separates exact provider-year
+enumeration from the certification of each canonical identity. The opt-in applies
+only to the typed bounded launch plan and checksummed record/page inventory.
+Unresolved source-reconstructable identity components retain their `needs_review`
+decisions, reasons, every occurrence and one full unit of unknown entity mass;
+they are neither discarded nor certified. They cannot enter metric calculators
+or the measurable citation-ID population, and remain in source-wide coverage
+denominators and uncertainty projections.
+
+Exact dates, complete provenance, conservation, current 90%/95% coverage gates,
+cohort/peer minimums and all five-metric requirements are unchanged. Complete
+enumeration is not complete scientific knowledge. Legacy defaults, types and
+historical hashes remain unchanged; new and legacy source-year versions cannot
+be mixed within a metric window or frozen citation population. This policy does
+not authorize fabricated identities, guessed dates or favorable paper subsets.
+
+## Observed researcher identity inputs — 2026-09-08
+
+**PA-061:** `observed-paper-native-researchers-v1` certifies the exact supported
+researcher-ID tuple consumed by institution/country calculations, not complete
+identification of the byline. An empty supported tuple does not mean zero authors:
+unknown positions and contradictory assertions remain explicit. The unchanged
+portfolio minimum of five known researchers still applies; missing eligibility
+does not produce a zero score. Conflicting/repeated asserted identities remain
+fail-closed, and researcher-level certification is unchanged.
+
+## Conditional observed release — 2026-09-08
+
+**PA-062:** The owner explicitly authorizes a limited **conditional observed
+release**: completeness of provider enumeration, whole-source evidence quality,
+and the quality of each published entity×field×period observation are separate
+claims. `conditional-observed-source-year-v1` may establish complete membership
+while preserving every original source-quality certification, numerator,
+denominator, reason, unknown mass and failed 90%/95% gate. This does not certify
+unknown identities or turn absent evidence into a zero. The original full-source
+quality verdict remains reconstructable and is disclosed, not relabeled PASS.
+
+`conditional-observed-ontology-branch-release-v1` binds the exact fully enumerated
+six-year source authority to the actual published raw/normalized observations and
+their normalization peers. Every released partition must genuinely satisfy the
+unchanged v1 evidence thresholds, minimum samples, dated affiliations, citation
+cutoffs/maturity/cohorts, conservation and certification rules. The activation
+coverage is the worst measured coverage of these exact released partitions, not
+a caller-supplied replacement for source ratios. All five compatible metrics
+must still be present together for a shared entity, field and period; publication
+rejects substituted, added or omitted numeric observations. Legacy full-source
+activation and proof versions remain strict and unchanged.
+
+These are observations of the **recorded** research ecosystem, not estimates of
+the complete ecosystem. Annual whole-source coverage and measurement cutoffs
+must be public. Momentum remains the unchanged backward-looking formula, but
+changes in source/evidence coverage may affect apparent change and must be
+explicitly disclosed. Unsupported fields/entities/periods stay missing. This
+supersedes only the full-source quality prerequisite for this opt-in release
+authority, not any numeric threshold, scientific formula or full-Physics claim.
+
 ## Current activation decision
 
 The v3.0.4 production activation begins with the implemented `hep-th-v1`

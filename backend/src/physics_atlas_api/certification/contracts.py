@@ -10,6 +10,8 @@ from enum import Enum
 from fractions import Fraction
 from typing import Literal
 
+from .build_cache import memoize_immutable
+
 CERTIFICATION_POLICY_VERSION = "scientific-evidence-certification-v1"
 
 CertificationState = Literal[
@@ -106,6 +108,18 @@ def _canonical_value(value: object) -> object:
 def canonical_digest(value: object) -> str:
     """Return a stable digest for immutable certification inputs."""
 
+    return memoize_immutable(
+        "legacy-canonical-json-sha256-v1", (value,), lambda: _canonical_digest(value)
+    )
+
+
+def _canonical_digest(value: object) -> str:
+    from .build_cache import build_verification_cache_active
+
+    if build_verification_cache_active():
+        from .streaming_digest import streaming_canonical_digest
+
+        return streaming_canonical_digest(value)
     payload = json.dumps(
         _canonical_value(value),
         sort_keys=True,
@@ -872,6 +886,7 @@ class CertifiedMetricPartition[PartitionT]:
                 verify_automatic_source_binding(
                     decision,
                     window_projections.get(paper_certification.paper_id),
+                    entity_type=entity_type,
                 )
                 used_decision_ids.add(decision.decision_id)
                 if decision.certified_value_digest != paper_evidence_value_digest(

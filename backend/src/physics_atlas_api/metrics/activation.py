@@ -178,13 +178,20 @@ def assess_joint_metric_activation(
     reasons: list[str] = []
     if dataset_scope is not None:
         from .scoped_activation import (
-            SCOPED_DATASET_ACTIVATION_VERSION,
             CertifiedDatasetScope,
+            ConditionalObservedDatasetScope,
         )
 
         if not isinstance(dataset_scope, CertifiedDatasetScope):
             raise ValueError("scoped activation requires exact certified source years")
         dataset_scope.__post_init__()
+        if isinstance(dataset_scope, ConditionalObservedDatasetScope):
+            measured = MetricSystemCoverageEvidence(**dataset_scope.observed_coverage())
+            if evidence.coverage != measured:
+                reasons.append(
+                    "conditional activation coverage differs from "
+                    "exact released partitions"
+                )
         if (
             dataset_scope.dataset_version != evidence.data_source_version
             or dataset_scope.acquisition_scope != evidence.acquisition_scope
@@ -253,7 +260,7 @@ def assess_joint_metric_activation(
     breadth_version = (
         DIVERSITY_BREADTH_REVIEW_VERSION
         if dataset_scope is None
-        else SCOPED_DATASET_ACTIVATION_VERSION
+        else dataset_scope.version
     )
     if evidence.diversity_breadth_review_version != breadth_version:
         reasons.append("Diversity breadth-review version does not match the contract")

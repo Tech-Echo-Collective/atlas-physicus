@@ -8,7 +8,7 @@ name-based affiliation guess.
 
 from collections import Counter
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from fractions import Fraction
 from typing import Any
@@ -47,11 +47,19 @@ from .institutions import (
     institution_authority_version,
 )
 from .ror_affiliation_match import RORAffiliationMatchResult
+from .ror_grid_crosswalk import (
+    ROR_GRID_CROSSWALK_VERSION,
+    RORGridCrosswalkResult,
+    inspire_grid_id,
+)
 
 LAUNCH_ATTRIBUTION_VERSION = "source-bound-launch-attribution-v1"
 AuthorityLookup = Callable[[str], tuple[SourceRecord, EvidenceReference] | None]
 RawAffiliationLookup = Callable[
     [SourceRecord, EvidenceReference, int, int], RORAffiliationMatchResult | None
+]
+GridCrosswalkLookup = Callable[
+    [SourceRecord, EvidenceReference], RORGridCrosswalkResult | None
 ]
 
 
@@ -316,6 +324,7 @@ def _resolve_affiliation(
     institution_lookup: AuthorityLookup,
     ror_lookup: AuthorityLookup,
     raw_match: RawAffiliationLookup | None,
+    grid_match: GridCrosswalkLookup | None,
     structured_certifications: dict[
         tuple[EvidenceReference, EvidenceReference], InstitutionCertificationResult
     ],
@@ -399,6 +408,113 @@ def _resolve_affiliation(
                 "conflicted", ("provider-and-paper-ror-assertions-conflict",)
             )
     target = direct[0] if direct else provider_rors[0] if provider_rors else None
+    if (
+        target is None
+        and provider_record is not None
+        and provider_reference is not None
+        and grid_match is not None
+    ):
+        try:
+            grid = inspire_grid_id(provider_record)
+            crosswalk = (
+                grid_match(provider_record, provider_reference) if grid else None
+            )
+            if crosswalk is not None:
+                if not isinstance(crosswalk, RORGridCrosswalkResult):
+                    raise CertificationError(
+                        "GRID lookup requires an exact typed result"
+                    )
+                crosswalk.__post_init__()
+                if (
+                    crosswalk.receipt.institution_reference != provider_reference
+                    or crosswalk.receipt.grid_id != grid
+                ):
+                    raise CertificationError(
+                        "GRID result identifies another institution"
+                    )
+                ror_record, ror_reference = _check_record(
+                    (crosswalk.ror_record, crosswalk.ror_reference),
+                    "ror",
+                    crosswalk.ror_record.source_record_id,
+                )
+                grid_references = (
+                    reference,
+                    provider_reference,
+                    crosswalk.receipt.response_reference,
+                    ror_reference,
+                )
+                lifecycle = _lifecycle_reasons(ror_record, source_facts.exact_date)
+                if lifecycle:
+                    return outcome(
+                        "insufficient_evidence",
+                        lifecycle,
+                        authority_record=ror_record,
+                        evidence=grid_references,
+                    )
+                addresses = provider_record.raw.get("addresses", [])
+                if not isinstance(addresses, list) or any(
+                    not isinstance(item, dict)
+                    or (
+                        item.get("country_code") is not None
+                        and (
+                            not isinstance(item["country_code"], str)
+                            or pycountry.countries.get(alpha_2=item["country_code"])
+                            is None
+                        )
+                    )
+                    for item in addresses
+                ):
+                    raise CertificationError("INSPIRE institution address is malformed")
+                countries = {
+                    item["country_code"]
+                    for item in addresses
+                    if item.get("country_code")
+                }
+                if countries and countries != {
+                    item.country_code for item in _locations(ror_record)
+                }:
+                    return outcome(
+                        "conflicted",
+                        ("grid-authority-country-conflict",),
+                        evidence=grid_references,
+                    )
+                authority = _authority(ror_record)
+                evidence = InstitutionResolutionEvidence(
+                    raw_name=raw_name,
+                    source_evidence_ids=tuple(
+                        f"{item.provider}:{item.source_record_id}:{item.checksum}"
+                        for item in grid_references
+                    )
+                    + (
+                        f"{ROR_GRID_CROSSWALK_VERSION}:{grid}:{crosswalk.receipt.content_digest}",
+                    ),
+                    source_manifest_digest=canonical_digest(
+                        (grid_references, crosswalk.receipt, source_field)
+                    ),
+                    authority_version=institution_authority_version((authority,)),
+                    # Exact crosswalk supplies the authority ID, not a claim
+                    # that this ROR ID appeared in the original paper.
+                    direct_ror_ids=(authority.ror_id,),
+                    provider="inspire",
+                    provider_institution_id=provider_id,
+                )
+                grid_institution = certify_institution(
+                    evidence,
+                    (authority,),
+                    retain_exact_ror_identity=True,
+                )
+                grid_institution = replace(
+                    grid_institution, match_method=ROR_GRID_CROSSWALK_VERSION
+                )
+                return outcome(
+                    grid_institution.state,
+                    grid_institution.reasons,
+                    grid_institution,
+                    ror_record,
+                    grid_references,
+                )
+        except CertificationError as error:
+            return outcome("conflicted", (str(error),))
     if target is not None:
         target_source = ror_lookup(target)
         if target_source is None:
@@ -550,6 +666,7 @@ def attribute_launch_record(
     institution_lookup: AuthorityLookup,
     ror_lookup: AuthorityLookup,
     raw_match: RawAffiliationLookup | None = None,
+    grid_match: GridCrosswalkLookup | None = None,
 ) -> LaunchAttributionResult:
     """Verify per-author authority links then invoke Fractional Attribution v1.
 
@@ -617,6 +734,7 @@ def attribute_launch_record(
                 institution_lookup=institution_lookup,
                 ror_lookup=ror_lookup,
                 raw_match=raw_match,
+                grid_match=grid_match,
                 structured_certifications=structured_certifications,
             )
             resolutions.append(resolution)

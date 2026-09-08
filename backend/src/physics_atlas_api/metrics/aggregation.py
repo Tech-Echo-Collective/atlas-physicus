@@ -470,6 +470,21 @@ def _aggregate_group(
                 if session_key
                 else {}
             ),
+            # The fourth key component binds the opt-in observed reference
+            # universe. Dropping it would relabel a scoped result as a legacy
+            # complete-field cohort. No new keys enter legacy results.
+            **(
+                {
+                    key: baseline.components[key]
+                    for key in (
+                        "citation_reference_membership_version",
+                        "citation_reference_universe",
+                        "citation_reference_complete_field_universe",
+                    )
+                }
+                if len(session_key) > 3
+                else {}
+            ),
         },
         normalization_parameters={
             "physics_aggregation_version": ("physics-field-balanced-coverage-aware-v1"),

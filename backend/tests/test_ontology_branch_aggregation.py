@@ -13,6 +13,9 @@ from physics_atlas_api.certification import (
     build_certified_metric_partition,
     certify_coverage,
 )
+from physics_atlas_api.certification.measurement_windows import (
+    OBSERVED_POSITIVE_FIELD_CITATION_MEMBERSHIP_VERSION,
+)
 from physics_atlas_api.certification.populations import (
     OBSERVED_ATTRIBUTION_COVERAGE_VERSION,
     derive_metric_population,
@@ -27,7 +30,10 @@ from physics_atlas_api.metrics.aggregation import (
     certify_field_population,
     derive_ontology_branch_population,
 )
-from physics_atlas_api.metrics.calculators import calculate_connectivity
+from physics_atlas_api.metrics.calculators import (
+    calculate_connectivity,
+    citation_session_normalization_key,
+)
 from physics_atlas_api.metrics.presentation import (
     AtlasScaleObservation,
     CertifiedMetricCalculation,
@@ -166,6 +172,61 @@ def test_branch_arithmetic_preserves_leaf_impact_session_and_rejects_mixing(
         _aggregate_branch_group(
             (first, changed), evidence, METRIC_VALIDATION_THRESHOLDS_V1
         )
+
+
+def test_observed_impact_branch_keeps_exact_noncomplete_reference_scope(
+    field_observations: tuple[AtlasScaleObservation, ...],  # noqa: F811
+) -> None:
+    # Bounded metadata/arithmetic fixture, never an admission proof.
+    evidence = derive_ontology_branch_population(
+        PHYSICS_FIELD_ONTOLOGY_V1.get("nuclear"), nuclear_fields(field_observations)
+    )
+    legacy = replace(
+        _result(),
+        entity_id=evidence.entity_id,
+        field_id="nucl-th",
+        normalized_value=40.0,
+    )
+    metadata = {
+        "citation_reference_membership_version": (
+            OBSERVED_POSITIVE_FIELD_CITATION_MEMBERSHIP_VERSION
+        ),
+        "citation_reference_universe": "observed-positive-field-membership",
+        "citation_reference_complete_field_universe": False,
+    }
+    first = replace(legacy, components={**legacy.components, **metadata})
+    second = replace(first, field_id="nucl-ex", normalized_value=60.0)
+    result = _aggregate_branch_group(
+        (first, second), evidence, METRIC_VALIDATION_THRESHOLDS_V1
+    )
+    assert result.normalized_value == 50 and result.field_id == "nuclear"
+    assert citation_session_normalization_key(
+        result
+    ) == citation_session_normalization_key(first)
+    assert len(citation_session_normalization_key(result)) == 4
+    assert all(result.components[key] == value for key, value in metadata.items())
+    with pytest.raises(ValueError, match="identical versions"):
+        _aggregate_branch_group(
+            (legacy, second), evidence, METRIC_VALIDATION_THRESHOLDS_V1
+        )
+    invalid = replace(
+        second,
+        components={
+            **second.components,
+            "citation_reference_complete_field_universe": True,
+        },
+    )
+    with pytest.raises(CertificationError, match="semantics are invalid"):
+        _aggregate_branch_group(
+            (first, invalid), evidence, METRIC_VALIDATION_THRESHOLDS_V1
+        )
+    old = _aggregate_branch_group(
+        (legacy, replace(legacy, field_id="nucl-ex", normalized_value=60.0)),
+        evidence,
+        METRIC_VALIDATION_THRESHOLDS_V1,
+    )
+    assert old.normalized_value == result.normalized_value
+    assert not any(key in old.components for key in metadata)
 
 
 def _observed_field(observation: AtlasScaleObservation) -> AtlasScaleObservation:

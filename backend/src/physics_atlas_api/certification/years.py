@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Literal
 
@@ -40,6 +40,10 @@ if TYPE_CHECKING:
     from .measurement_windows import CertifiedSessionCitationCohort
 
 SOURCE_YEAR_CERTIFICATION_RULE_VERSION = "complete-source-year-certification-v1"
+ENUMERATED_LAUNCH_SOURCE_YEAR_RULE_VERSION = (
+    "enumerated-source-year-with-unresolved-identity-v1"
+)
+CONDITIONAL_OBSERVED_SOURCE_YEAR_RULE_VERSION = "conditional-observed-source-year-v1"
 METRIC_WINDOW_CERTIFICATION_RULE_VERSION = "metric-window-certification-v1"
 SourceEntityType = Literal["researcher", "institution", "country"]
 
@@ -542,6 +546,58 @@ class SourceYearEvidence:
             )
 
 
+@dataclass(frozen=True, kw_only=True)
+class EnumeratedLaunchSourceYearEvidence(SourceYearEvidence):
+    """Complete captured membership, not a claim that every identity is known.
+
+    The opt-in accepts only reconstructed launch identity uncertainty and keeps
+    it fully unattributed. Exact dates, source inventory and every requested
+    coverage gate retain their existing requirements. Legacy hashes are intact.
+    """
+
+    identity_completeness_policy: str = ENUMERATED_LAUNCH_SOURCE_YEAR_RULE_VERSION
+
+    def __post_init__(self) -> None:
+        from .launch_years import LaunchStructuralDecision
+
+        SourceYearEvidence.__post_init__(self)
+        if (
+            self.identity_completeness_policy
+            != ENUMERATED_LAUNCH_SOURCE_YEAR_RULE_VERSION
+            or not isinstance(self.acquisition_plan, BoundedLaunchSourcePlan)
+            or any(
+                not isinstance(item, RecordPageSourcePartitionEvidence)
+                for item in self.partitions
+            )
+        ):
+            raise CertificationError(
+                "enumerated launch years require the exact versioned capture plan"
+            )
+        projections = {item.paper_id: item for item in self.paper_projections}
+        for decision in self.structural_decisions:
+            if decision.evidence_kind != "canonical-paper-identity":
+                continue
+            if not isinstance(decision, LaunchStructuralDecision):
+                raise CertificationError(
+                    "enumerated identities require reconstructed launch source proofs"
+                )
+            if decision.state == "certified":
+                continue
+            decision.__post_init__()
+            projection = projections.get(decision.subject_id)
+            if (
+                decision.state != "needs_review"
+                or projection is None
+                or decision.source_projection != projection
+                or projection.entity_shares
+                or dict(projection.unresolved_entity_mass)
+                != {"researcher": 1.0, "institution": 1.0, "country": 1.0}
+            ):
+                raise CertificationError(
+                    "unresolved launch identities must retain full unknown entity mass"
+                )
+
+
 @dataclass(frozen=True)
 class CertifiedSourceYear:
     evidence: SourceYearEvidence
@@ -603,12 +659,55 @@ class CertifiedSourceYear:
         return self.certification.certification_id
 
 
+@dataclass(frozen=True, kw_only=True)
+class ConditionalObservedSourceYearEvidence(EnumeratedLaunchSourceYearEvidence):
+    """Enumeration authority with original source-quality results left intact."""
+
+    release_policy_version: str = CONDITIONAL_OBSERVED_SOURCE_YEAR_RULE_VERSION
+
+    def __post_init__(self) -> None:
+        EnumeratedLaunchSourceYearEvidence.__post_init__(self)
+        if self.release_policy_version != CONDITIONAL_OBSERVED_SOURCE_YEAR_RULE_VERSION:
+            raise CertificationError("unsupported conditional source-year policy")
+
+
 def _evaluate_source_year(
+    evidence: SourceYearEvidence,
+    coverage: tuple[CoverageCertification, ...],
+) -> SourceYearCertification:
+    from .build_cache import memoize_immutable
+
+    return memoize_immutable(
+        "exact-source-year-evaluation-v1",
+        (
+            evidence,
+            coverage,
+            SOURCE_YEAR_CERTIFICATION_RULE_VERSION,
+            ENUMERATED_LAUNCH_SOURCE_YEAR_RULE_VERSION,
+            CONDITIONAL_OBSERVED_SOURCE_YEAR_RULE_VERSION,
+            tuple(
+                (kind, coverage_minimum(kind))
+                for kind in evidence.required_coverage_kinds
+            ),
+        ),
+        lambda: _uncached_evaluate_source_year(evidence, coverage),
+    )
+
+
+def _uncached_evaluate_source_year(
     evidence: SourceYearEvidence,
     coverage: tuple[CoverageCertification, ...],
 ) -> SourceYearCertification:
     from .launch_metric_coverage import SourceAttributionMassPopulation
 
+    separate_identity_uncertainty = isinstance(
+        evidence, EnumeratedLaunchSourceYearEvidence
+    )
+    conditional_observations = isinstance(
+        evidence, ConditionalObservedSourceYearEvidence
+    )
+    if separate_identity_uncertainty:
+        evidence.__post_init__()
     if isinstance(
         evidence.acquisition_plan,
         (AutomaticSourceAcquisitionPlanEvidence, BoundedLaunchSourcePlan),
@@ -732,7 +831,15 @@ def _evaluate_source_year(
             state = "insufficient_evidence"
         reasons.append("required structural evidence certifications are missing")
     if any(
-        item.state != "certified" or not evidence_decision_is_current(item)
+        (
+            item.state != "certified"
+            and not (
+                separate_identity_uncertainty
+                and item.evidence_kind == "canonical-paper-identity"
+                and item.state == "needs_review"
+            )
+        )
+        or not evidence_decision_is_current(item)
         for decisions in structural_by_kind.values()
         for item in decisions
     ):
@@ -838,9 +945,10 @@ def _evaluate_source_year(
         state = "conflicted"
         reasons.append("source-year coverage does not use the v1 certification policy")
     if any(item.state != "certified" for item in coverage):
-        if state == "certified":
-            state = "insufficient_evidence"
-        reasons.append("one or more required evidence coverage gates failed")
+        if not conditional_observations:
+            if state == "certified":
+                state = "insufficient_evidence"
+            reasons.append("one or more required evidence coverage gates failed")
     coverage_decisions_by_kind = {
         kind: tuple(
             item for item in evidence.coverage_decisions if item.evidence_kind == kind
@@ -979,7 +1087,11 @@ def _evaluate_source_year(
             sorted(item.decision_id for item in evidence.structural_decisions)
         ),
         input_digest=canonical_digest((evidence, coverage)),
-        rule_version=SOURCE_YEAR_CERTIFICATION_RULE_VERSION,
+        rule_version=CONDITIONAL_OBSERVED_SOURCE_YEAR_RULE_VERSION
+        if conditional_observations
+        else ENUMERATED_LAUNCH_SOURCE_YEAR_RULE_VERSION
+        if separate_identity_uncertainty
+        else SOURCE_YEAR_CERTIFICATION_RULE_VERSION,
         reasons=tuple(dict.fromkeys(reasons)),
     )
 
@@ -993,6 +1105,53 @@ def certify_source_year(
         coverage=coverage,
         certification=_evaluate_source_year(evidence, coverage),
     )
+
+
+def source_quality_certification(
+    source_year: CertifiedSourceYear,
+) -> SourceYearCertification:
+    """Reconstruct the unchanged full-source verdict; never relabel its ratios."""
+    evidence = source_year.evidence
+    if isinstance(evidence, ConditionalObservedSourceYearEvidence):
+        evidence = EnumeratedLaunchSourceYearEvidence(
+            **{
+                item.name: getattr(evidence, item.name)
+                for item in fields(EnumeratedLaunchSourceYearEvidence)
+            }
+        )
+    return _evaluate_source_year(evidence, source_year.coverage)
+
+
+def qualify_observed_release_source_year(
+    source_year: CertifiedSourceYear,
+) -> CertifiedSourceYear:
+    """PA-062 opt-in only: complete inventory can support conditional observations.
+
+    No source-quality decision is changed. The new certified status concerns
+    enumerated membership; metric partitions must pass their own exact coverage.
+    """
+    source_year.__post_init__()
+    if not isinstance(source_year.evidence, EnumeratedLaunchSourceYearEvidence):
+        raise CertificationError(
+            "conditional release requires typed launch enumeration"
+        )
+    evidence = ConditionalObservedSourceYearEvidence(
+        **{
+            item.name: getattr(source_year.evidence, item.name)
+            for item in fields(EnumeratedLaunchSourceYearEvidence)
+        }
+    )
+    qualified = certify_source_year(evidence, source_year.coverage)
+    if qualified.state != "certified":
+        raise CertificationError(
+            "conditional source inventory remains invalid: "
+            + "; ".join(qualified.certification.reasons)
+        )
+    if source_quality_certification(qualified) != source_quality_certification(
+        source_year
+    ):
+        raise CertificationError("conditional release changed source-quality evidence")
+    return qualified
 
 
 @dataclass(frozen=True)
@@ -1056,6 +1215,9 @@ class CertifiedMetricWindow:
             raise CertificationError(
                 "metric-window certification does not reconstruct from its proofs"
             )
+        from .launch_calculations import validate_launch_citation_window
+
+        validate_launch_citation_window(self)
 
     @property
     def state(self) -> CertificationState:
@@ -1118,7 +1280,13 @@ def _evaluate_metric_window(
             "metric-window source years omit required evidence coverage dimensions"
         )
     if any(
-        item.rule_version != SOURCE_YEAR_CERTIFICATION_RULE_VERSION for item in selected
+        item.rule_version
+        not in {
+            SOURCE_YEAR_CERTIFICATION_RULE_VERSION,
+            ENUMERATED_LAUNCH_SOURCE_YEAR_RULE_VERSION,
+            CONDITIONAL_OBSERVED_SOURCE_YEAR_RULE_VERSION,
+        }
+        for item in selected
     ):
         state = "conflicted"
         reasons.append("metric window contains a stale source-year certification")

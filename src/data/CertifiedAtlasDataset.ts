@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { metricSystemV1Ids, type AtlasDataset } from '../domain/models';
-import { atlasDatasetSchema } from '../domain/schemas';
+import { atlasDatasetSchema, datasetScopeMetadataSchema } from '../domain/schemas';
 import { hasCompleteVisualizationMetricSystem } from '../metrics/MetricRegistry';
 import { StaticAtlasRepository } from './StaticAtlasRepository';
 
@@ -8,8 +8,7 @@ export const certifiedAtlasReleaseVersion = 'certified-atlas-dataset-v1';
 const maximumDatasetBytes = 64 * 1024 * 1024;
 const maximumManifestBytes = 8 * 1024 * 1024;
 const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
-const datasetScopeSchema = z.object({
-  version: z.literal('certified-ontology-branch-release-v1'),
+const datasetScopeSchema = datasetScopeMetadataSchema.and(z.object({
   // This release version names the currently certified two-leaf branch.
   // A different acquisition scope requires a newly reviewed release contract.
   rootFieldId: z.literal('nuclear'),
@@ -21,7 +20,7 @@ const datasetScopeSchema = z.object({
     year: z.number().int(),
     certificationId: z.string().regex(/^source-year-[a-f0-9]{64}$/),
   })).min(6),
-});
+}));
 
 const manifestSchema = z.object({
   schemaVersion: z.literal(certifiedAtlasReleaseVersion),
@@ -91,6 +90,22 @@ function assertDatasetScope(dataset: AtlasDataset, scope: z.infer<typeof dataset
   if ([...yearsByType.values()].some((years) => years.size !== 6 ||
     [2018, 2019, 2020, 2021, 2022, 2023].some((year) => !years.has(year)))) {
     throw new Error('The certified branch historical source-year inventory is incomplete.');
+  }
+  if (scope.version === 'conditional-observed-ontology-branch-release-v1') {
+    const qualityKeys = new Set<string>();
+    for (const quality of scope.sourceYearQuality ?? []) {
+      const key = JSON.stringify([quality.entityType, quality.year, quality.cutoff]);
+      if (qualityKeys.has(key) || !yearsByType.get(quality.entityType)?.has(quality.year) ||
+        new Set(quality.coverage.map((item) => item.kind)).size !== quality.coverage.length ||
+        (quality.status === 'certified' && quality.coverage.some((item) => item.status !== 'certified'))) {
+        throw new Error('Conditional source quality must preserve its exact historical inventory and states.');
+      }
+      qualityKeys.add(key);
+    }
+    if (scope.sourceYearProofs.some((proof) => !scope.sourceYearQuality?.some((quality) =>
+      quality.entityType === proof.entityType && quality.year === proof.year))) {
+      throw new Error('Conditional source quality omits a retained source year.');
+    }
   }
   const allowedFields = new Set<string>([scope.rootFieldId, ...scope.leafFieldIds]);
   if (dataset.metricObservations.some((item) => !item.fieldId || !allowedFields.has(item.fieldId) ||
@@ -260,6 +275,14 @@ export async function loadCertifiedAtlasRepository(
       leafFieldIds: scope.leafFieldIds,
       boundaryKind: scope.boundaryKind,
       certificationDigest: scope.certificationDigest,
+      ...(scope.version === 'conditional-observed-ontology-branch-release-v1' ? {
+        interpretation: scope.interpretation,
+        momentumCaveat: scope.momentumCaveat,
+        observedCoverage: scope.observedCoverage,
+        sourceYearQuality: scope.sourceYearQuality,
+        citationCohorts: scope.citationCohorts,
+        normalizationCohorts: scope.normalizationCohorts,
+      } : {}),
     };
     dataset.metadata.defaultFieldId = scope.rootFieldId;
   }

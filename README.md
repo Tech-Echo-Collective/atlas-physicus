@@ -59,7 +59,49 @@ cross-field aggregation reject mixed coverage policies. This is an
 admission-contract change, not a metric formula change or evidence that the
 five-layer launch has passed.
 
-Focused validation: 130 backend tests, 33 frontend compatibility tests, lint,
+PA-060 separately versions **complete source enumeration**, not identity approval.
+The opt-in `enumerated-source-year-with-unresolved-identity-v1` retains every
+captured paper, including identity conflicts with their original `needs_review`
+decisions and full unknown attribution mass. Such conflicts cannot become
+calculator inputs or measured citation identities. Exact dates, provenance,
+conservation and source-wide 90%/95% gates still apply; mixed source-year policy
+versions are rejected. This prevents one retained identity conflict from falsely
+implying that an otherwise fully enumerated provider year was not read completely.
+
+PA-062 implements the owner's subsequent explicit approval of **limited observed
+release**. The new opt-in `conditional-observed-source-year-v1` admits completely
+enumerated years without claiming that the whole source passes its quality gate.
+Original source coverage, insufficient states and unknown mass remain unchanged
+and publicly disclosed with annual cutoffs. The release authority binds actual
+published observations and normalization peers: each observed entity×field×period
+must pass the same 95% canonical-institution / 90% evidence thresholds and all
+other v1 scientific rules. All five compatible metrics must still be released
+together. Neither missing source evidence nor a favorable sample can substitute
+for these exact proofs. The ordinary legacy full-source gate remains unchanged.
+
+These values describe the recorded ecosystem, not complete-ecosystem estimates.
+Momentum retains its backward-looking formula, but annual coverage changes may
+affect apparent change. The map keeps a concise conditional-scope notice, while
+Data provenance shows original annual coverage/mass, states and measurement
+cutoffs, recorded citation-reference populations, and eligible/ineligible
+normalization-peer counts once per cohort. The Physics overview initially shows
+the explicitly labeled recorded Nuclear Physics subset; original observation
+field identities are never copied or relabeled as full-Physics values. Selecting
+an unsupported field still stays neutral, and the immutable timeline uses the
+years actually available in the dataset. Missing fields, entities and years
+remain neutral. A completed policy
+adapter is not itself a successful scientific release or deployment.
+
+The bounded launch runner now checkpoints only completed compact pages in its
+single private temporary directory. A retry verifies the exact query, inventory,
+versions and checksums; it never treats a conflicting source record as a missing
+record. Contradictory primary/related DOI roles retain the entire linked identity
+component as unresolved. Final export reconstructs the actual raw/normalized
+proofs and retains compact historical facts, not recursive decision traces. It
+also checks that the global map has a usable five-layer/composite country and
+more than one supported historical period before writing release assets.
+
+Previous PA-059 validation: 130 backend tests, 33 frontend compatibility tests, lint,
 type checking and the production build pass. No new scientific data was acquired
 or activated; all 36,456,719 bytes of isolated local test/build material were removed.
 
@@ -67,9 +109,12 @@ The latest bounded evidence still leaves these completion requirements:
 
 - Resolve or explicitly withhold the seven identity-conflicted components among
   2,306 inspected 2018 nuclear-physics records without dropping their evidence.
-- Improve and remeasure canonical institution evidence. The 250-paper sample
-  reaches **67.354%**, below the unchanged **95%** threshold; this is not a
-  whole-year or production-wide estimate.
+- Finish source-quality certification and disclose its result. The complete
+  current 2018 traversal contains **2,306** records, with **95.906%** paper-time
+  affiliation presence and **68.614%** resolved institution mass before canonical
+  conflict exclusion. These are acquisition measurements, not certification
+  coverage or a metric release. PA-062 permits only genuinely eligible observed
+  partitions to proceed, retaining the insufficient source verdict separately.
 - Establish six certified historical years for the candidate 2018–2023 window,
   mature comparable citation cohorts, and the required eligible normalization
   peers. Impact retains its 24-month maturity, 50-paper reference-cohort minimum

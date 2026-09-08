@@ -4,6 +4,7 @@ from .automation import (
     AUTOMATIC_DATE_RULE_VERSION,
     AUTOMATIC_FIELD_RULE_VERSION,
     AUTOMATIC_RESEARCHER_RULE_VERSION,
+    AutomaticKnownResearcherDecision,
     AutomaticPaperIdentityDecision,
 )
 from .citations import CITATION_CERTIFICATION_RULE_VERSION
@@ -51,9 +52,19 @@ def evidence_rule_version(evidence_kind: EvidenceKind) -> str:
 def evidence_decision_is_current(decision: EvidenceCertificationDecision) -> bool:
     """Accept legacy rules or exact typed source proofs, never an approval flag."""
     from .field_mass import SourceFieldMassDecision
+    from .launch_calculations import LaunchPaperDecision, LaunchSourceCitationDecision
     from .launch_metric_coverage import SourceAttributionMassDecision
 
-    if isinstance(decision, (SourceFieldMassDecision, SourceAttributionMassDecision)):
+    if isinstance(
+        decision,
+        (
+            AutomaticKnownResearcherDecision,
+            SourceFieldMassDecision,
+            SourceAttributionMassDecision,
+            LaunchPaperDecision,
+            LaunchSourceCitationDecision,
+        ),
+    ):
         try:
             decision.__post_init__()
         except ValueError:

@@ -248,13 +248,22 @@ def test_case_variant_duplicates_preserve_assertions_without_false_conflict() ->
 
 
 def test_same_doi_with_primary_and_related_roles_fails_closed() -> None:
-    with pytest.raises(CertificationError, match="conflicting primary and related"):
-        launch_occurrence(
-            dois=[
-                {"value": "10.1234/MAIN", "material": "publication"},
-                {"value": "10.1234/main", "material": "erratum"},
-            ]
-        )
+    item = launch_occurrence(
+        dois=[
+            {"value": "10.1234/MAIN", "material": "publication"},
+            {"value": "10.1234/main", "material": "erratum"},
+        ]
+    )
+    assert len(item.doi_assertions) == 2
+    assert tuple(value.value for value in item.doi_role_conflicts) == ("10.1234/main",)
+    result = canonicalize_launch_inputs((item,))
+    component = result.papers[0].component
+    assert result.occurrence_count == 1
+    assert component.status == "needs_review" and component.canonical_id is None
+    assert component.primary_identifier is None and component.conflict_schemes == (
+        "doi",
+    )
+    assert result.papers[0].occurrences[0].doi_assertions == item.doi_assertions
 
 
 @pytest.mark.parametrize("material", ["corrigendum", "unknown-role", "", None, 42])

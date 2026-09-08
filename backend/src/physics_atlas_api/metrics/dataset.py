@@ -25,7 +25,10 @@ from ..certification.populations import (
     metric_population_attribution_bounds,
     metric_population_coverage_policy,
 )
-from ..certification.years import CertifiedMetricWindow
+from ..certification.years import (
+    CertifiedMetricWindow,
+    ConditionalObservedSourceYearEvidence,
+)
 from .activation import MetricSystemActivationEvidence, assess_joint_metric_activation
 from .aggregation import CertifiedPhysicsAggregation
 from .contracts import CANDIDATE_METRIC_IDS, METRIC_CONTRACTS
@@ -34,7 +37,7 @@ from .presentation import (
     AtlasScaleObservation,
     CertifiedMetricCalculation,
 )
-from .scoped_activation import CertifiedDatasetScope
+from .scoped_activation import CertifiedDatasetScope, ConditionalObservedDatasetScope
 from .thresholds import METRIC_VALIDATION_THRESHOLDS_V1
 
 ATLAS_DATASET_RELEASE_VERSION = "certified-atlas-dataset-v1"
@@ -265,6 +268,14 @@ def _verify_observation(
                     raise CertificationError(
                         "fixture or unsupported source years cannot be published"
                     )
+                if any(
+                    isinstance(year.evidence, ConditionalObservedSourceYearEvidence)
+                    for year in window.source_years
+                ) and not isinstance(dataset_scope, ConditionalObservedDatasetScope):
+                    raise CertificationError(
+                        "conditional observations require exact conditional "
+                        "release authority and source-quality disclosure"
+                    )
                 if dataset_scope is not None and id(window) not in verified:
                     dataset_scope.require_metric_window(window)
                     verified.add(id(window))
@@ -304,6 +315,8 @@ def build_atlas_dataset(
             "Joint Activation Gate withheld: " + "; ".join(decision.reasons)
         )
     scientific_evidence.__post_init__()
+    if isinstance(dataset_scope, ConditionalObservedDatasetScope):
+        dataset_scope.require_published_observations(observations)
     payload = _entity_payload(entities)
     entity_ids = {
         "country": {item["id"] for item in payload["countries"]},
@@ -417,6 +430,13 @@ def build_atlas_dataset(
         ),
         "provenance": provenance,
     }
+    if isinstance(dataset_scope, ConditionalObservedDatasetScope):
+        payload["metadata"]["disclaimer"] = (
+            "Certified conditional observations of recorded research, not complete "
+            "ecosystem estimates. Source quality and unresolved attribution remain "
+            "explicit. Historical Impact is retrospective; Momentum can reflect "
+            "changes in evidence coverage. Missing is not zero. Not a ranking."
+        )
     dataset_bytes = _json_bytes(payload)
     if len(dataset_bytes) > MAX_DATASET_BYTES:
         raise CertificationError("dataset exceeds the bounded 64 MiB export size")

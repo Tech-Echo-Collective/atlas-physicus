@@ -155,10 +155,36 @@ class CitationSessionPage:
     expected_source_ids: tuple[str, ...] | None = None
 
     def validate(self) -> None:
-        request = _page_request(self.request_url)
-        scope_query = citation_population_query(
-            self.acquisition_scope, self.calendar_year, self.end_calendar_year
+        from .launch_scope import (
+            BOUNDED_LAUNCH_DATE_BASIS,
+            BOUNDED_LAUNCH_SCOPE,
+            BOUNDED_LAUNCH_YEARS,
         )
+
+        request = _page_request(self.request_url)
+        if self.acquisition_scope == BOUNDED_LAUNCH_SCOPE:
+            # Frozen exact-ID measurement is not a new query/acquisition scope.
+            # Keep the source recipe's date axis and six-year boundary intact.
+            final_year = (
+                self.calendar_year
+                if self.end_calendar_year is None
+                else self.end_calendar_year
+            )
+            if (
+                self.expected_source_ids is None
+                or self.calendar_year not in BOUNDED_LAUNCH_YEARS
+                or final_year not in BOUNDED_LAUNCH_YEARS
+                or final_year < self.calendar_year
+                or self.declared_date_basis != BOUNDED_LAUNCH_DATE_BASIS
+            ):
+                raise CertificationError(
+                    "launch citations require bounded frozen IDs and source dates"
+                )
+            scope_query = ""
+        else:
+            scope_query = citation_population_query(
+                self.acquisition_scope, self.calendar_year, self.end_calendar_year
+            )
         expected_query = (
             scope_query
             if self.expected_source_ids is None
@@ -431,6 +457,60 @@ def derive_session_citation_observations(
             key=lambda item: item.paper_id,
         )
     )
+
+
+def derive_observed_session_citation_observations(
+    session: CitationMeasurementSession,
+    cohort_key: tuple[str, int, str],
+    *,
+    frozen_observed_paper_ids: tuple[str, ...],
+) -> tuple[CitationObservationCertification, ...]:
+    """Project a declared observed universe, not a complete-field population.
+
+    This low-level function grants no cohort authority. The conditional cohort
+    constructor must independently derive the supplied membership from frozen
+    source facts, before and independently of citation counts.
+    """
+    session.validate()
+    selected = set(frozen_observed_paper_ids)
+    records = {row.paper_id: row for page in session.pages for row in page.records}
+    field_id, year, document_type = cohort_key
+    if len(selected) != len(frozen_observed_paper_ids) or not selected <= set(records):
+        raise CertificationError(
+            "observed citation membership is missing or duplicated"
+        )
+    if any(
+        records[paper_id].publication_date is None
+        or records[paper_id].publication_date.year != year  # type: ignore[union-attr]
+        or records[paper_id].document_type != document_type
+        or field_id not in records[paper_id].field_ids
+        for paper_id in selected
+    ):
+        raise CertificationError(
+            "observed citation membership differs from source facts"
+        )
+    observations = tuple(
+        sorted(
+            (
+                observation
+                for page in session.pages
+                for observation in _derive_citation_observations(
+                    tuple(row for row in page.records if row.paper_id in selected),
+                    cohort_key,
+                    dataset_version=page.dataset_version,
+                    acquisition_scope=page.acquisition_scope,
+                    source=page.source,
+                    observed_at=page.received_at,
+                    source_snapshot_id=page.source_snapshot_id,
+                    response_sha256=page.response_sha256,
+                )
+            ),
+            key=lambda item: item.paper_id,
+        )
+    )
+    if {item.paper_id for item in observations} != selected:
+        raise CertificationError("observed reference membership was silently reduced")
+    return observations
 
 
 def build_citation_measurement_session(
