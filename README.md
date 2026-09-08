@@ -211,6 +211,19 @@ metadata to the existing frontend. Raw provider and intermediate build material
 is ephemeral, not a new permanent scholarly mirror. That dataset is not yet the
 ordinary public source; implementation support does not imply deployment.
 
+The compact frontend export keeps the complete entity catalog and observations
+in its bounded core. Existing authorship, paper-time affiliation and external
+resource records are retained once in immutable on-demand gzip shards, not
+duplicated profile snapshots. `atlas-ui-shards-v1` verifies compressed and decoded
+SHA-256/size, exact relationship indexes and known author counts. Each decoded
+shard is limited to 4 MiB, the lossless dictionary index to 8 MiB, and the release
+to 512 relationship shards; the core's 64 MiB cap is unchanged. Export streams
+validated per-paper relationships and writes only final compressed assets inside
+the single temporary build directory after the whole-output disk-budget check.
+This changes delivery only, not evidence, metrics, missing semantics or coverage.
+Existing source-native researcher IDs are retained exactly and escaped only in
+navigation URLs; source record and snapshot references survive UI validation.
+
 ## Data and provenance
 
 The normal public path is the integrated live API. Checked-in synthetic

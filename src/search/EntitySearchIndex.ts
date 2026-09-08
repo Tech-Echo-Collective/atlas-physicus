@@ -172,7 +172,7 @@ function genericTerms(label: string, identifier: string): SearchTerm[] {
   ];
 }
 
-function buildCandidates(dataset: AtlasDataset): SearchCandidate[] {
+function buildCandidates(dataset: AtlasDataset, includePapers: boolean): SearchCandidate[] {
   return [
     ...dataset.scienceDomains.map((domain) => ({
       entityId: domain.id,
@@ -239,6 +239,18 @@ function buildCandidates(dataset: AtlasDataset): SearchCandidate[] {
         externalIds: researcher.externalIds ?? [],
       };
     }),
+    ...(includePapers ? dataset.papers : []).map((paper) => ({
+      entityId: paper.id,
+      entityType: 'paper' as const,
+      label: paper.title,
+      context: `Paper · ${paper.year} · ${paper.fieldIds.join(' · ')}`,
+      terms: genericTerms(paper.title, paper.id),
+      externalIds: [
+        ...(paper.externalIdentifiers ?? []),
+        ...(paper.doi ? [{ scheme: 'doi' as const, value: paper.doi }] : []),
+        ...(paper.arxivId ? [{ scheme: 'arxiv' as const, value: paper.arxivId }] : []),
+      ],
+    })),
     ...dataset.researchGroups.map((group) => ({
       entityId: group.id,
       entityType: 'research-group' as const,
@@ -278,8 +290,8 @@ function bestCandidateMatch(
 export class EntitySearchIndex {
   private readonly candidates: SearchCandidate[];
 
-  constructor(dataset: AtlasDataset) {
-    this.candidates = buildCandidates(dataset);
+  constructor(dataset: AtlasDataset, options: { includePapers?: boolean } = {}) {
+    this.candidates = buildCandidates(dataset, options.includePapers ?? false);
   }
 
   search(query: string, limit = 8): AtlasSearchResult[] {

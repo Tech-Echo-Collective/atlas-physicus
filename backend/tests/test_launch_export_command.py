@@ -215,6 +215,54 @@ def test_main_dispatches_export_only_to_explicit_root(
     command.assert_called_once_with(tmp_path, geographic_reference=GEOGRAPHIC_REFERENCE)
 
 
+def test_export_publishes_only_manifest_declared_shards(tmp_path: Path, command):  # type: ignore[no-untyped-def]
+    _, result, _, build, _ = command
+    manifest = json.loads(result.manifest_bytes)
+    manifest["uiShards"] = {
+        "index": {"path": "ui-index.json.gz"},
+        "shards": [{"path": "ui-authorships-0000.json.gz"}],
+    }
+    # Packaging-only fixture; scientific transport integrity is tested separately.
+    sharded = replace(
+        result,
+        manifest_bytes=json.dumps(manifest).encode(),
+        ui_assets=(
+            ("ui-shard", "ui-authorships-0000.json.gz", b"fixture-relation"),
+            ("ui-index", "ui-index.json.gz", b"fixture-index"),
+        ),
+    )
+    build.return_value = sharded
+    launch_pipeline.export(tmp_path, geographic_reference=GEOGRAPHIC_REFERENCE)
+    assert {path.name for path in tmp_path.iterdir()} == {
+        *NAMES,
+        "ui-index.json.gz",
+        "ui-authorships-0000.json.gz",
+    }
+    for _, path, content in sharded.assets:
+        assert (tmp_path / path).read_bytes() == content
+
+
+@pytest.mark.parametrize("failure", ["unlisted", "existing", "escape"])
+def test_extra_shard_guard_precedes_all_writes(tmp_path: Path, command, failure):  # type: ignore[no-untyped-def]
+    _, result, _, build, _ = command
+    path = "../ui-escape.json.gz" if failure == "escape" else "ui-index.json.gz"
+    manifest = json.loads(result.manifest_bytes)
+    if failure != "unlisted":
+        manifest["uiShards"] = {"index": {"path": path}, "shards": []}
+    build.return_value = replace(
+        result,
+        manifest_bytes=json.dumps(manifest).encode(),
+        ui_assets=(("ui-index", path, b"fixture-index"),),
+    )
+    if failure == "existing":
+        (tmp_path / path).write_bytes(b"retained-existing-fixture")
+    with pytest.raises((CertificationError, ValueError)):
+        launch_pipeline.export(tmp_path, geographic_reference=GEOGRAPHIC_REFERENCE)
+    assert {item.name for item in tmp_path.iterdir()} == (
+        {path} if failure == "existing" else set()
+    )
+
+
 def test_export_cli_requires_explicit_reference_before_running(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

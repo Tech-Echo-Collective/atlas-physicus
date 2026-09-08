@@ -8,6 +8,7 @@ never inferred from scientific affiliation or copied synthetic entity records.
 
 import json
 from collections import Counter, defaultdict
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import quote
@@ -17,6 +18,7 @@ import pycountry
 from .. import schemas
 from ..fields import PHYSICS_FIELD_ONTOLOGY_V1
 from ..metrics.dataset import AtlasDatasetEntities
+from ..metrics.ui_shards import UIRelationshipSink
 from .automation import (
     UNAMBIGUOUS_RESEARCHER_RULE_VERSION,
     ResolvedResearcherIdentifiers,
@@ -37,6 +39,8 @@ LAUNCH_ENTITIES_VERSION = "source-bound-atlas-entities-v1"
 
 @dataclass(frozen=True)
 class LaunchEntitiesBuild:
+    """The returned core's exact bytes; counts also include streamed relations."""
+
     entities: AtlasDatasetEntities
     byte_length: int
     entity_counts: tuple[tuple[str, int], ...]
@@ -141,9 +145,10 @@ def _reference_entities(
     )
 
 
-def _resources(entities: AtlasDatasetEntities) -> list[schemas.ExternalResourceOut]:
+def _iter_resources(
+    entities: AtlasDatasetEntities,
+) -> Iterator[schemas.ExternalResourceOut]:
     """Exact identifier links only; no invented homepage or live health claim."""
-    links = []
     groups = (
         ("institution", entities.institutions),
         ("researcher", entities.researchers),
@@ -169,26 +174,25 @@ def _resources(entities: AtlasDatasetEntities) -> list[schemas.ExternalResourceO
                 if prefix is None:
                     continue
                 key = entity_type, record.id, scheme, value
-                links.append(
-                    schemas.ExternalResourceOut(
-                        id=f"resource-{canonical_digest(key)}",
-                        entity_type=entity_type,
-                        entity_id=record.id,
-                        resource_type="inspire"
-                        if scheme == "inspire-author"
-                        else scheme,
-                        label=f"{scheme.upper()}: {value}",
-                        url=prefix + quote(value, safe="/"),
-                        source=scheme,
-                        source_record_id=value,
-                        external_id=identifier,
-                        is_primary=False,
-                        verified=False,
-                        health_status="unknown",
-                        provenance=record.provenance,
-                    )
+                yield schemas.ExternalResourceOut(
+                    id=f"resource-{canonical_digest(key)}",
+                    entity_type=entity_type,
+                    entity_id=record.id,
+                    resource_type="inspire" if scheme == "inspire-author" else scheme,
+                    label=f"{scheme.upper()}: {value}",
+                    url=prefix + quote(value, safe="/"),
+                    source=scheme,
+                    source_record_id=value,
+                    external_id=identifier,
+                    is_primary=False,
+                    verified=False,
+                    health_status="unknown",
+                    provenance=record.provenance,
                 )
-    return sorted(links, key=lambda item: item.id)
+
+
+def _resources(entities: AtlasDatasetEntities) -> list[schemas.ExternalResourceOut]:
+    return sorted(_iter_resources(entities), key=lambda item: item.id)
 
 
 def build_launch_entities(
@@ -198,12 +202,15 @@ def build_launch_entities(
     geographic_views: tuple[schemas.GeographicViewOut, ...],
     source_snapshots: tuple[schemas.SourceSnapshotOut, ...] = (),
     researcher_projection_version: str | None = None,
+    relationship_sink: UIRelationshipSink | None = None,
 ) -> LaunchEntitiesBuild:
     """Return all supported UI facts and exact size, without truncation or I/O.
 
     ``source_references`` must remain in the final compact evidence manifest:
     provenance IDs link there to original checksums, not mutable source URLs.
     Missing labels/coordinates remain unavailable, not generated replacements.
+    With a relationship sink, ``entities``/``byte_length`` describe only the
+    returned inline core; ``entity_counts`` still counts every emitted record.
     """
     if researcher_projection_version not in {None, UNAMBIGUOUS_RESEARCHER_RULE_VERSION}:
         raise CertificationError("unsupported UI researcher projection version")
@@ -407,6 +414,17 @@ def build_launch_entities(
                 provenance=_provenance(occurrence.reference, version, scope),
             )
 
+        if relationship_sink is not None:
+            # Existing paper-local duplicate resolution is unchanged. Once a
+            # paper is complete, retain only its compressed transport/index,
+            # rather than full-corpus Pydantic objects plus expanded JSON.
+            for key in sorted(authorships):
+                relationship_sink.add("authorships", authorships[key])
+            for affiliation_key in sorted(affiliations):
+                relationship_sink.add("affiliations", affiliations[affiliation_key])
+            authorships.clear()
+            affiliations.clear()
+
     country_ids = {item.id for item in entities.countries}
     for institution_id, facts in sorted(institution_facts.items()):
         country_codes = {item.country_code for item in facts}
@@ -489,7 +507,11 @@ def build_launch_entities(
         )
     entities.authorships = [authorships[key] for key in sorted(authorships)]
     entities.affiliations = [affiliations[key] for key in sorted(affiliations)]
-    entities.external_resources = _resources(entities)
+    if relationship_sink is None:
+        entities.external_resources = _resources(entities)
+    else:
+        for resource in _iter_resources(entities):
+            relationship_sink.add("externalResources", resource)
     if len({snapshot.id for snapshot in source_snapshots}) != len(
         source_snapshots
     ) or any(
@@ -513,7 +535,16 @@ def build_launch_entities(
         entities=entities,
         byte_length=len(serialized),
         entity_counts=tuple(
-            sorted((key, len(value)) for key, value in payload.items())
+            sorted(
+                {
+                    **{key: len(value) for key, value in payload.items()},
+                    **(
+                        {}
+                        if relationship_sink is None
+                        else relationship_sink.record_counts
+                    ),
+                }.items()
+            )
         ),
         omitted_counts=tuple(sorted(omitted.items())),
         source_references=tuple(sorted(references, key=canonical_digest)),

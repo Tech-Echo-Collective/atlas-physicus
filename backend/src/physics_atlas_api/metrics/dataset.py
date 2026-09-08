@@ -39,6 +39,7 @@ from .presentation import (
 )
 from .scoped_activation import CertifiedDatasetScope, ConditionalObservedDatasetScope
 from .thresholds import METRIC_VALIDATION_THRESHOLDS_V1
+from .ui_shards import UIShardExport
 
 ATLAS_DATASET_RELEASE_VERSION = "certified-atlas-dataset-v1"
 MAX_DATASET_BYTES = 64 * 1024 * 1024  # Operational export bound, not a scientific gate.
@@ -299,6 +300,7 @@ def build_atlas_dataset(
     *,
     generated_at: datetime,
     dataset_scope: CertifiedDatasetScope | None = None,
+    ui_shards: UIShardExport | None = None,
 ) -> AtlasDatasetExport:
     """Export only after the unchanged exact-five gate and typed proof checks.
 
@@ -318,6 +320,10 @@ def build_atlas_dataset(
     if isinstance(dataset_scope, ConditionalObservedDatasetScope):
         dataset_scope.require_published_observations(observations)
     payload = _entity_payload(entities)
+    if ui_shards is not None:
+        if ui_shards.dataset_version != activation_evidence.data_source_version:
+            raise CertificationError("UI shard release version differs from metrics")
+        ui_shards.validate(entities)
     entity_ids = {
         "country": {item["id"] for item in payload["countries"]},
         "institution": {item["id"] for item in payload["institutions"]},
@@ -473,6 +479,8 @@ def build_atlas_dataset(
                 "for all five metrics"
             )
         manifest["datasetScope"] = dataset_scope.release_metadata()
+    if ui_shards is not None:
+        manifest["uiShards"] = ui_shards.metadata
     manifest_bytes = _json_bytes(manifest)
     if len(manifest_bytes) > MAX_MANIFEST_BYTES:
         raise CertificationError("dataset manifest exceeds the bounded 8 MiB size")

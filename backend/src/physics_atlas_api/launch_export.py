@@ -1,7 +1,7 @@
 """Pure, proof-derived release adapter for the bounded launch.
 
 No files, provider reads, database writes, or public activation occur here. The
-returned three immutable assets are suitable for the existing Pages publisher.
+returned immutable assets are suitable for the existing Pages publisher.
 An eligible flag is derived from reconstruction of these actual observations,
 never from passing synthetic tests or a caller-supplied approval boolean.
 """
@@ -51,6 +51,7 @@ from .metrics.scoped_activation import (
     certify_conditional_observed_dataset_scope,
 )
 from .metrics.thresholds import METRIC_VALIDATION_THRESHOLDS_V1
+from .metrics.ui_shards import UIShardBuilder
 
 LAUNCH_EXPORT_VERSION = "proof-derived-conditional-launch-export-v1"
 EVIDENCE_PATH = "scientific-evidence.json.gz"
@@ -75,6 +76,7 @@ class LaunchExport:
     dataset_bytes: bytes
     scientific_evidence_bytes: bytes
     summary: dict[str, Any]
+    ui_assets: tuple[tuple[str, str, bytes], ...] = ()
     version: str = LAUNCH_EXPORT_VERSION
 
     @property
@@ -83,7 +85,7 @@ class LaunchExport:
             ("manifest", "manifest.json", self.manifest_bytes),
             ("dataset", "atlas-dataset.json", self.dataset_bytes),
             ("evidence", EVIDENCE_PATH, self.scientific_evidence_bytes),
-        )
+        ) + self.ui_assets
 
 
 def _verify_prepared_lineage(calculated: CalculatedLaunch) -> None:
@@ -238,7 +240,7 @@ def build_launch_export(
     geographic_views: tuple[schemas.GeographicViewOut, ...],
     generated_at: datetime,
 ) -> LaunchExport:
-    """Return all three final assets, or fail without writing anything.
+    """Return final core/evidence/relationship assets, or fail without writes.
 
     The caller should use the existing bounded verification-cache context for
     repeated immutable proof checks. Missing observations and diagnosed source
@@ -257,12 +259,16 @@ def build_launch_export(
         calculated.prepared.source_years, calculated.observations
     )
     reconstruction = _reconstruct_calculations(scope, calculated)
+    ui_builder = UIShardBuilder(scope.dataset_version)
     entities = build_launch_entities(
         calculated.prepared.canonical.papers,
         calculated.prepared.attributions,
         geographic_views=geographic_views,
         researcher_projection_version=UNAMBIGUOUS_RESEARCHER_RULE_VERSION,
+        relationship_sink=ui_builder,
     )
+    ui_shards = ui_builder.finish(entities.entities)
+    del ui_builder  # Release build-only ID/index sets before independent validation.
     retained = build_launch_retained(
         scope.source_years,
         calculated.observations,
@@ -291,6 +297,7 @@ def build_launch_export(
         reference,
         generated_at=generated_at,
         dataset_scope=scope,
+        ui_shards=ui_shards,
     )
     manifest = json.loads(exported.manifest_bytes)
     manifest["scientificEvidenceFormat"] = {
@@ -342,8 +349,13 @@ def build_launch_export(
             "datasetBytes": len(exported.dataset_bytes),
             "scientificEvidenceBytes": len(evidence_bytes),
             "scientificEvidenceDecodedBytes": retained.byte_length,
+            "uiShardCount": len(ui_shards.metadata["shards"]),
+            "uiRecordCounts": ui_shards.metadata["recordCounts"],
+            "uiTransportBytes": sum(len(data) for _, _, data in ui_shards.assets),
             "totalProductionBytes": len(manifest_bytes)
             + len(exported.dataset_bytes)
-            + len(evidence_bytes),
+            + len(evidence_bytes)
+            + sum(len(data) for _, _, data in ui_shards.assets),
         },
+        ui_assets=ui_shards.assets,
     )

@@ -6,7 +6,8 @@ import {
 } from '../../data/APIRepository';
 import { loadAtlasDataset } from '../../data/loadAtlasDataset';
 import { getDatasetPresentation } from '../../data/DatasetPresentation';
-import { observationFieldForView } from '../../data/ObservedScope';
+import { observationFieldForView, matchesFieldSelection } from '../../data/ObservedScope';
+import { hasScopedEntityHydration, replaceEntityContext, type AtlasEntityScope } from '../../data/ScopedAtlasRepository';
 import {
   AtlasDataSourceRequestGate,
   assessDataSourceObservations,
@@ -81,6 +82,7 @@ export function AtlasExplorer() {
   );
   const liveApiAvailable = atlasApiUrl !== null || atlasDatasetUrl.length > 0;
   const shellRef = useRef<HTMLElement>(null);
+  const scopedSearchControllerRef = useRef<AbortController | null>(null);
   const sourceRequestGateRef = useRef(new AtlasDataSourceRequestGate());
   const restoreNavigationFromUrlRef = useRef(false);
   const preserveNextSourceNoticeRef = useRef(false);
@@ -101,6 +103,8 @@ export function AtlasExplorer() {
   const [isDataSourceLoading, setIsDataSourceLoading] = useState(true);
   const [sourceError, setSourceError] = useState<string | null>(null);
   const [sourceNotice, setSourceNotice] = useState<string | null>(null);
+  const [loadedEntityContextKey, setLoadedEntityContextKey] = useState<string | null>(null);
+  const [failedEntityContextKey, setFailedEntityContextKey] = useState<string | null>(null);
   const [settledLiveWorldRequestKey, setSettledLiveWorldRequestKey] = useState<
     string | null
   >(null);
@@ -138,6 +142,7 @@ export function AtlasExplorer() {
 
   const applyNavigationState = useCallback(
     (navigation: AtlasNavigationState) => {
+      scopedSearchControllerRef.current?.abort();
       setSelectedDomainId(navigation.selectedDomainId);
       setSelectedFieldId(navigation.selectedFieldId);
       setSelectedYear(navigation.selectedYear);
@@ -288,7 +293,7 @@ export function AtlasExplorer() {
 
         if (
           requestedDataSourceId === 'live-api' &&
-          nextRepository instanceof APIRepository &&
+          (nextRepository instanceof APIRepository || hasScopedEntityHydration(nextRepository)) &&
           typeof window !== 'undefined'
         ) {
           nextDataset = await hydrateLiveNavigationDataset(
@@ -463,6 +468,35 @@ export function AtlasExplorer() {
   );
   const isLiveApiRepository =
     repository instanceof APIRepository && selectedDataSourceId === 'live-api';
+  const scopedRepository = hasScopedEntityHydration(repository) ? repository : null;
+  const entityContextType = selectedResearcherId ? 'researcher' : selectedInstitutionId ? 'institution'
+    : isFieldOverviewOpen && selectedFieldId ? 'research-field' : null;
+  const entityContextId = selectedResearcherId ?? selectedInstitutionId ?? (isFieldOverviewOpen ? selectedFieldId : null);
+  const entityContextKey = scopedRepository && datasetVersion
+    ? `${datasetVersion}:${entityContextType ?? 'world'}:${entityContextId ?? ''}` : null;
+  const entityContextReady = !entityContextKey || loadedEntityContextKey === entityContextKey;
+  const isEntityContextLoading = !entityContextReady && failedEntityContextKey !== entityContextKey;
+  useEffect(() => {
+    if (!scopedRepository || !entityContextKey) return;
+    let active = true;
+    const controller = new AbortController();
+    const request = entityContextType && entityContextId
+      ? scopedRepository.loadEntityContext({ entityType: entityContextType, id: entityContextId }, controller.signal)
+      : Promise.resolve({ affiliations: [], authorships: [], externalResources: [] });
+    request.then((context) => {
+      if (!active) return;
+      setDataset((current) => current?.metadata.provenance.version === datasetVersion
+        ? replaceEntityContext(current, context) : current);
+      setLoadedEntityContextKey(entityContextKey);
+      setFailedEntityContextKey(null);
+      setSourceError(null);
+    }).catch((error: unknown) => {
+      if (!active) return;
+      setFailedEntityContextKey(entityContextKey);
+      setSourceError(`The selected profile evidence could not be verified. ${error instanceof Error ? error.message : ''}`);
+    });
+    return () => { active = false; controller.abort(); };
+  }, [scopedRepository, entityContextKey, entityContextId, entityContextType, datasetVersion]);
   const loadLiveStatus = useCallback(async () => {
     if (!(repository instanceof APIRepository)) {
       throw new Error('Live status is unavailable for a static data source.');
@@ -1038,7 +1072,7 @@ export function AtlasExplorer() {
     ? dataset.researchGroups.filter(
         (group) =>
           group.institutionId === selectedInstitution.id &&
-          (!selectedFieldId || group.fieldIds.includes(selectedFieldId)),
+          matchesFieldSelection(group.fieldIds, selectedFieldId, dataset.fields),
       )
     : [];
   const selectedResearchGroup =
@@ -1116,6 +1150,7 @@ export function AtlasExplorer() {
     if (sourceId === requestedDataSourceId) {
       return;
     }
+    scopedSearchControllerRef.current?.abort();
     setSourceError(null);
     setSourceNotice(null);
     preserveNextSourceNoticeRef.current = false;
@@ -1174,7 +1209,7 @@ export function AtlasExplorer() {
     const firstGroup = dataset.researchGroups.find(
       (group) =>
         group.institutionId === institutionId &&
-        (!selectedFieldId || group.fieldIds.includes(selectedFieldId)),
+        matchesFieldSelection(group.fieldIds, selectedFieldId, dataset.fields),
     );
     navigateTo({
       ...navigationState,
@@ -1263,6 +1298,23 @@ export function AtlasExplorer() {
 
   const selectSearchResult = async (result: AtlasSearchResult) => {
     let searchDataset = dataset;
+    if (hasScopedEntityHydration(repository) &&
+      ['institution', 'researcher', 'research-group', 'paper', 'research-field'].includes(result.entityType)) {
+      scopedSearchControllerRef.current?.abort();
+      const controller = new AbortController();
+      scopedSearchControllerRef.current = controller;
+      try {
+        const context = await repository.loadEntityContext({ entityType: result.entityType as AtlasEntityScope['entityType'], id: result.entityId }, controller.signal);
+        if (controller.signal.aborted) return;
+        searchDataset = replaceEntityContext(searchDataset, context);
+        datasetRef.current = searchDataset;
+        setDataset(searchDataset);
+      } catch (error: unknown) {
+        if (controller.signal.aborted) return;
+        setSourceError(`The selected entity evidence could not be verified. ${error instanceof Error ? error.message : ''}`);
+        return;
+      }
+    }
     if (repository instanceof APIRepository) {
       try {
         if (
@@ -1411,7 +1463,7 @@ export function AtlasExplorer() {
       navigateTo({
         ...navigationState,
         selectedFieldId:
-          selectedFieldId && institution.fieldIds.includes(selectedFieldId)
+          selectedFieldId && matchesFieldSelection(institution.fieldIds, selectedFieldId, searchDataset.fields)
             ? selectedFieldId
             : null,
         selectedCountryId: getExplorationCountryId(
@@ -1439,7 +1491,7 @@ export function AtlasExplorer() {
       navigateTo({
         ...navigationState,
         selectedFieldId:
-          selectedFieldId && group.fieldIds.includes(selectedFieldId)
+          selectedFieldId && matchesFieldSelection(group.fieldIds, selectedFieldId, searchDataset.fields)
             ? selectedFieldId
             : group.fieldIds[0] ?? null,
         selectedCountryId: getExplorationCountryId(
@@ -1567,7 +1619,7 @@ export function AtlasExplorer() {
       navigateTo({
         ...navigationState,
         selectedFieldId:
-          selectedFieldId && paper.fieldIds.includes(selectedFieldId)
+          selectedFieldId && matchesFieldSelection(paper.fieldIds, selectedFieldId, searchDataset.fields)
             ? selectedFieldId
             : paper.fieldIds[0] ?? null,
         selectedCountryId: getExplorationCountryId(
@@ -1601,7 +1653,7 @@ export function AtlasExplorer() {
     navigateTo({
       ...navigationState,
       selectedFieldId:
-        selectedFieldId && researcher.fieldIds.includes(selectedFieldId)
+        selectedFieldId && matchesFieldSelection(researcher.fieldIds, selectedFieldId, searchDataset.fields)
           ? selectedFieldId
           : null,
       selectedCountryId: getExplorationCountryId(
@@ -1704,9 +1756,9 @@ export function AtlasExplorer() {
         onInstitutionSelect={selectInstitution}
       />
 
-      {(isLiveScopeLoading || isLiveProfileLoading) && (
+      {(isLiveScopeLoading || isLiveProfileLoading || isEntityContextLoading) && (
         <div className="live-data-loading" role="status">
-          {isLiveProfileLoading
+          {isLiveProfileLoading || isEntityContextLoading
             ? 'Loading scoped entity profile…'
             : isLiveWorldLoading
               ? 'Loading country map observations…'
@@ -1886,6 +1938,7 @@ export function AtlasExplorer() {
       )}
 
       {selectedInstitution &&
+        entityContextReady &&
         selectedCountry &&
         selectedInstitutionLocationCountry &&
         !selectedResearcher && (
@@ -1913,7 +1966,7 @@ export function AtlasExplorer() {
         />
       )}
 
-      {selectedResearcher && selectedInstitution && (
+      {selectedResearcher && selectedInstitution && entityContextReady && (
         <ResearcherProfile
           researcher={selectedResearcher}
           affiliationHistory={
@@ -1936,14 +1989,16 @@ export function AtlasExplorer() {
         />
       )}
 
-      {isFieldOverviewOpen && activeField && (
+      {isFieldOverviewOpen && activeField && entityContextReady && (
         <FieldOverview
           field={activeField}
+          fields={dataset.fields}
           institutions={dataset.institutions}
           researchers={dataset.researchers}
           affiliations={dataset.affiliations}
           papers={dataset.papers}
           authorships={dataset.authorships}
+          paperAuthorCounts={scopedRepository?.paperAuthorCounts}
           historicalEvents={dataset.historicalEvents}
           datasetKind={dataset.metadata.datasetKind}
           onClose={() =>

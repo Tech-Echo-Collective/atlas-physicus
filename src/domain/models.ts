@@ -44,6 +44,9 @@ export interface DataProvenance {
   retrievedAt?: string;
   /** Versioned acquisition boundary for live provider-derived data. */
   acquisitionScope?: string;
+  /** Exact compact source references, distinct from the release version. */
+  sourceRecordId?: string;
+  sourceSnapshotId?: string;
 }
 
 export interface Provenanced {

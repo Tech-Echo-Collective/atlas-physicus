@@ -415,33 +415,48 @@ class SourceYearPaperProjection:
             )
 
     def decision_value_digest(self, evidence_kind: EvidenceKind) -> str:
-        values: dict[EvidenceKind, object] = {
-            "canonical-paper-identity": {"paper_id": self.paper_id},
-            "publication-metric-date": {
+        # Do not sort the complete author/entity ledger for unrelated dimensions.
+        # The payloads and their canonical JSON hashes remain exactly unchanged.
+        if evidence_kind == "canonical-paper-identity":
+            value: object = {"paper_id": self.paper_id}
+        elif evidence_kind == "publication-metric-date":
+            value = {
                 "paper_id": self.paper_id,
                 "publication_date": self.publication_date,
-            },
-            "field-weight-conservation": {
+            }
+        elif evidence_kind == "field-weight-conservation":
+            value = {
                 "paper_id": self.paper_id,
                 "field_weights": tuple(sorted(self.field_weights)),
                 "unmapped_field_mass": self.unmapped_field_mass,
                 "field_weight_total": self.field_weight_total,
-                "field_weighting_policy_version": (self.field_weighting_policy_version),
-            },
-            "provenance-completeness": {
-                "paper_id": self.paper_id,
-                "occurrence_references": self.occurrence_references,
-                "entity_shares": tuple(sorted(self.entity_shares)),
-                "unresolved_entity_mass": tuple(sorted(self.unresolved_entity_mass)),
-                "attribution_policy_version": self.attribution_policy_version,
-            },
-        }
-        try:
-            return canonical_digest(values[evidence_kind])
-        except KeyError as error:
+                "field_weighting_policy_version": self.field_weighting_policy_version,
+            }
+        elif evidence_kind == "provenance-completeness":
+            from .build_cache import memoize_immutable
+
+            # Only this large payload benefits from the full immutable key check.
+            # Every value is re-keyed on reuse, including nested frozen references.
+            return memoize_immutable(
+                "source-year-provenance-value-digest-v1",
+                (self, evidence_kind),
+                lambda: canonical_digest(
+                    {
+                        "paper_id": self.paper_id,
+                        "occurrence_references": self.occurrence_references,
+                        "entity_shares": tuple(sorted(self.entity_shares)),
+                        "unresolved_entity_mass": tuple(
+                            sorted(self.unresolved_entity_mass)
+                        ),
+                        "attribution_policy_version": self.attribution_policy_version,
+                    }
+                ),
+            )
+        else:
             raise ValueError(
                 f"{evidence_kind} is not a source-year structural dimension"
-            ) from error
+            )
+        return canonical_digest(value)
 
 
 @dataclass(frozen=True)

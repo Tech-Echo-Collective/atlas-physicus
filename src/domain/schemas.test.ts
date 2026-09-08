@@ -14,10 +14,24 @@ import {
   provenanceSchema,
   rawEntityRecordSchema,
   researcherSchema,
+  authorshipSchema,
+  externalResourceSchema,
   sourceSnapshotSchema,
 } from './schemas';
 
 describe('atlasDatasetSchema', () => {
+  it('accepts unchanged INSPIRE native IDs through every scientific relationship reference', () => {
+    const dataset = atlasDatasetSchema.parse(demoData);
+    expect(researcherSchema.parse({ ...dataset.researchers[0], id: 'inspire-author:123' }).id).toBe('inspire-author:123');
+    expect(affiliationSchema.parse({ ...dataset.affiliations[0], researcherId: 'inspire-author:123' }).researcherId).toBe('inspire-author:123');
+    expect(authorshipSchema.parse({ ...dataset.authorships[0], researcherId: 'inspire-author:123' }).researcherId).toBe('inspire-author:123');
+    expect(externalResourceSchema.parse({ ...dataset.externalResources[0], entityType: 'researcher', entityId: 'inspire-author:123' }).entityId).toBe('inspire-author:123');
+    expect(institutionSchema.parse({ ...dataset.institutions[0], id: 'institution-ror-03yrm5c26' }).id).toBe('institution-ror-03yrm5c26');
+    expect(paperSchema.parse({ ...dataset.papers[0], id: `paper-${'a'.repeat(64)}` }).id).toBe(`paper-${'a'.repeat(64)}`);
+    for (const id of ['inspire-author:abc', 'other-provider:123', 'inspire-author:123/../../x', 'inspire-author%3A123', 'https://example.test/123']) {
+      expect(researcherSchema.safeParse({ ...dataset.researchers[0], id }).success).toBe(false);
+    }
+  });
   it('accepts the v3.0.1 normalized synthetic metric dataset', () => {
     const dataset = atlasDatasetSchema.parse(demoData);
 

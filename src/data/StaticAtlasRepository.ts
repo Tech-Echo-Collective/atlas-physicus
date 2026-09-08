@@ -47,7 +47,7 @@ export class StaticAtlasRepository implements ScientificAtlasRepository {
   private readonly metricRegistry: MetricRegistry;
   private readonly searchIndex: EntitySearchIndex;
   private readonly profileService: ProfileService;
-  private readonly knowledgeGraph: ScientificKnowledgeGraph;
+  private knowledgeGraph: ScientificKnowledgeGraph | undefined;
 
   constructor(source: unknown = demoData) {
     const validatedDataset = atlasDatasetSchema.parse(source);
@@ -58,7 +58,6 @@ export class StaticAtlasRepository implements ScientificAtlasRepository {
       this.dataset = validatedDataset;
       this.searchIndex = new EntitySearchIndex(this.dataset);
       this.profileService = new ProfileService(this.dataset);
-      this.knowledgeGraph = new KnowledgeGraphService().build(this.dataset);
       return;
     }
 
@@ -69,7 +68,6 @@ export class StaticAtlasRepository implements ScientificAtlasRepository {
     });
     this.searchIndex = new EntitySearchIndex(this.dataset);
     this.profileService = new ProfileService(this.dataset);
-    this.knowledgeGraph = new KnowledgeGraphService().build(this.dataset);
   }
 
   async loadDataset(): Promise<AtlasDataset> {
@@ -274,6 +272,7 @@ export class StaticAtlasRepository implements ScientificAtlasRepository {
   }
 
   async getKnowledgeGraph(): Promise<ScientificKnowledgeGraph> {
+    this.knowledgeGraph ??= new KnowledgeGraphService().build(this.dataset);
     return this.knowledgeGraph;
   }
 

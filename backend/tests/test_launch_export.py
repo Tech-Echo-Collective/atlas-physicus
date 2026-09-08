@@ -19,6 +19,7 @@ from test_launch_pipeline import (  # noqa: F401
 from physics_atlas_api import launch_export, launch_pipeline
 from physics_atlas_api.certification import CertificationError
 from physics_atlas_api.certification.build_cache import bounded_build_verification_cache
+from physics_atlas_api.certification.launch_entities import _reference_entities
 from physics_atlas_api.metrics.contracts import CANDIDATE_METRIC_IDS
 from physics_atlas_api.metrics.dataset import AtlasDatasetExport
 
@@ -140,7 +141,7 @@ def _transport_stubs(monkeypatch, measured):  # type: ignore[no-untyped-def]
         counts=(("papers", 12),),
     )
     entities = SimpleNamespace(
-        entities=object(),
+        entities=_reference_entities(()),
         source_references=(),
         omitted_counts=(("fixture_unknown_location", 1),),
         entity_counts=(("papers", 12),),
@@ -183,6 +184,7 @@ def _transport_stubs(monkeypatch, measured):  # type: ignore[no-untyped-def]
             },
             "observationCounts": {metric: 0 for metric in CANDIDATE_METRIC_IDS},
             "periods": [],
+            "uiShards": kwargs["ui_shards"].metadata,
         }
         return AtlasDatasetExport(dataset, json.dumps(manifest).encode())
 
@@ -191,7 +193,7 @@ def _transport_stubs(monkeypatch, measured):  # type: ignore[no-untyped-def]
     return retained, sink
 
 
-def test_final_three_asset_transport_is_deterministic_and_recoverable(
+def test_final_asset_transport_is_deterministic_and_recoverable(
     measured_launch, monkeypatch: pytest.MonkeyPatch
 ) -> None:  # type: ignore[no-untyped-def]
     retained, sink = _transport_stubs(monkeypatch, measured_launch)
@@ -224,6 +226,7 @@ def test_final_three_asset_transport_is_deterministic_and_recoverable(
         "manifest.json",
         "atlas-dataset.json",
         "scientific-evidence.json.gz",
+        "ui-index.json.gz",
     }
 
 

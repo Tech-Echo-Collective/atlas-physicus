@@ -22,8 +22,10 @@ conflict exclusion**, not final certified coverage. The 2019 traversal is also
 complete: 2,412 records, 94.891433% affiliation presence and 67.104458% resolved
 institution mass before canonical exclusion. The 2020 traversal is complete:
 2,787 records, 95.299925% affiliation presence and 65.737948% resolved institution
-mass before canonical exclusion. The 2021–2023 acquisition is still running with
-checksummed completed-page recovery. A DOI role conflict in an
+mass before canonical exclusion. The 2021 traversal is complete: 2,580 records,
+98.164154% affiliation presence and 71.871944% resolved institution mass before
+canonical exclusion. The 2022–2023 acquisition is still running with checksummed
+completed-page recovery. A DOI role conflict in an
 earlier attempt is retained as unresolved rather than terminating enumeration.
 No real exact-five observations or final Atlas Dataset have yet been produced.
 
@@ -34,13 +36,33 @@ UI consume the same versioned supported subset; legacy-window injection and
 mixed-policy normalization/aggregation are rejected. Full local validation passes
 1,318 backend tests, Ruff/format and strict typing (114 source files). This is not
 complete author-identity coverage.
+The validated change is pushed as `3ab78fe`; full CI 34191541841 passes.
 
 An actual 2018 UI projection measures 177,369,453 JSON bytes (15,706,925 gzip
 bytes), above the existing 64 MiB transport cap before metrics. Authorship and
 affiliation relationships account for 143,194,246 bytes. This is a measured
-delivery blocker, not a scientific failure; bounded on-demand representation
-is being investigated without truncating profiles or changing observations.
-The measurement created no scientific output files and is not a six-year estimate.
+delivery blocker, not a scientific failure. The bounded streaming fix is validated:
+the same 2018 records restore exactly from 41 gzip relationship shards plus an
+index (15,244,912 bytes), with 12,181,639 core entity bytes before display-only
+geographic views and metrics. The decoded index is 3,076,781 bytes. Every original
+relationship count and category byte count is preserved; no records were dropped.
+This single-year in-memory check created no scientific output files and is not a
+six-year estimate. Actual final core/index/evidence sizes remain unmeasured.
+
+A single 2018 country source-year preflight stopped at its 300-second bound before
+coverage qualification. Its exact interrupted stack exposed repeated eager
+structural-payload construction and uncached dictionary hashing. The narrowly
+equivalent lazy-payload/digest-reuse fix preserves all four original SHA values.
+Its bounded method test is not a full-year speed or certification claim.
+
+The delivery/compatibility checkpoint passes 1,343 backend tests, full Ruff/format,
+strict typing (115 source files), 170 frontend tests, seven pipeline tests, type
+checking, lint and production build; Web publisher/configuration tests pass nine
+cases. It also fixes rejection of actual `inspire-author:<numeric>` IDs, preserves
+source record/snapshot references, and keeps ontology branches on deep routes.
+Three completed deterministic pytest directories were removed: 168,856,161
+measured regular-file bytes; scientific acquisition checkpoints remain untouched.
+The sole build directory is still active, so final cleanup is pending.
 
 Launch integration `7ab79b8` is pushed. CI 34186465032 passed frontend/containers
 and 1,295 backend tests; seven export-command tests exposed an installed-package

@@ -17,6 +17,7 @@ import {
   type AtlasDatasetKind,
 } from '../../data/DatasetPresentation';
 import { InstitutionActivityHistory } from './InstitutionActivityHistory';
+import { matchesFieldSelection } from '../../data/ObservedScope';
 
 interface InstitutionViewProps {
   institution: Institution;
@@ -77,17 +78,27 @@ export function InstitutionView({
   const activeResearchers = researchers.filter(
     (researcher) =>
       activeResearcherIds.has(researcher.id) &&
-      (!activeFieldId || researcher.fieldIds.includes(activeFieldId)),
+      matchesFieldSelection(researcher.fieldIds, activeFieldId, fields),
   );
   const institutionResearcherIds = new Set(
     affiliations
       .filter((affiliation) => affiliation.institutionId === institution.id)
       .map((affiliation) => affiliation.researcherId),
   );
+  const institutionPapersByResearcher = new Map<string, Set<string>>();
+  const legacyInstitutionResearchers = new Set<string>();
+  affiliations.filter((row) => row.institutionId === institution.id).forEach((row) => {
+    if (!row.paperId) { legacyInstitutionResearchers.add(row.researcherId); return; }
+    const papers = institutionPapersByResearcher.get(row.researcherId) ?? new Set<string>();
+    papers.add(row.paperId);
+    institutionPapersByResearcher.set(row.researcherId, papers);
+  });
   const paperIds = new Set(
     authorships
       .filter((authorship) =>
-        institutionResearcherIds.has(authorship.researcherId),
+        institutionResearcherIds.has(authorship.researcherId) &&
+          (legacyInstitutionResearchers.has(authorship.researcherId) ||
+            institutionPapersByResearcher.get(authorship.researcherId)?.has(authorship.paperId)),
       )
       .map((authorship) => authorship.paperId),
   );
@@ -95,14 +106,14 @@ export function InstitutionView({
     .filter(
       (paper) =>
         paperIds.has(paper.id) &&
-        (!activeFieldId || paper.fieldIds.includes(activeFieldId)),
+        matchesFieldSelection(paper.fieldIds, activeFieldId, fields),
     )
     .sort((left, right) => right.year - left.year)
     .slice(0, 4);
   const relatedEvents = historicalEvents
     .filter(
       (event) =>
-        (!activeFieldId || event.fieldId === activeFieldId) &&
+        matchesFieldSelection([event.fieldId], activeFieldId, fields) &&
         event.relatedInstitutionIds.includes(institution.id),
     )
     .sort((left, right) => left.year - right.year);
@@ -191,7 +202,7 @@ export function InstitutionView({
             <div className="entity-section-heading">
               <div>
                 <p className="section-kicker">External resources</p>
-                <h3>Verified profile references</h3>
+                <h3>Source profile references</h3>
               </div>
               <span>Separate resource layer</span>
             </div>

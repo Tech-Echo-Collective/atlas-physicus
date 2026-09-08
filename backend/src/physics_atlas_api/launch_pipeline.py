@@ -156,6 +156,11 @@ def prepare(root: Path) -> None:
     ) as cache:
         for entity_type in ("institution", "country"):
             for source in captured:
+                _progress(
+                    "validating-source-year",
+                    year=source.plan.calendar_year,
+                    entityType=entity_type,
+                )
                 build = build_launch_source_year(
                     source,
                     canonical,
@@ -168,6 +173,11 @@ def prepare(root: Path) -> None:
                     raise CertificationError(
                         f"source membership unavailable: {build.blockers}"
                     )
+                _progress(
+                    "measuring-source-coverage",
+                    year=source.plan.calendar_year,
+                    entityType=entity_type,
+                )
                 covered = certify_launch_source_coverage(build)
                 qualified = qualify_observed_release_source_year(covered.source_year)
                 if qualified.state != "certified":
@@ -592,10 +602,31 @@ def export(root: Path, *, geographic_reference: Path) -> None:
     if len(result.summary["countryHeatmapPeriods"]) < 2:
         raise CertificationError("country heatmap lacks supported historical periods")
     assets = tuple((path, content) for _, path, content in result.assets)
-    if tuple(path for path, _ in assets) != names[:3]:
+    if tuple(path for path, _ in assets[:3]) != names[:3]:
         raise CertificationError("unexpected final asset inventory")
+    manifest = json.loads(result.manifest_bytes)
+    transport = manifest.get("uiShards")
+    expected_extra = (
+        {row["path"] for row in transport["shards"]} | {transport["index"]["path"]}
+        if transport is not None
+        else set()
+    )
+    if (
+        len(assets) > 516
+        or len({path for path, _ in assets}) != len(assets)
+        or {path for path, _ in assets[3:]} != expected_extra
+        or any(
+            Path(path).name != path
+            or not path.startswith("ui-")
+            or not path.endswith(".json.gz")
+            for path, _ in assets[3:]
+        )
+    ):
+        raise CertificationError("unexpected final UI asset inventory")
     summary = json.dumps(result.summary, sort_keys=True, separators=(",", ":")).encode()
     assets += ((names[3], summary),)
+    if any((root / path).exists() or (root / path).is_symlink() for path, _ in assets):
+        raise ValueError("final launch assets already exist; never overwrite")
     if _storage_bytes(root) + sum(len(data) for _, data in assets) > (
         MAX_EPHEMERAL_BYTES - 100_000_000
     ):

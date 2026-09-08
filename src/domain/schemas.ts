@@ -5,7 +5,9 @@ import {
   type RawEntityAttribute,
 } from './models';
 
-const entityIdSchema = z.string().min(1).regex(/^[a-z0-9-]+$/);
+// Preserve the existing provider-native identity; never rewrite scientific keys
+// merely to fit a URL slug. Other namespace/URL forms are not implicitly trusted.
+const entityIdSchema = z.string().min(1).regex(/^(?:[a-z0-9-]+|inspire-author:[0-9]+)$/);
 const fieldIdSchema = z.string().min(1).regex(/^[a-z0-9-]+$/);
 const metricIdSchema = z.string().min(1).regex(/^[a-z0-9_-]+$/);
 const temporalDateSchema = z
@@ -54,6 +56,8 @@ export const provenanceSchema = z.object({
   confidence: optionalFromNullable(z.number().min(0).max(1)),
   retrievedAt: optionalFromNullable(z.string().datetime({ offset: true })),
   acquisitionScope: optionalFromNullable(z.string().trim().min(1)),
+  sourceRecordId: optionalFromNullable(z.string().trim().min(1)),
+  sourceSnapshotId: optionalFromNullable(z.string().trim().min(1)),
 });
 
 export const externalIdentifierSchema = z.object({

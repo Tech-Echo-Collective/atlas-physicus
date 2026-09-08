@@ -11,14 +11,18 @@ import {
   getDatasetPresentation,
   type AtlasDatasetKind,
 } from '../../data/DatasetPresentation';
+import { fieldsWithinSelection } from '../../data/ObservedScope';
 
 interface FieldOverviewProps {
   field: ResearchField;
+  fields?: ResearchField[];
   institutions: Institution[];
   researchers: Researcher[];
   affiliations: Affiliation[];
   papers: Paper[];
   authorships: Authorship[];
+  /** Exact release index; unloaded relationships must never imply zero authors. */
+  paperAuthorCounts?: Readonly<Record<string, number>>;
   historicalEvents: HistoricalEvent[];
   datasetKind: AtlasDatasetKind;
   onClose: () => void;
@@ -26,27 +30,30 @@ interface FieldOverviewProps {
 
 export function FieldOverview({
   field,
+  fields = [field],
   institutions,
   researchers,
   affiliations,
   papers,
   authorships,
+  paperAuthorCounts,
   historicalEvents,
   datasetKind,
   onClose,
 }: FieldOverviewProps) {
   const presentation = getDatasetPresentation(datasetKind);
+  const selectedFields = fieldsWithinSelection(fields, field.id);
   const fieldInstitutions = institutions
-    .filter((institution) => institution.fieldIds.includes(field.id))
+    .filter((institution) => institution.fieldIds.some((id) => selectedFields.has(id)))
     .slice(0, 6);
   const fieldResearchers = researchers
-    .filter((researcher) => researcher.fieldIds.includes(field.id))
+    .filter((researcher) => researcher.fieldIds.some((id) => selectedFields.has(id)))
     .slice(0, 8);
   const fieldPapers = papers
-    .filter((paper) => paper.fieldIds.includes(field.id))
+    .filter((paper) => paper.fieldIds.some((id) => selectedFields.has(id)))
     .sort((left, right) => right.year - left.year);
   const fieldEvents = historicalEvents
-    .filter((event) => event.fieldId === field.id)
+    .filter((event) => selectedFields.has(event.fieldId))
     .sort((left, right) => left.year - right.year);
   const affiliationsByResearcherId = new Map(
     affiliations.map((affiliation) => [affiliation.researcherId, affiliation]),
@@ -161,7 +168,9 @@ export function FieldOverview({
               <li key={paper.id}>
                 <div>
                   <time>{paper.year}</time>
-                  <span>{authorCountByPaperId.get(paper.id) ?? 0} authors</span>
+                  <span>{paperAuthorCounts
+                    ? paperAuthorCounts[paper.id] === undefined ? 'Linked researcher count unavailable' : `${paperAuthorCounts[paper.id]} linked researchers`
+                    : `${authorCountByPaperId.get(paper.id) ?? 0} authors`}</span>
                 </div>
                 <strong>{paper.title}</strong>
                 <p>{paper.summary || 'Summary unavailable in this source.'}</p>

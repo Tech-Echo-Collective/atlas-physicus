@@ -18,8 +18,8 @@ reports.
   Fixed fatal DOI-role conflict handling and loss of observed-reference citation
   semantics during branch aggregation. Completed-page checksums permit bounded
   acquisition recovery without provider-payload persistence.
-- Fresh 2018/2019/2020 acquisition completed (2,306/2,412/2,787 records);
-  2021–2023 remains active.
+- Fresh 2018/2019/2020/2021 acquisition completed (2,306/2,412/2,787/2,580 records);
+  2022–2023 remains active.
   This is not six certified years or a successful metric release. Original
   source-wide failures remain distinct from conditional released-input coverage.
 - Local checks: 1,278 backend tests, 144 frontend tests and seven pipeline tests
@@ -46,10 +46,28 @@ reports.
   normalization cohort or field aggregation. Full local validation passes 1,318
   backend tests, Ruff/format and strict typing (114 source files); these checks
   are not a real five-metric observation claim.
+- PA-063 is pushed as `3ab78fe` and complete CI 34191541841 passes.
 - Actual 2018 UI projection: 177,369,453 JSON bytes / 15,706,925 gzip bytes;
   authorship and affiliation rows dominate. This exceeds the existing 64 MiB
   transport cap before metrics. The in-memory measurement retained no scientific
-  files; minimal on-demand delivery is pending, not a six-year capacity claim.
+  files. The single subsequent streamed delivery check passes in 163.12 seconds:
+  12,181,639 core bytes before geography/metrics, 15,244,912 gzip relationship/index
+  bytes, 41 shards, 3,076,781 decoded index bytes. All record counts and original
+  category byte sizes match; no six-year capacity or observation claim is made.
+- One exact 2018 country source-year preflight stopped at its 300-second bound
+  during structural decision value hashing, before coverage qualification.
+  Lazy dimension construction and exact immutable provenance-digest reuse now
+  preserve every existing SHA; 58 focused checks pass. A bounded 3,000-author
+  method test improves 0.466→0.183 seconds with the active cache, not a claimed
+  full-year speedup. No files or scientific observations resulted.
+- Final local checkpoint checks pass 1,343 backend tests, full lint/format and
+  strict typing (115 source files), 170 frontend tests, seven pipeline tests and
+  production build; Web publisher/configuration tests pass nine cases. Actual
+  source-native IDs, compact provenance fields and branch-aware deep routes are
+  covered; no source identities are rewritten and no API data is mixed in.
+- Removed only three completed deterministic pytest temporary directories,
+  reclaiming 168,856,161 measured regular-file bytes. Acquisition evidence and
+  checkpoints are untouched; final sole-directory cleanup remains pending.
 
 ## 2026-09-08 — Separate observed coverage from retained attribution uncertainty
 

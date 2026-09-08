@@ -1,4 +1,5 @@
 import type { AtlasDataset } from '../domain/models';
+import { matchesFieldSelection } from '../data/ObservedScope';
 
 export interface AtlasNavigationState {
   selectedDomainId: string;
@@ -81,10 +82,11 @@ export function resolveAtlasLocation(
   dataset: AtlasDataset,
 ): AtlasNavigationState {
   const defaultState = createDefaultAtlasNavigation(dataset);
-  const segments = location.pathname
-    .split('/')
-    .filter(Boolean)
-    .map((segment) => decodeURIComponent(segment).toLocaleLowerCase());
+  let segments: string[];
+  try {
+    segments = location.pathname.split('/').filter(Boolean)
+      .map((segment) => decodeURIComponent(segment).toLocaleLowerCase());
+  } catch { return defaultState; }
   const parameters = new URLSearchParams(location.search);
   const availableYears = dataset.metricObservations
     .filter((observation) => observation.entityType === 'country')
@@ -198,7 +200,7 @@ export function resolveAtlasLocation(
       ...baseState,
       selectedFieldId:
         baseState.selectedFieldId &&
-        institution.fieldIds.includes(baseState.selectedFieldId)
+        matchesFieldSelection(institution.fieldIds, baseState.selectedFieldId, dataset.fields)
           ? baseState.selectedFieldId
           : null,
       selectedCountryId: getExplorationCountryId(
@@ -241,7 +243,7 @@ export function resolveAtlasLocation(
       ...baseState,
       selectedFieldId:
         baseState.selectedFieldId &&
-        researcher.fieldIds.includes(baseState.selectedFieldId)
+        matchesFieldSelection(researcher.fieldIds, baseState.selectedFieldId, dataset.fields)
           ? baseState.selectedFieldId
           : null,
       selectedCountryId: getExplorationCountryId(
@@ -275,22 +277,22 @@ export function buildAtlasUrl(
       (candidate) => candidate.id === state.selectedResearcherId,
     );
     if (researcher) {
-      pathname = `/atlas/researcher/${entitySlug(
+      pathname = `/atlas/researcher/${encodeURIComponent(entitySlug(
         researcher.id,
         'researcher-',
         researcher.name,
-      )}`;
+      ))}`;
     }
   } else if (state.selectedInstitutionId) {
     const institution = dataset.institutions.find(
       (candidate) => candidate.id === state.selectedInstitutionId,
     );
     if (institution) {
-      pathname = `/atlas/institution/${entitySlug(
+      pathname = `/atlas/institution/${encodeURIComponent(entitySlug(
         institution.id,
         'institution-',
         institution.name,
-      )}`;
+      ))}`;
     }
   } else if (state.selectedCountryId) {
     const country = dataset.countries.find(

@@ -3,6 +3,7 @@ import { metricSystemV1Ids, type AtlasDataset } from '../domain/models';
 import { atlasDatasetSchema, datasetScopeMetadataSchema } from '../domain/schemas';
 import { hasCompleteVisualizationMetricSystem } from '../metrics/MetricRegistry';
 import { StaticAtlasRepository } from './StaticAtlasRepository';
+import { ShardedAtlasRepository, uiShardsSchema } from './ShardedAtlasRepository';
 
 export const certifiedAtlasReleaseVersion = 'certified-atlas-dataset-v1';
 const maximumDatasetBytes = 64 * 1024 * 1024;
@@ -67,6 +68,7 @@ const manifestSchema = z.object({
     qualityFlags: z.array(z.string()).min(1),
   })),
   datasetScope: datasetScopeSchema.optional(),
+  uiShards: uiShardsSchema.optional(),
 });
 
 function assertDatasetScope(dataset: AtlasDataset, scope: z.infer<typeof datasetScopeSchema>): void {
@@ -286,5 +288,7 @@ export async function loadCertifiedAtlasRepository(
     };
     dataset.metadata.defaultFieldId = scope.rootFieldId;
   }
-  return new StaticAtlasRepository(dataset);
+  return manifest.uiShards
+    ? ShardedAtlasRepository.create(dataset, manifest.uiShards, manifestUrl, fetcher)
+    : new StaticAtlasRepository(dataset);
 }
