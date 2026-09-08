@@ -26,6 +26,7 @@ for (blob,) in DB.execute('select payload from authorities'):
  addr=next(a for a in addrs if a.get('country_code')==code);ror=next((x['value'].strip().rstrip('/').rsplit('/',1)[-1] for x in m.get('external_system_identifiers',[]) if x.get('schema')=='ROR'),None)
  iid='institution-ror-'+ror if ror else 'institution-inspire-'+sid;cid='country-'+code.lower()
  variants=[x.get('value') for x in m.get('name_variants',[]) if x.get('value')];hier=[x.get('name') for x in m.get('institution_hierarchy',[]) if x.get('name')];icn=m.get('ICN',[]);icn=[icn] if isinstance(icn,str) else icn
+ legacy=m.get('legacy_ICN');icn=icn+([legacy] if isinstance(legacy,str) and legacy.strip() else [])
  label=(variants or hier or icn or ['INSPIRE institution '+sid])[0]
  if label.lower()=='obsolete':continue
  country_map[cid]={'id':cid,'isoAlpha3':country.alpha_3,'isoNumeric':country.numeric,'name':country.name,'region':'World','provenance':P}

@@ -7,6 +7,20 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-08 — NTU institution visibility
+
+INSPIRE institution 911953 already had attributed papers and normalized values,
+but its authority used `legacy_ICN`; the parser emitted a numeric placeholder
+and lacked coordinates. A release-bound metadata correction restores Nanyang
+Technological University, NTU and its Chinese alias, exact ROR identity and an
+official campus reference point. Both Web map and worker use the same correction.
+The immutable scientific release, entity IDs and metric rows stay unchanged.
+Country lists now include institutions without coordinates or a current metric,
+with 25-row pagination; map density controls no longer truncate the directory.
+Parser fallback reads legacy names on future versioned acquisitions. Source
+type/lint/build, 188 frontend tests and seven pipeline tests pass. Public rollout
+and Web catalog regression checks follow in this entry.
+
 ## 2026-09-08 — Small-country map visibility
 
 The previous 1:110m geometry omitted Singapore and ten other locations present

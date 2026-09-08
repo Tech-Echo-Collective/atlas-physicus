@@ -18,3 +18,13 @@ Attribution follows the source paper's institution ID to its authority record, r
 Five dimensions are computed on the retrieved attributed corpus: trailing three-year fractional Activity (within-category/year/type robust log 5–95% display transform); mature-paper Impact (mean non-self citations relative to the same category/publication-year cohort, then robust display normalization); confirmed Collaboration share; normalized Shannon entropy over 51 native categories; Momentum (adjacent three-year log change, robust cohort centering/scaling, 2023–2025 only). Cohorts require two distinct-supported values rather than the old 30-entity certification gate. A degenerate distribution stays missing. Impact uses citations captured September 8, 2026 even for older selected years; it is retrospective, not a historical citation snapshot. Momentum is sensitive to unequal source capture completeness. Physics overview is an equal mean of available normalized category scores.
 
 Initial data contains canonical catalogs; metrics load by year and paper-time relationship records load on demand. The exact compact relationship index has a 32 MiB decoded limit (19.55 MiB measured), while each relationship shard remains bounded at 4 MiB. Checksums and size receipts are validated by the public loader. No provider credentials enter the browser.
+
+September 8 metadata repair: the parser now accepts `legacy_ICN` from older
+INSPIRE institution records. The existing release remains immutable. The Web
+map and detail worker apply `src/data/InstitutionMetadataCorrections.ts` to the
+exact existing NTU identity (`institution-inspire-911953`) for this release only.
+Its ROR name/acronym and official NTU visitor-map campus reference point restore
+display and search; the ID, attributed papers and metric values are unchanged.
+Source URLs and capture hashes accompany the correction. Historical Nanyang
+University and Nanyang Polytechnic remain separate institutions. A future
+attribution rebuild using legacy aliases requires a new dated output/version.

@@ -1943,8 +1943,11 @@ export function AtlasExplorer({ repositoryOverride, onYearChange, onObservationS
 
       {!selectedInstitution && !isFieldOverviewOpen && (
         <CountryPanel
+          key={`${selectedCountryId}:${selectedFieldId}:${selectedYear}`}
           country={selectedCountry}
-          institutions={visibleInstitutions}
+          institutions={geographicInstitutions.filter((institution) =>
+            matchesFieldSelection(institution.fieldIds, selectedFieldId, dataset.fields),
+          )}
           countryObservation={selectedCountryObservation}
           institutionObservations={institutionObservations}
           metricLabel={activeMetricLabel}
