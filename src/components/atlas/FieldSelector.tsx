@@ -11,11 +11,13 @@ export function FieldSelector({
   selectedFieldId,
   onSelect,
 }: FieldSelectorProps) {
+  // Domain roots already have their own selector; branches remain explorable.
+  const selectableFields = fields.filter((field) => field.nodeKind !== 'domain-root');
   return (
     <nav className="field-selector" aria-label="Research fields">
       <p className="section-kicker">Research field</p>
       <div className="field-list">
-        {fields.map((field) => {
+        {selectableFields.map((field) => {
           const isSelected = field.id === selectedFieldId;
 
           return (

@@ -68,6 +68,13 @@ reports.
 - Removed only three completed deterministic pytest temporary directories,
   reclaiming 168,856,161 measured regular-file bytes. Acquisition evidence and
   checkpoints are untouched; final sole-directory cleanup remains pending.
+- Delivery checkpoint `89e9739` passes complete CI 34193610284. After a provider
+  DNS connection failure, 2022 resumes from its 230 checksummed completed pages;
+  earlier source evidence remains unchanged. The field selector now excludes
+  only domain-root nodes, avoiding a duplicate Physics button that led to an
+  unsupported field selection while preserving the declared nuclear branch.
+  Its complete frontend recheck passes 173 tests, seven pipeline tests, type
+  checking, lint and production build; no new metric observation is claimed.
 
 ## 2026-09-08 — Separate observed coverage from retained attribution uncertainty
 

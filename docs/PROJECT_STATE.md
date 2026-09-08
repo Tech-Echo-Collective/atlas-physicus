@@ -63,6 +63,12 @@ source record/snapshot references, and keeps ontology branches on deep routes.
 Three completed deterministic pytest directories were removed: 168,856,161
 measured regular-file bytes; scientific acquisition checkpoints remain untouched.
 The sole build directory is still active, so final cleanup is pending.
+The delivery checkpoint is pushed as `89e9739`; complete CI 34193610284 passes.
+The 2022 acquisition stopped after 230 complete, checksummed pages because of a
+provider DNS connection failure. Network access recovered, and the existing
+bounded resume path continues from those pages; it does not replace their
+recorded source evidence. A small field-selector correction removes only the
+duplicate domain-root button, preserving the nuclear branch and other fields.
 
 Launch integration `7ab79b8` is pushed. CI 34186465032 passed frontend/containers
 and 1,295 backend tests; seven export-command tests exposed an installed-package
