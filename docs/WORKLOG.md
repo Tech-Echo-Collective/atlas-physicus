@@ -7,6 +7,10 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-08 — PA-065 attributed arXiv delivery
+
+Fresh INSPIRE capture: all 459 native category/year requests and 5,423 institution authorities succeeded. Exact ID/ROR and unique full authority-name segment attribution yields 46,524 papers and 4,567 institutions. Fractional author mass is conserved with unknown shares unallocated; native cross-lists are preserved. Five observed metrics retain raw values and fitted 0–100 normalization parameters; 1,263,445 observations are transported by year. The original explorer accepts an attributed repository, displays native category codes, preserves the observed timeline and defers paper relationships. Full frontend typecheck/lint and 173 frontend tests plus seven pipeline tests passed before deployment integration. Public publication is being verified separately in the Web repository. The acquisition cap and retrospective citation date are explicitly disclosed.
+
 ## 2026-09-08 — Immediate observed heatmap preview
 
 - Owner explicitly superseded waiting for strict five-metric launch (PA-064).

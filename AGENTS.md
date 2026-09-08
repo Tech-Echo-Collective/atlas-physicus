@@ -25,7 +25,9 @@ Then read the technical document directly relevant to the task. Do not infer tha
 
 ## Current milestone
 
-PA-064: the owner explicitly authorized immediate public publication of the
+PA-065: the owner explicitly authorized fresh acquisition across all 51 arXiv physics categories, confirmed attribution and normalized publication in the original explorer. This observed delivery path supersedes the nuclear-only homepage and does not wait for joint five-metric certification. See `pipeline/arxiv-attributed/README.md` and the current project state. Preserve truthful acquisition coverage and missing attribution.
+
+Historical PA-064: the owner explicitly authorized immediate public publication of the
 observed activity heatmap on September 8. The activity preview does not wait for
 joint five-metric certification. Keep its real source-record counts, declared
 nuclear-physics scope and missing attribution explicit; never present it as the

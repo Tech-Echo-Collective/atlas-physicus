@@ -71,6 +71,19 @@ export function getDatasetPresentation(
   datasetKind: AtlasDatasetKind,
   deliveryMode?: DatasetMetadata['deliveryMode'],
 ): DatasetPresentation {
+  if (datasetKind === 'live-api' && deliveryMode === 'attributed-dataset') {
+    return {
+      ...presentations['live-api'],
+      badgeLabel: 'Source-verified affiliations',
+      dataLabel: 'arXiv research atlas',
+      dataLabelLower: 'arXiv research atlas',
+      observationLabel: 'Attributed research observation',
+      sampleLabel: 'Retrieved research corpus',
+      valuesLabel: 'Field-normalized values',
+      disclaimer: 'Verified paper-time institution links. Retrieved coverage varies by category and year.',
+      isLiveApi: false,
+    };
+  }
   if (datasetKind === 'live-api' && deliveryMode === 'versioned-dataset') {
     return {
       ...presentations['live-api'],

@@ -73,14 +73,14 @@ function mergeById<T extends { id: string }>(current: T[], incoming: T[]): T[] {
 
 const liveTimelineStartYear = 1900;
 
-export function AtlasExplorer() {
+export function AtlasExplorer({ repositoryOverride, onYearChange }: { repositoryOverride?: AtlasRepository; onYearChange?: (year: number) => void } = {}) {
   const atlasDatasetUrl = typeof import.meta.env.VITE_ATLAS_DATASET_URL === 'string'
     ? import.meta.env.VITE_ATLAS_DATASET_URL.trim()
     : '';
   const atlasApiUrl = normalizeAtlasApiBaseUrl(
     import.meta.env.VITE_ATLAS_API_URL,
   );
-  const liveApiAvailable = atlasApiUrl !== null || atlasDatasetUrl.length > 0;
+  const liveApiAvailable = repositoryOverride !== undefined || atlasApiUrl !== null || atlasDatasetUrl.length > 0;
   const shellRef = useRef<HTMLElement>(null);
   const scopedSearchControllerRef = useRef<AbortController | null>(null);
   const sourceRequestGateRef = useRef(new AtlasDataSourceRequestGate());
@@ -91,7 +91,7 @@ export function AtlasExplorer() {
     useState<AtlasRepository>(atlasRepository);
   const [selectedDataSourceId, setSelectedDataSourceId] =
     useState<AtlasDataSourceId>(() =>
-      typeof window === 'undefined'
+      repositoryOverride ? 'live-api' : typeof window === 'undefined'
         ? 'synthetic-framework'
         : resolveAtlasDataSource(
             window.location.search,
@@ -191,6 +191,10 @@ export function AtlasExplorer() {
   }, [dataset]);
 
   useEffect(() => {
+    if (dataset?.metadata.deliveryMode === 'attributed-dataset') onYearChange?.(selectedYear);
+  }, [dataset?.metadata.deliveryMode, selectedYear, onYearChange]);
+
+  useEffect(() => {
     selectedMetricIdRef.current = selectedMetricId;
   }, [selectedMetricId]);
 
@@ -228,7 +232,8 @@ export function AtlasExplorer() {
   useEffect(() => {
     if (
       datasetRef.current &&
-      requestedDataSourceId === selectedDataSourceIdRef.current
+      requestedDataSourceId === selectedDataSourceIdRef.current &&
+      (!repositoryOverride || repositoryOverride === repository)
     ) {
       setIsDataSourceLoading(false);
       return;
@@ -240,6 +245,7 @@ export function AtlasExplorer() {
     setSourceError(null);
 
     const repositoryPromise: Promise<AtlasRepository> = (() => {
+      if (repositoryOverride) return Promise.resolve(repositoryOverride);
       if (requestedDataSourceId === 'inspire-hep-pilot') {
         return import('../../data/PilotAtlasRepository').then(
           ({ pilotAtlasRepository }) => pilotAtlasRepository,
@@ -408,6 +414,8 @@ export function AtlasExplorer() {
     atlasApiUrl,
     atlasDatasetUrl,
     requestedDataSourceId,
+    repositoryOverride,
+    repository,
   ]);
 
   useEffect(() => {
@@ -916,6 +924,10 @@ export function AtlasExplorer() {
       return [];
     }
 
+    if (dataset.metadata.deliveryMode === 'attributed-dataset') {
+      return [...new Set(dataset.papers.map((paper) => paper.year))].sort((a, b) => a - b);
+    }
+
     return Array.from(
       new Set(
         visualizationObservations
@@ -938,7 +950,7 @@ export function AtlasExplorer() {
   ]);
   const timelineYears = useMemo(() => {
     if (dataset?.metadata.datasetKind !== 'live-api' ||
-      dataset.metadata.deliveryMode === 'versioned-dataset') {
+      dataset.metadata.deliveryMode === 'versioned-dataset' || dataset.metadata.deliveryMode === 'attributed-dataset') {
       return availableYears;
     }
     const currentDatasetYear = Number(dataset.metadata.period);

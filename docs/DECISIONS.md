@@ -9,6 +9,7 @@ architectural constraints continue to apply to Atlas Physicus.
 
 | ID | Decision | Consequence |
 | --- | --- | --- |
+| PA-065 | September 8 owner directs immediate end-to-end attributed publication, native arXiv physics classification, and restoration of the full explorer. | Supersedes the nuclear-only preview as the public homepage and the joint certification gate for this explicitly observed delivery path. Confirm paper-time attribution, retain unknown mass, publish reproducible 0–100 category normalization, expose exact acquisition completeness, and never claim full arXiv coverage or strict certification. |
 | PA-001 | Physics Atlas is descriptive and exploratory, not predictive. | Do not add prediction claims, forecasting, or interfaces that imply future scientific performance. |
 | PA-002 | Physics Atlas does not rank researchers, institutions, universities, countries, or fields. | Metrics, ordering, labels, and visual emphasis must not be presented as statements of scientific worth. |
 | PA-003 | Physics Atlas does not provide personalized researcher or paper recommendations. | Discovery follows explicit atlas exploration and search, not behavioral profiling or recommendation scoring. |

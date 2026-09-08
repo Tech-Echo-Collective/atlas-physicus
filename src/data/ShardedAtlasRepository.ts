@@ -9,7 +9,7 @@ import type { AtlasEntityContext, AtlasEntityScope, ScopedAtlasRepository } from
 
 const version = 'atlas-ui-shards-v1';
 const maximumShardBytes = 4 * 1024 * 1024;
-const maximumIndexBytes = 8 * 1024 * 1024;
+const maximumIndexBytes = 32 * 1024 * 1024;
 const maximumCacheBytes = 16 * 1024 * 1024;
 const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
 const referenceSchema = z.object({

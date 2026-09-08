@@ -9,6 +9,16 @@ recent [worklog](WORKLOG.md). Exact scientific measurements belong in the
 linked validation reports rather than being repeated throughout the project
 documentation.
 
+## Attributed arXiv explorer — September 8 PA-065
+
+The owner explicitly superseded the nuclear-only preview and joint five-metric release gate: fetch research, confirm attribution, and publish it in the original explorer under native arXiv categories. The new delivery path is `attributed-dataset`; it does not claim the older strict certification status.
+
+Fresh acquisition completed 459 category/year queries (51 physics categories × 2018–2026) with no failed partition: 61,846 deduplicated INSPIRE records and 5,423 institution authorities. 46,524 dated papers have supported institution attribution, producing 4,567 canonical institutions in 135 countries/regions and 1,263,445 observed metric rows across the nine years. 841,619 of 1,015,866 source author positions have supported attribution. Unknown author shares remain unallocated; 485 records fall outside the dated scope and 14,837 have no verified institution. Public assets total approximately 60.6 MB; the retained source SQLite snapshot is approximately 80 MB.
+
+The five dimensions are normalized within native category/year/entity cohorts, with an equal-field overview. Cohort eligibility is relaxed to two, missing or degenerate metrics stay absent, and 2026 is partial. This is a bounded INSPIRE corpus (up to 250 most-recent records per category/year), not all arXiv or a representative census. Historical Impact uses citations observed at the current capture date; Momentum can reflect differences in acquisition coverage. Exact counts, capture receipts, and methods are in the release `coverage.json` and [pipeline notes](../pipeline/arxiv-attributed/README.md).
+
+The original explorer is restored through an injected static repository, with yearly metric loading and existing institution/researcher/paper exploration. Publishing is in progress; do not call this public until the Web Pages deployment is verified. The previous preview remains the last verified public deployment below.
+
 ## Immediate public heatmap preview — owner-directed September 8
 
 PA-064 supersedes waiting for five-metric certification before showing the

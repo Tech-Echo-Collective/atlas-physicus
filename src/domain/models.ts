@@ -351,7 +351,7 @@ export interface DatasetMetadata extends Provenanced {
   schemaVersion: string;
   datasetKind: 'synthetic-demo' | 'inspire-hep-pilot' | 'live-api';
   /** Delivery is separate from scientific source identity. */
-  deliveryMode?: 'versioned-dataset';
+  deliveryMode?: 'versioned-dataset' | 'attributed-dataset';
   releaseManifestUrl?: string;
   /** Explicit first-release branch; never an alias for overall Physics. */
   datasetScope?: {

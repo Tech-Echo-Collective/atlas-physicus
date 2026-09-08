@@ -30,7 +30,7 @@ export function FieldSelector({
               aria-pressed={isSelected}
               title={field.description}
             >
-              <span className="field-code">{field.id}</span>
+              <span className="field-code">{field.ontologyVersion === 'arxiv-category-taxonomy-2026-09-08' ? field.aliases?.[0] ?? field.id : field.id}</span>
               <span className="field-label">{field.label}</span>
             </button>
           );

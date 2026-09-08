@@ -1,6 +1,8 @@
 # Atlas Physicus roadmap
 
-September 8 PA-064: publish the existing observed activity heatmap immediately
+September 8 PA-065: restore the full explorer with 51 native arXiv physics categories, fresh acquired source records, verified paper-time attribution and category-normalized metrics. The bounded observed release supersedes the nuclear-only homepage preview.
+
+Previous September 8 PA-064: publish the existing observed activity heatmap immediately
 as a scoped public preview. Its six-year source-record counts, country and
 institution exploration are independent of the remaining five-metric
 certification milestone below. Web `5d739a3` supplies the preview; preserve it

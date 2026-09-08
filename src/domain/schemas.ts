@@ -670,7 +670,7 @@ export const datasetMetadataSchema = z.object({
     'inspire-hep-pilot',
     'live-api',
   ]),
-  deliveryMode: z.literal('versioned-dataset').optional(),
+  deliveryMode: z.enum(['versioned-dataset', 'attributed-dataset']).optional(),
   releaseManifestUrl: z.url().optional(),
   datasetScope: datasetScopeMetadataSchema.optional(),
   defaultFieldId: fieldIdSchema.optional(),
