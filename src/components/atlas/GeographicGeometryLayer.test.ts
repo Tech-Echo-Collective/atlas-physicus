@@ -66,6 +66,14 @@ describe('geographic geometry layer', () => {
     expect(locators.some((locator) => locator.countryId === 'country-cn')).toBe(false);
   });
 
+  it('preserves the mainland when an outlying-island supplement shares its ISO code', () => {
+    const australia = { ...dataset.countries[0], id: 'country-au', isoNumeric: '036', name: 'Australia' };
+    const countries = buildCountryFeatureCollection([australia], [], []);
+    const canvas = buildExplorationCanvasFeatureCollection(countries, australia.id);
+    expect(polygonRings(canvas.features[0].geometry).flat().length).toBeGreaterThan(1000);
+    expect(buildSmallCountryLocators(countries, [australia])).toEqual([]);
+  });
+
   it('keeps every configured China-view source geometry renderable', () => {
     const collection = buildCountryFeatureCollection(
       dataset.countries,

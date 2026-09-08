@@ -40,11 +40,14 @@ function getWorldFeatures() {
   if (!worldFeatures) {
     const topology = worldCountries as unknown as Topology;
     const collection = feature(topology, topology.objects.countries as GeometryCollection) as unknown as FeatureCollection<Geometry>;
-    const supplements = new Map((smallCountries as FeatureCollection<Geometry>).features.map((item) => [item.id, item]));
-    const existingIds = new Set(collection.features.map((item) => item.id));
+    // Natural Earth may give separate components the same ISO code (e.g. a
+    // mainland and outlying islands). A detail supplement must not replace both.
+    const sourceKey = (item: FeatureCollection<Geometry>['features'][number]) => `${item.id}:${String(item.properties?.name ?? '')}`;
+    const supplements = new Map((smallCountries as FeatureCollection<Geometry>).features.map((item) => [sourceKey(item), item]));
+    const existingIds = new Set(collection.features.map(sourceKey));
     worldFeatures = [
-      ...collection.features.map((item) => supplements.get(item.id) ?? item),
-      ...[...supplements.values()].filter((item) => !existingIds.has(item.id)),
+      ...collection.features.map((item) => supplements.get(sourceKey(item)) ?? item),
+      ...[...supplements.values()].filter((item) => !existingIds.has(sourceKey(item))),
     ].map((item) => ({ ...item, geometry: splitGeometryAtAntimeridian(item.geometry) }));
   }
   return worldFeatures;
