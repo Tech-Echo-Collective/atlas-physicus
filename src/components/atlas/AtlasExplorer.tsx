@@ -73,7 +73,11 @@ function mergeById<T extends { id: string }>(current: T[], incoming: T[]): T[] {
 
 const liveTimelineStartYear = 1900;
 
-export function AtlasExplorer({ repositoryOverride, onYearChange }: { repositoryOverride?: AtlasRepository; onYearChange?: (year: number) => void } = {}) {
+export function AtlasExplorer({ repositoryOverride, onYearChange, onObservationScopeChange }: {
+  repositoryOverride?: AtlasRepository;
+  onYearChange?: (year: number) => void;
+  onObservationScopeChange?: (year: number, fieldId: string | null) => void;
+} = {}) {
   const atlasDatasetUrl = typeof import.meta.env.VITE_ATLAS_DATASET_URL === 'string'
     ? import.meta.env.VITE_ATLAS_DATASET_URL.trim()
     : '';
@@ -193,6 +197,10 @@ export function AtlasExplorer({ repositoryOverride, onYearChange }: { repository
   useEffect(() => {
     if (dataset?.metadata.deliveryMode === 'attributed-dataset') onYearChange?.(selectedYear);
   }, [dataset?.metadata.deliveryMode, selectedYear, onYearChange]);
+
+  useEffect(() => {
+    if (dataset?.metadata.deliveryMode === 'attributed-dataset') onObservationScopeChange?.(selectedYear, selectedFieldId);
+  }, [dataset?.metadata.deliveryMode, selectedYear, selectedFieldId, onObservationScopeChange]);
 
   useEffect(() => {
     selectedMetricIdRef.current = selectedMetricId;
@@ -925,7 +933,7 @@ export function AtlasExplorer({ repositoryOverride, onYearChange }: { repository
     }
 
     if (dataset.metadata.deliveryMode === 'attributed-dataset') {
-      return [...new Set(dataset.papers.map((paper) => paper.year))].sort((a, b) => a - b);
+      return dataset.metadata.availableYears ?? [...new Set(dataset.papers.map((paper) => paper.year))].sort((a, b) => a - b);
     }
 
     return Array.from(
@@ -1022,6 +1030,12 @@ export function AtlasExplorer({ repositoryOverride, onYearChange }: { repository
     selectedYear,
     visualizationObservations,
   ]);
+
+  const profileService = useMemo(() => dataset ? new ProfileService(dataset) : null, [dataset]);
+  const selectedInstitutionProfile = useMemo(() => selectedInstitutionId
+    ? profileService?.getInstitutionProfile(selectedInstitutionId) ?? null : null, [profileService, selectedInstitutionId]);
+  const selectedResearcherProfile = useMemo(() => selectedResearcherId
+    ? profileService?.getResearcherProfile(selectedResearcherId) ?? null : null, [profileService, selectedResearcherId]);
 
   if (!dataset) {
     return (
@@ -1126,13 +1140,6 @@ export function AtlasExplorer({ repositoryOverride, onYearChange }: { repository
     ? dataset.countries.find(
         (country) => country.id === selectedInstitution.countryId,
       ) ?? selectedCountry
-    : null;
-  const profileService = new ProfileService(dataset);
-  const selectedInstitutionProfile = selectedInstitution
-    ? profileService.getInstitutionProfile(selectedInstitution.id)
-    : null;
-  const selectedResearcherProfile = selectedResearcher
-    ? profileService.getResearcherProfile(selectedResearcher.id)
     : null;
   const selectedInstitutionIdentityResolutions = selectedInstitution
     ? (dataset.identityResolutions ?? []).filter(

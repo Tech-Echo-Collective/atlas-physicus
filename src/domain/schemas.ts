@@ -664,6 +664,7 @@ export const datasetScopeMetadataSchema = z.object({
 });
 
 export const datasetMetadataSchema = z.object({
+  availableYears: z.array(z.number().int().min(1000).max(9999)).optional(),
   schemaVersion: z.string().min(1),
   datasetKind: z.enum([
     'synthetic-demo',

@@ -348,6 +348,7 @@ export interface SourceYearQuality {
 }
 
 export interface DatasetMetadata extends Provenanced {
+  availableYears?: number[];
   schemaVersion: string;
   datasetKind: 'synthetic-demo' | 'inspire-hep-pilot' | 'live-api';
   /** Delivery is separate from scientific source identity. */

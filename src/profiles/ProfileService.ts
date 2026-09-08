@@ -109,6 +109,19 @@ export class ProfileService {
     researcherIds: Set<string>,
     affiliations?: Affiliation[],
   ): Paper[] {
+    const affiliationsByResearcher = new Map<string, Affiliation[]>();
+    const exactPaperAuthors = new Map<string, Set<string>>();
+    for (const affiliation of affiliations ?? []) {
+      if (affiliation.paperId) {
+        const authors = exactPaperAuthors.get(affiliation.paperId) ?? new Set<string>();
+        authors.add(affiliation.researcherId);
+        exactPaperAuthors.set(affiliation.paperId, authors);
+      } else {
+        const rows = affiliationsByResearcher.get(affiliation.researcherId) ?? [];
+        rows.push(affiliation);
+        affiliationsByResearcher.set(affiliation.researcherId, rows);
+      }
+    }
     const authorshipsByPaper = new Map<string, Authorship[]>();
     this.dataset.authorships.forEach((authorship) => {
       const list = authorshipsByPaper.get(authorship.paperId) ?? [];
@@ -125,12 +138,10 @@ export class ProfileService {
         return hasResearcher;
       }
       return relevantAuthorships.some((authorship) =>
-        affiliations.some(
+        exactPaperAuthors.get(paper.id)?.has(authorship.researcherId) ||
+        (affiliationsByResearcher.get(authorship.researcherId) ?? []).some(
           (affiliation) =>
-            affiliation.researcherId === authorship.researcherId &&
-            (affiliation.paperId
-              ? affiliation.paperId === paper.id
-              : affiliationIncludesYear(affiliation, paper.year)),
+            affiliationIncludesYear(affiliation, paper.year),
         ),
       );
     });

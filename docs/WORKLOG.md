@@ -7,6 +7,15 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-08 — Map loading performance
+
+The attributed explorer now accepts current year/category metric partitions with
+explicit available years and replaces paper/researcher catalogs with the selected
+profile context. Profile services are memoized; paper attribution matching and
+complete-author checks use indexes instead of repeated full-array scans. This
+supports the Web adapter's small map bootstrap and deferred worker processing
+without changing observed values or attribution rules.
+
 ## 2026-09-08 — PA-065 attributed arXiv delivery
 
 Fresh INSPIRE capture: all 459 native category/year requests and 5,423 institution authorities succeeded. Exact ID/ROR and unique full authority-name segment attribution yields 46,524 papers and 4,569 institutions. Fractional author mass is conserved with unknown shares unallocated; native cross-lists are preserved. Five observed metrics retain raw values and fitted 0–100 normalization parameters; 1,263,445 observations are transported by year. The original explorer accepts an attributed repository, displays native category codes, preserves the observed timeline and defers paper relationships. Full frontend typecheck/lint and 173 frontend tests plus seven pipeline tests passed before deployment integration. Web `98c0bd6` passed Pages run 34224824433 and is public. Final Web `83a5f08` adds authority-parent display names for 897 ROR-unified institutions and passed Pages run 34225254343 at 12:18 UTC; the source frontend pin remains `e224d07`. Public default-year schema validation, all 51 category activity layers, 18 Web tests, the gzip transport regression and source type/lint checks passed. The acquisition cap and retrospective citation date are explicitly disclosed.

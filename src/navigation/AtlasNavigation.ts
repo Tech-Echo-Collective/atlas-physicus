@@ -88,7 +88,7 @@ export function resolveAtlasLocation(
       .map((segment) => decodeURIComponent(segment).toLocaleLowerCase());
   } catch { return defaultState; }
   const parameters = new URLSearchParams(location.search);
-  const availableYears = dataset.metricObservations
+  const availableYears = dataset.metadata.availableYears ?? dataset.metricObservations
     .filter((observation) => observation.entityType === 'country')
     .map((observation) => Number(observation.period))
     .filter(Number.isFinite);

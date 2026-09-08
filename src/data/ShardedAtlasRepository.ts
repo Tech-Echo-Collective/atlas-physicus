@@ -337,8 +337,10 @@ export class ShardedAtlasRepository extends StaticAtlasRepository implements Sco
         : new Set([...researcherIds].flatMap((id) => this.index.researcherPaperIds[id] ?? []));
     const authorships = await this.rows<Authorship>([...paperIds].flatMap((id) => this.index.paperAuthorshipShards[id] ?? []),
       'authorships', (row) => paperIds.has(row.paperId), signal);
+    const observedAuthorCounts = new Map<string, number>();
+    for (const row of authorships) observedAuthorCounts.set(row.paperId, (observedAuthorCounts.get(row.paperId) ?? 0) + 1);
     for (const id of paperIds) {
-      if (authorships.filter((row) => row.paperId === id).length !== this.paperAuthorCounts[id]) {
+      if ((observedAuthorCounts.get(id) ?? 0) !== this.paperAuthorCounts[id]) {
         throw new Error('Atlas paper relationships are incomplete; unloaded authors must not become zero.');
       }
     }
