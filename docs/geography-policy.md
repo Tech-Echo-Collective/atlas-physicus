@@ -37,7 +37,23 @@ The frontend uses validated `GeographicView` records to connect an exploration c
 
 For the current requested prototype behavior, the China exploration configuration contains source geometry identifiers `156` and `158` and location entities `country-cn` and `country-tw`. Consequently, the complete configured canvas and institutions located in Taiwan appear while exploring the China view. This configuration controls map membership only. It does not merge entity identity, alter research attribution, or express scientific or political ownership.
 
-The packaged `world-atlas` source preserves `156` as a renderable MultiPolygon and `158` as a renderable Polygon. The application does not simplify or reconstruct either feature. Country mode composes every configured polygon into a dedicated exploration-canvas GeoJSON source. That source drives the fill, outline, glow, and camera fit independently from the world choropleth, ensuring that all configured geometry remains visibly present.
+The packaged `world-atlas` source uses Natural Earth 4.1.0 at 1:50m scale, with
+nondegenerate 1:10m geometry for places spanning less than one degree on both
+axes and ISO features missing from 1:50m. The 40 supplemental features are
+reproduced by `node scripts/prepare-small-country-geometries.mjs` from the locked
+`world-atlas` package; original coordinates and source identifiers are retained.
+The valid 1:50m shape is retained when 1:10m quantization collapses a polygon.
+Geometry `156` and `158` are both renderable MultiPolygons, including their source
+islands. Country mode composes every configured polygon into a dedicated
+exploration-canvas source that drives fill, outline, glow and camera fit.
+
+Small countries have fixed 28-pixel accessible navigation targets centered on
+their largest source polygon. Coordinate area and span are display heuristics
+only; locator size does not encode a research metric or enlarge borders. Targets
+hide when zoom reveals the polygon at a useful size, or when a country is selected.
+Country fit can reach zoom 10.5 and manual zoom 12 so city-states remain usable.
+Countries without an observation remain selectable with the normal missing-data
+state. The existing geographic-view membership rules remain unchanged.
 
 In World View, heatmap color is also resolved through geographic-view membership. Every source geometry in a view receives the display metric value supplied for that view's country entity. Native location identity remains unchanged—for example, geometry `158` retains `country-tw` as its location entity while using `country-cn` as its configured visualization metric entity. This is a presentation join only and does not create, duplicate, or reassign metric observations.
 

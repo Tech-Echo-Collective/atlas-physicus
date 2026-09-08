@@ -8,7 +8,8 @@ import type {
   Position,
 } from 'geojson';
 import type { GeometryCollection, Topology } from 'topojson-specification';
-import worldCountries from 'world-atlas/countries-110m.json';
+import worldCountries from 'world-atlas/countries-50m.json';
+import smallCountries from '../../data/geography/small-countries-10m.json';
 import type {
   Country,
   GeographicView,
@@ -32,6 +33,22 @@ export type ExplorationCanvasProperties = NonNullable<GeoJsonProperties> & {
 
 const antimeridianLongitude = 180;
 const coordinateEpsilon = 1e-9;
+
+let worldFeatures: FeatureCollection<Geometry, GeoJsonProperties>['features'] | undefined;
+
+function getWorldFeatures() {
+  if (!worldFeatures) {
+    const topology = worldCountries as unknown as Topology;
+    const collection = feature(topology, topology.objects.countries as GeometryCollection) as unknown as FeatureCollection<Geometry>;
+    const supplements = new Map((smallCountries as FeatureCollection<Geometry>).features.map((item) => [item.id, item]));
+    const existingIds = new Set(collection.features.map((item) => item.id));
+    worldFeatures = [
+      ...collection.features.map((item) => supplements.get(item.id) ?? item),
+      ...[...supplements.values()].filter((item) => !existingIds.has(item.id)),
+    ].map((item) => ({ ...item, geometry: splitGeometryAtAntimeridian(item.geometry) }));
+  }
+  return worldFeatures;
+}
 
 function positionsEqual(left: Position, right: Position): boolean {
   return (
@@ -311,12 +328,6 @@ export function buildCountryFeatureCollection(
   geographicViews: GeographicView[],
   observations: MetricObservation[],
 ): FeatureCollection<Geometry, CountryFeatureProperties> {
-  const topology = worldCountries as unknown as Topology;
-  const object = topology.objects.countries as GeometryCollection;
-  const collection = feature(topology, object) as unknown as FeatureCollection<
-    Geometry,
-    GeoJsonProperties
-  >;
   const countriesByIso = new Map(
     countries.map((country) => [country.isoNumeric, country]),
   );
@@ -329,7 +340,7 @@ export function buildCountryFeatureCollection(
 
   return {
     type: 'FeatureCollection',
-    features: collection.features.map((worldFeature) => {
+    features: getWorldFeatures().map((worldFeature) => {
       const isoNumeric = String(worldFeature.id ?? '').padStart(3, '0');
       const country = countriesByIso.get(isoNumeric);
       const explorationCountryId = resolveExplorationCountryId(
@@ -344,7 +355,6 @@ export function buildCountryFeatureCollection(
 
       return {
         ...worldFeature,
-        geometry: splitGeometryAtAntimeridian(worldFeature.geometry),
         properties: {
           ...(worldFeature.properties ?? {}),
           isoNumeric,

@@ -10,7 +10,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          geography: ['topojson-client', 'world-atlas/countries-110m.json'],
+          geography: ['topojson-client', 'world-atlas/countries-50m.json'],
           maplibre: ['maplibre-gl'],
           react: ['react', 'react-dom'],
         },

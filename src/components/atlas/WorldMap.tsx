@@ -32,6 +32,7 @@ import {
 import { GlobalViewControl } from './GlobalViewControl';
 import { getAtlasMapLayerHierarchy } from './MapLayerHierarchy';
 import { metricValueColor } from './visualScale';
+import { buildSmallCountryLocators } from './SmallCountryLocators';
 
 interface WorldMapProps {
   countries: Country[];
@@ -132,6 +133,10 @@ export function WorldMap({
       ),
     [institutions, institutionObservations],
   );
+  const smallCountryLocators = useMemo(
+    () => buildSmallCountryLocators(countryGeoJson, countries),
+    [countryGeoJson, countries],
+  );
   const explorationCanvasGeoJson = useMemo(
     () =>
       buildExplorationCanvasFeatureCollection(
@@ -200,7 +205,7 @@ export function WorldMap({
       center: worldCamera.center,
       zoom: worldCamera.zoom,
       minZoom: 0.7,
-      maxZoom: 8,
+      maxZoom: 12,
       attributionControl: false,
       renderWorldCopies: false,
     });
@@ -577,6 +582,36 @@ export function WorldMap({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !mapReady || selectedCountryId) return;
+    const locators = smallCountryLocators.map((country) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'small-country-locator';
+      button.dataset.countryId = country.countryId;
+      button.dataset.label = country.name;
+      button.setAttribute('aria-label', `Explore ${country.name}`);
+      button.title = `Explore ${country.name}`;
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        onCountrySelectRef.current(country.countryId);
+      });
+      const marker = new maplibregl.Marker({ element: button })
+        .setLngLat(country.coordinates).addTo(map);
+      return { marker, button, maximumZoom: country.maximumZoom };
+    });
+    const updateVisibility = () => {
+      for (const locator of locators) locator.button.hidden = map.getZoom() >= locator.maximumZoom;
+    };
+    updateVisibility();
+    map.on('zoom', updateVisibility);
+    return () => {
+      map.off('zoom', updateVisibility);
+      locators.forEach(({ marker }) => marker.remove());
+    };
+  }, [mapReady, selectedCountryId, smallCountryLocators]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map) {
       return;
     }
@@ -719,7 +754,7 @@ export function WorldMap({
         padding: isNarrow
           ? { top: 150, right: 44, bottom: 220, left: 44 }
           : { top: 120, right: 390, bottom: 180, left: 105 },
-        maxZoom: 5.2,
+        maxZoom: 10.5,
         duration: 950,
       });
     }

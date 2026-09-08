@@ -1,5 +1,6 @@
 import demoData from '../../data/demo/atlas.json';
 import { atlasDatasetSchema } from '../../domain/schemas';
+import { buildSmallCountryLocators } from './SmallCountryLocators';
 import {
   buildCountryFeatureCollection,
   buildExplorationCanvasFeatureCollection,
@@ -33,6 +34,38 @@ function maximumLongitudeJump(rings: number[][][]): number {
 }
 
 describe('geographic geometry layer', () => {
+  it.each([
+    ['702', 'Singapore'], ['470', 'Malta'], ['492', 'Monaco'],
+    ['048', 'Bahrain'], ['020', 'Andorra'], ['438', 'Liechtenstein'],
+    ['674', 'San Marino'], ['336', 'Vatican'], ['798', 'Tuvalu'],
+  ])('keeps %s %s visible and selectable without requiring a metric observation', (isoNumeric, name) => {
+    const country = { ...dataset.countries[0], id: `country-${isoNumeric}`, isoNumeric, name };
+    const countries = buildCountryFeatureCollection([country], [], []);
+    const canvas = buildExplorationCanvasFeatureCollection(countries, country.id);
+    expect(canvas.features).toHaveLength(1);
+    expect(canvas.features[0].geometry.coordinates.length).toBeGreaterThan(0);
+    expect(canvas.features[0].properties.metricValue).toBeUndefined();
+    const locators = buildSmallCountryLocators(countries, [country]);
+    expect(locators).toHaveLength(1);
+    expect(locators[0]).toMatchObject({ countryId: country.id, name });
+    expect(locators[0].coordinates.every(Number.isFinite)).toBe(true);
+    expect(locators[0].maximumZoom).toBeGreaterThan(2);
+    if (isoNumeric === '702') {
+      const [longitude, latitude] = locators[0].coordinates;
+      expect(longitude).toBeGreaterThan(103.6);
+      expect(longitude).toBeLessThan(104.1);
+      expect(latitude).toBeGreaterThan(1.2);
+      expect(latitude).toBeLessThan(1.5);
+      expect(polygonRings(canvas.features[0].geometry).flat().length).toBeGreaterThan(20);
+    }
+  });
+
+  it('does not create small-country targets for large combined exploration views', () => {
+    const countries = buildCountryFeatureCollection(dataset.countries, dataset.geographicViews, []);
+    const locators = buildSmallCountryLocators(countries, dataset.countries);
+    expect(locators.some((locator) => locator.countryId === 'country-cn')).toBe(false);
+  });
+
   it('keeps every configured China-view source geometry renderable', () => {
     const collection = buildCountryFeatureCollection(
       dataset.countries,
@@ -45,11 +78,11 @@ describe('geographic geometry layer', () => {
     );
 
     expect(
-      chinaViewFeatures.map((candidate) => candidate.properties.isoNumeric),
+      chinaViewFeatures.map((candidate) => candidate.properties.isoNumeric).sort(),
     ).toEqual(['156', '158']);
     expect(
       chinaViewFeatures.map((candidate) => candidate.geometry.type),
-    ).toEqual(['MultiPolygon', 'Polygon']);
+    ).toEqual(['MultiPolygon', 'MultiPolygon']);
     expect(
       chinaViewFeatures.every(
         (candidate) =>
@@ -122,7 +155,7 @@ describe('geographic geometry layer', () => {
     expect(canvas.features).toHaveLength(1);
     expect(canvasFeature.properties).toEqual({
       explorationCountryId: 'country-cn',
-      sourceIsoNumerics: ['156', '158'],
+      sourceIsoNumerics: expect.arrayContaining(['156', '158']),
       metricValue: 83,
     });
     expect(canvasFeature.geometry.type).toBe('MultiPolygon');

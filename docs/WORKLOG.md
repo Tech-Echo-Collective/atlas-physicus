@@ -7,6 +7,16 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-08 — Small-country map visibility
+
+The previous 1:110m geometry omitted Singapore and ten other locations present
+in the attributed research catalog. Use the packaged 1:50m world with 40 preserved
+1:10m small-place supplements, cache geometry conversion, add minimum-size
+country navigation targets and allow useful city-state zoom. Research attribution
+and metrics are unchanged. Regression checks cover Singapore, Malta, Monaco,
+Bahrain, Andorra, Liechtenstein, San Marino, Vatican and Tuvalu, including
+selection without an observation and existing combined/antimeridian views.
+
 ## 2026-09-08 — Map loading performance
 
 The attributed explorer now accepts current year/category metric partitions with

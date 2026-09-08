@@ -52,6 +52,46 @@ button {
   inset: 0;
 }
 
+.small-country-locator {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.small-country-locator[hidden] { display: none; }
+
+.small-country-locator::before {
+  position: absolute;
+  inset: 9px;
+  content: "";
+  border: 1.5px solid #d3f1f7;
+  border-radius: 50%;
+  background: #0c2736;
+  box-shadow: 0 0 0 3px rgba(9, 25, 36, 0.72), 0 0 8px rgba(94, 211, 228, 0.5);
+}
+
+.small-country-locator:hover,
+.small-country-locator:focus-visible { z-index: 2; }
+
+.small-country-locator:hover::after,
+.small-country-locator:focus-visible::after {
+  position: absolute;
+  top: 0;
+  left: 29px;
+  padding: 5px 8px;
+  border: 1px solid #486774;
+  border-radius: 5px;
+  background: #0b1b28;
+  color: #edf9fc;
+  content: attr(data-label);
+  font: 12px/1.35 sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .live-data-loading {
   position: absolute;
   z-index: 8;

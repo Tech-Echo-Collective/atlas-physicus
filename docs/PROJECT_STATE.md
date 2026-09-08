@@ -28,6 +28,13 @@ calculations are unchanged. Local type/lint/build, 175 frontend tests, seven
 pipeline tests and 20 Web tests pass; browser checks cover category/year changes,
 institution search, institution profiles and researcher paper/affiliation detail.
 
+Small-country display fix: the source now uses 1:50m world geometry supplemented
+by 40 intact 1:10m small-place features. This covers all 135 locations in the
+current research catalog, including 11 absent from the old 1:110m map. Small
+country navigation targets and city-state camera zoom preserve map access
+regardless of land area or missing metric values. Geographic provenance and
+reproduction are documented in [the geography policy](geography-policy.md).
+
 ## Immediate public heatmap preview — owner-directed September 8
 
 PA-064 supersedes waiting for five-metric certification before showing the
