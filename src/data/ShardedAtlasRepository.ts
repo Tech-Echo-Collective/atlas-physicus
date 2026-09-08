@@ -90,6 +90,12 @@ async function recover(reference: z.infer<typeof referenceSchema>, manifestUrl: 
   if (!response.ok || !response.body || Number(response.headers.get('content-length')) > reference.bytes) {
     throw new Error('Atlas profile evidence is unavailable.');
   }
+  // Static hosts may serve .gz with Content-Encoding; fetch then returns decoded bytes.
+  if (response.headers.get('content-encoding')?.toLowerCase() === 'gzip') {
+    const decoded = await readBytes(response.body, reference.decodedBytes);
+    await checkHash(decoded, reference.decodedSha256, reference.decodedBytes);
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(decoded));
+  }
   const compressed = await readBytes(response.body, reference.bytes);
   await checkHash(compressed, reference.sha256, reference.bytes);
   if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot decode the verified Atlas dataset. Please use a current browser.');

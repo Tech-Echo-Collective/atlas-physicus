@@ -23,7 +23,7 @@ for (blob,) in DB.execute('select payload from authorities'):
  if len(codes)!=1:continue
  code=next(iter(codes));country=pycountry.countries.get(alpha_2=code)
  if not country:continue
- addr=next(a for a in addrs if a.get('country_code')==code);ror=next((x['value'].rstrip('/').rsplit('/',1)[-1] for x in m.get('external_system_identifiers',[]) if x.get('schema')=='ROR'),None)
+ addr=next(a for a in addrs if a.get('country_code')==code);ror=next((x['value'].strip().rstrip('/').rsplit('/',1)[-1] for x in m.get('external_system_identifiers',[]) if x.get('schema')=='ROR'),None)
  iid='institution-ror-'+ror if ror else 'institution-inspire-'+sid;cid='country-'+code.lower()
  variants=[x.get('value') for x in m.get('name_variants',[]) if x.get('value')];hier=[x.get('name') for x in m.get('institution_hierarchy',[]) if x.get('name')];icn=m.get('ICN',[]);icn=[icn] if isinstance(icn,str) else icn
  label=(variants or hier or icn or ['INSPIRE institution '+sid])[0]
@@ -143,16 +143,15 @@ for i,w in enumerate(works):
  if re.match(r'^\d{4}(?:-\d{2})?(?:-\d{2})?$',w['date']):p['publicationDate']=w['date']
  doi=next((d['value'] for d in w['dois'] if re.match(r'^10\.\d{4,9}/\S+$',d.get('value',''))),None)
  if doi:p['doi']=doi
- papers.append(p);seen_authors=set()
+ papers.append(p);verified_inst.update(w['iw']);seen_authors=set()
  for n,(a,(ids,method)) in enumerate(zip(w['authors'],w['resolved']),1):
   # Known source author identities are retained; otherwise identity stays local to this paper.
   if not ids:continue
   rid='inspire-author:'+a['id'] if a['id'].isdigit() else f'paper-author-{w["id"]}-{n}'
   researcher_fields[rid].update(w['fieldIds'])
   if rid not in researchers:researchers[rid]={'id':rid,'name':a['name'] or 'Unnamed source author','fieldIds':[],'externalIds':([{'scheme':'INSPIRE','value':a['id']}] if a['id'].isdigit() else []),'provenance':provenance(record=a['id'] or f'{w["id"]}:author:{n}')}
-  if rid in seen_authors:continue
+  if rid not in seen_authors:emit('authorships',{'id':f'auth-{w["id"]}-{n}','paperId':pid,'researcherId':rid,'authorPosition':n,'provenance':P})
   seen_authors.add(rid)
-  emit('authorships',{'id':f'auth-{w["id"]}-{n}','paperId':pid,'researcherId':rid,'authorPosition':n,'provenance':P})
   for iid in sorted(ids):
    verified_inst.add(iid);inst_fields[iid].update(w['fieldIds'])
    emit('affiliations',{'id':f'aff-{w["id"]}-{n}-{iid}','paperId':pid,'researcherId':rid,'institutionId':iid,'startYear':w['year'],'endYear':w['year'],'source':method,'confidence':1,'provenance':provenance('Paper-time attribution: '+method,record=w['id'])})
@@ -193,9 +192,9 @@ for key,rows in core.items():
 metric_rows=core.pop('metricObservations'); metric_files={}
 for year in range(2018,2027):
  rows=[r for r in metric_rows if r['period']==str(year)]; columns=list(dict.fromkeys(k for r in rows for k in r)); payload={'columns':columns,'rows':[[r.get(k) for k in columns] for r in rows]}
- encoded=json.dumps(payload,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode(); zipped=gzip.compress(encoded,compresslevel=6,mtime=0); filename=f'metrics-{year}.json.gz';(OUT/filename).write_bytes(zipped);metric_files[str(year)]={'path':filename,'bytes':len(zipped),'decodedBytes':len(encoded),'sha256':hashlib.sha256(zipped).hexdigest(),'records':len(rows)}
+ encoded=json.dumps(payload,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode(); zipped=gzip.compress(encoded,compresslevel=6,mtime=0); filename=f'metrics-{year}.json.gz';(OUT/filename).write_bytes(zipped);metric_files[str(year)]={'path':filename,'bytes':len(zipped),'decodedBytes':len(encoded),'sha256':hashlib.sha256(zipped).hexdigest(),'records':len(rows),'decodedSha256':hashlib.sha256(encoded).hexdigest()}
 core['metricObservations']=[]
 packed={'version':'arxiv-atlas-packed-v1','provenance':provs,'normalizationParameters':parameters,'dataset':core};raw=json.dumps(packed,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode();compressed=gzip.compress(raw,compresslevel=6,mtime=0);(OUT/'atlas.json.gz').write_bytes(compressed)
 receipts=[dict(zip(['category','year','total','received','url','sha256','retrievedAt','error'],r)) for r in DB.execute('select * from captures order by category,year')]
-report={'version':VERSION,'generatedAt':AT,'source':'INSPIRE REST API','taxonomy':'https://arxiv.org/category_taxonomy','counts':dict(counts),'countries':len(country_map),'institutions':len(institutions),'researchers':len(researchers),'papers':len(papers),'metrics':len(observations),'partitions':receipts,'attributionByFieldYear':[{'fieldId':f,'year':y,**dict(c)} for (f,y),c in sorted(coverage.items())],'relationships':sink.record_counts,'indexDecodedBytes':export.metadata['index']['decodedBytes'],'coreBytes':len(compressed),'coreDecodedBytes':len(raw),'coreSha256':hashlib.sha256(compressed).hexdigest(),'metricFiles':metric_files,'methods':{'attribution':'Exact source institution identity links or a unique exact authority-name affiliation segment; no fuzzy matching. Unknown author shares remain unallocated.','normalization':'Within category/year/entity-type robust log 5–95% winsorization; normalized citation cohorts; bounded collaboration share; Shannon diversity; robust centered momentum. Minimum display cohort 2, not old certification threshold 30.','overview':'Equal mean of available normalized category scores, without filling absent categories.','coverage':'Most recent up to 250 source records per category/year. Different completeness across partitions; not census or probability sample.'}}
+report={'version':VERSION,'generatedAt':AT,'source':'INSPIRE REST API','taxonomy':'https://arxiv.org/category_taxonomy','counts':dict(counts),'countries':len(country_map),'institutions':len(institutions),'researchers':len(researchers),'papers':len(papers),'metrics':len(observations),'partitions':receipts,'attributionByFieldYear':[{'fieldId':f,'year':y,**dict(c)} for (f,y),c in sorted(coverage.items())],'relationships':sink.record_counts,'indexDecodedBytes':export.metadata['index']['decodedBytes'],'coreBytes':len(compressed),'coreDecodedBytes':len(raw),'coreSha256':hashlib.sha256(compressed).hexdigest(),'coreDecodedSha256':hashlib.sha256(raw).hexdigest(),'metricFiles':metric_files,'methods':{'attribution':'Exact source institution identity links or a unique exact authority-name affiliation segment; no fuzzy matching. Unknown author shares remain unallocated.','normalization':'Within category/year/entity-type robust log 5–95% winsorization; normalized citation cohorts; bounded collaboration share; Shannon diversity; robust centered momentum. Minimum display cohort 2, not old certification threshold 30.','overview':'Equal mean of available normalized category scores, without filling absent categories.','coverage':'Most recent up to 250 source records per category/year. Different completeness across partitions; not census or probability sample.'}}
 (OUT/'coverage.json').write_text(json.dumps(report,separators=(',',':'),ensure_ascii=False));(ROOT/'result.json').write_text(json.dumps({k:v for k,v in report.items() if k not in ['partitions','attributionByFieldYear']},indent=2));print((ROOT/'result.json').read_text(),flush=True)

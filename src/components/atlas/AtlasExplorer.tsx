@@ -1893,7 +1893,7 @@ export function AtlasExplorer({ repositoryOverride, onYearChange }: { repository
           <p className="section-kicker">Atlas coordinates</p>
           <h2>Trace research through space and time</h2>
         </div>
-        <DataSourceSelector
+        {!repositoryOverride && <DataSourceSelector
           selectedSourceId={selectedDataSourceId}
           liveApiAvailable={liveApiAvailable}
           certifiedDataset={dataset.metadata.deliveryMode === 'versioned-dataset'}
@@ -1906,7 +1906,7 @@ export function AtlasExplorer({ repositoryOverride, onYearChange }: { repository
               : `Certified ${dataset.fields.find((field) => field.id === dataset.metadata.datasetScope?.rootFieldId)?.label ?? dataset.metadata.datasetScope.rootFieldId} scope only. Overall Physics and unsupported fields remain neutral; missing is not zero.`
             : null)}
           onSelect={selectDataSource}
-        />
+        />}
         <ScienceDomainSelector
           domains={dataset.scienceDomains}
           selectedDomainId={selectedDomainId}

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { gzipSync } from 'node:zlib';
+import { gzipSync, gunzipSync } from 'node:zlib';
 import { describe, expect, it, vi } from 'vitest';
 import demoData from './demo/atlas.json';
 import { atlasDatasetSchema } from '../domain/schemas';
@@ -116,6 +116,20 @@ describe('immutable UI shard transport', () => {
     expect((await repository.loadDataset()).authorships).toEqual([]);
     expect(repository.paperAuthorCounts).toEqual(f.index.paperAuthorCounts);
     expect((await repository.searchEntities(f.full.papers[0].title))[0].entityType).toBe('paper');
+  });
+
+  it('verifies decoded hashes when the static host applies gzip Content-Encoding', async () => {
+    const f = fixture();
+    f.fetcher.mockImplementation(async (input) => {
+      const bytes = f.bodies.get(new URL(String(input)).pathname.split('/').at(-1)!)!;
+      return new Response(new Uint8Array(gunzipSync(bytes)), {
+        headers: { 'Content-Encoding': 'gzip', 'Content-Length': String(bytes.byteLength) },
+      });
+    });
+    const repository = await f.create();
+    expect(repository.paperAuthorCounts).toEqual(f.index.paperAuthorCounts);
+    const context = await repository.loadEntityContext({ entityType: 'researcher', id: f.full.authorships[0].researcherId });
+    expect(context.authorships.length).toBeGreaterThan(0);
   });
 
   it('recovers exact researcher profile, provenance and all paper coauthors without API mixing', async () => {
