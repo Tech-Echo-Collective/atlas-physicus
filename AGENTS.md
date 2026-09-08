@@ -25,6 +25,13 @@ Then read the technical document directly relevant to the task. Do not infer tha
 
 ## Current milestone
 
+PA-064: the owner explicitly authorized immediate public publication of the
+observed activity heatmap on September 8. The activity preview does not wait for
+joint five-metric certification. Keep its real source-record counts, declared
+nuclear-physics scope and missing attribution explicit; never present it as the
+certified five-metric product. Preserve the preview when continuing certification
+work. See the first section of `docs/PROJECT_STATE.md`.
+
 The active milestone is **v3.0.5-alpha Stabilization & Scientific Validation**.
 Do not begin v3.1, widen the production `hep-th-v1` scope, start a Full Physics
 load, or introduce unrelated product features while this milestone is active.

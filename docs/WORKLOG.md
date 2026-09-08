@@ -7,6 +7,21 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-08 — Immediate observed heatmap preview
+
+- Owner explicitly superseded waiting for strict five-metric launch (PA-064).
+- Web `5d739a3` adds a homepage activity preview from 15,358 retained source
+  records and 1,623 institutions, with six selectable years, geographic drilldown,
+  institution search, exact observed quantities and disclosed unknown mass.
+- The 1,071,710-byte export preserves annual allocated mass from the existing
+  acquisition summaries. Source IDs are unique across the six inputs; shares
+  conserve each record's unit mass. No acquisition or database writes occurred.
+- Local build/types/lint and 16 Web tests pass. Browser checks confirm actual
+  map colour, 2018/2023 selection, China drilldown and Tsinghua institution data.
+- Existing Web uncommitted certification work is preserved in its original
+  checkout. Preview changes are isolated in `/private/tmp/atlas-heatmap-preview-web`
+  and pushed to the existing public Web repository. Pages run: 34221987141.
+
 ## 2026-09-08 — Conditional real-data launch integration (in progress)
 
 - Latest acquisition: all six years are complete, with 15,358 records; 2022/2023

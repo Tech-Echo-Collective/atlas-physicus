@@ -9,7 +9,27 @@ recent [worklog](WORKLOG.md). Exact scientific measurements belong in the
 linked validation reports rather than being repeated throughout the project
 documentation.
 
-## Current task: minimum launch integration and actual evidence blockers
+## Immediate public heatmap preview — owner-directed September 8
+
+PA-064 supersedes waiting for five-metric certification before showing the
+current heatmap. Web commit `5d739a3` publishes an observed activity preview on
+the homepage, using the existing 15,358 INSPIRE source records from 2018–2023
+and 1,623 institutions. The dataset is 1,071,710 JSON bytes, with exact annual
+mass conservation and acquisition-summary reconciliation checked on export.
+Only already allocated fractional paper-time affiliation shares are mapped;
+unknown mass remains disclosed. Counts refer to source records, not asserted
+deduplicated canonical publications. Colour uses a fixed six-year log scale.
+
+The original explorer remains at `/?view=full-atlas` and existing deep routes.
+The Web source pin is `0dd5aa1`. Local build, lint, types and 16 Web tests pass;
+browser checks confirm the coloured map, year switching, country selection,
+institution search and details. Deployment status is recorded in
+[Pages run 34221987141](https://github.com/Tech-Echo-Collective/Physics-Atlas-Web/actions/runs/34221987141).
+The preview requires no new provider acquisition, database mutation, certified
+dataset manifest, citation measurement or joint metric gate. Do not make those
+conditions prerequisites for keeping this preview public.
+
+## Separate ongoing work: certified five-metric integration
 
 Active September 8 launch work (not yet a public release): PA-060/061/062 now
 separate enumerated source membership, supported researcher inputs and conditional

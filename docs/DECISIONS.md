@@ -404,6 +404,18 @@ Public profiles must not present quarantined identity links as verified. This is
 evidence isolation, not complete researcher disambiguation or a full-ecosystem
 completeness claim; actual metric/normalization gates still decide publication.
 
+## Immediate observed activity preview — 2026-09-08
+
+**PA-064:** The owner explicitly requests publishing the current heatmap
+immediately without the previous strict joint-launch requirements. A public
+observed-activity preview may therefore display existing real fractional
+source-record affiliation counts independently of the certified five metrics.
+It must identify its nuclear-physics scope, available years, preview status,
+unassigned attribution and visual colour transform. It may not fabricate
+missing dimensions or claim certified, complete, or deduplicated publication
+coverage. The existing five-metric certification remains a separate product
+milestone and does not block this preview. Web `5d739a3` implements this decision.
+
 ## Current activation decision
 
 The v3.0.4 production activation begins with the implemented `hep-th-v1`

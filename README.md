@@ -32,6 +32,14 @@ paper-time affiliations, source evidence, and versioned scientific methods.
 
 ## Current live status
 
+The homepage now has an **observed activity heatmap preview** (PA-064), published
+from the existing nuclear-physics acquisition: 15,358 INSPIRE source records,
+2018–2023, and 1,623 institutions. It shows recorded fractional affiliation
+counts with unknown mass disclosed, independently of five-metric certification.
+Explore countries, institutions and years at [Atlas Physicus](https://atlas.techecho.org/).
+The original explorer remains available at `/?view=full-atlas` and its deep URLs.
+The certified five-metric system described below is a separate unfinished milestone.
+
 The public deployment uses the released `v3.0.5-alpha` architecture and a
 bounded `hep-th-v1` provider scope through the production FastAPI/PostgreSQL
 service. INSPIRE and arXiv supply literature evidence; ROR, ORCID, and Crossref

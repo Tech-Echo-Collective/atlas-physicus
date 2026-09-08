@@ -1,5 +1,11 @@
 # Atlas Physicus roadmap
 
+September 8 PA-064: publish the existing observed activity heatmap immediately
+as a scoped public preview. Its six-year source-record counts, country and
+institution exploration are independent of the remaining five-metric
+certification milestone below. Web `5d739a3` supplies the preview; preserve it
+while continuing the separately scoped scientific work.
+
 The roadmap records engineering direction, not promised dates. Each milestone must preserve the map-first exploration path and the rule that Atlas Physicus is not a ranking, recommendation, or prediction system. Historical release descriptions retain Physics Atlas where it was the product name at that time.
 
 ## Completed alpha foundations
