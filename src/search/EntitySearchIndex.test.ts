@@ -10,7 +10,7 @@ function buildIndex() {
         ? {
             ...institution,
             canonicalName: 'California Institute of Technology',
-            aliases: ['Caltech', 'CIT'],
+            aliases: ['Caltech', 'CIT', '加州理工学院'],
             historicalNames: ['Throop University'],
             identityConfidence: 1,
             externalIds: [{ scheme: 'demo-registry', value: 'DEMO-CALTECH' }],
@@ -32,6 +32,11 @@ function buildIndex() {
 }
 
 describe('EntitySearchIndex', () => {
+  it('preserves non-Latin institution names instead of dropping the query', () => {
+    expect(buildIndex().search('加州理工学院')[0]).toEqual(
+      expect.objectContaining({ entityId: 'institution-caltech', matchedOn: 'alias' }),
+    );
+  });
   it('resolves institution abbreviations and explicit aliases', () => {
     const index = buildIndex();
 
