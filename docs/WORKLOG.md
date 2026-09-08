@@ -18,8 +18,12 @@ The immutable scientific release, entity IDs and metric rows stay unchanged.
 Country lists now include institutions without coordinates or a current metric,
 with 25-row pagination; map density controls no longer truncate the directory.
 Parser fallback reads legacy names on future versioned acquisitions. Source
-type/lint/build, 188 frontend tests and seven pipeline tests pass. Public rollout
-and Web catalog regression checks follow in this entry.
+type/lint/build, 189 frontend tests, seven pipeline tests and 24 Web tests pass.
+Search normalization also preserves non-Latin institution aliases. Web `7bc6e2a`
+(source pin `f8c2c06`) passed Pages run `34230488491`; the public Singapore map
+shows both NTU and NUS at their campus locations. Regression checks use the
+released catalog and unchanged NTU 2025 Activity value (18.553189), verify full
+name/acronym/Chinese search, and preserve every other institution record.
 
 ## 2026-09-08 — Small-country map visibility
 

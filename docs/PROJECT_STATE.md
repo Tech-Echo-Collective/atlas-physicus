@@ -38,6 +38,17 @@ Published as Web `e05d0b0` with source pin `bdd1507`; Pages run `34228677640`
 succeeded. Public Singapore geometry, close zoom and the NUS institution node
 are verified; all 135 research locations have a retained source outline.
 
+NTU visibility follow-up: Web `7bc6e2a` (source pin `f8c2c06`) passed Pages run
+`34230488491`. The existing `institution-inspire-911953` now displays Nanyang
+Technological University with NTU/Chinese aliases and an official campus
+reference point, consistently in the map and detail worker. Its attributed
+papers and metric rows are unchanged. Country directories retain institutions
+without coordinates or a current metric and paginate at 25; map density limits
+apply only to pins. Search preserves non-Latin names. Source type/lint/build,
+189 frontend tests, seven pipeline tests and 24 Web tests pass; the public
+Singapore map and institution directory show both NTU and NUS. Other institutions
+with missing authority metadata still require source-supported enrichment.
+
 ## Immediate public heatmap preview — owner-directed September 8
 
 PA-064 supersedes waiting for five-metric certification before showing the
