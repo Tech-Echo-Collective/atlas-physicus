@@ -14,7 +14,12 @@ explicit available years and replaces paper/researcher catalogs with the selecte
 profile context. Profile services are memoized; paper attribution matching and
 complete-author checks use indexes instead of repeated full-array scans. This
 supports the Web adapter's small map bootstrap and deferred worker processing
-without changing observed values or attribution rules.
+without changing observed values or attribution rules. The default map now needs
+806,217 compressed bytes of scientific data (previously 14,239,986). Source tests
+cover unloaded-year navigation; Web tests compare every restored overview/optics
+value and provenance against the original transport. Local type/lint/build,
+175 frontend tests, seven pipeline tests and 20 Web tests pass, with category,
+year, search, institution and researcher workflows checked in the browser.
 
 ## 2026-09-08 — PA-065 attributed arXiv delivery
 

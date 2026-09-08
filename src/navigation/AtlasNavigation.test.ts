@@ -8,6 +8,17 @@ import {
 const dataset = atlasDatasetSchema.parse(demoData);
 
 describe('atlas URL navigation', () => {
+  it('retains an unloaded year from the attributed release inventory', () => {
+    const scoped = {
+      ...dataset,
+      metadata: { ...dataset.metadata, availableYears: [2018, 2025] },
+      papers: [],
+      metricObservations: dataset.metricObservations.map((row) => ({ ...row, period: '2025' })),
+    };
+    const state = resolveAtlasLocation({ pathname: '/atlas/physics', search: '?year=2018' }, scoped);
+    expect(state.selectedYear).toBe(2018);
+  });
+
   it('restores domain and field state from a shareable URL', () => {
     const state = resolveAtlasLocation(
       { pathname: '/atlas/physics/hep-th', search: '?year=2000' },

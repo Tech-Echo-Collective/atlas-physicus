@@ -19,6 +19,15 @@ The five dimensions are normalized within native category/year/entity cohorts, w
 
 The original explorer is restored through an injected static repository, with yearly metric loading and existing institution/researcher/paper exploration. Web `98c0bd6` is publicly deployed at https://atlas.techecho.org/; Pages run 34224824433 succeeded. The original map, native category selection, year switching, country values and institution profiles were checked in the browser. Final Web `83a5f08` includes authority-parent display names for 897 ROR-unified institutions; Pages run 34225254343 succeeded at 12:18 UTC. Public browser checks show the original heatmap, 51 native category controls, five metric options and the 2018–2026 timeline. The older preview below is historical.
 
+Performance follow-up: the Web adapter partitions the same immutable observations
+by year/category and defers paper catalogs, search, and profile relationships to a
+worker. Default map scientific-data transfer is 806,217 bytes rather than
+14,239,986 bytes; decoded input is 18,640,408 rather than 176,735,777 bytes.
+The derived display assets add approximately 32 MB; acquisition and metric
+calculations are unchanged. Local type/lint/build, 175 frontend tests, seven
+pipeline tests and 20 Web tests pass; browser checks cover category/year changes,
+institution search, institution profiles and researcher paper/affiliation detail.
+
 ## Immediate public heatmap preview — owner-directed September 8
 
 PA-064 supersedes waiting for five-metric certification before showing the
