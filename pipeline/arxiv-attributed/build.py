@@ -16,7 +16,7 @@ def provenance(source='INSPIRE literature and institution authority records',sta
  return d
 P=provenance(); D=provenance('Derived from retrieved INSPIRE arXiv papers; confirmed paper-time institution links','unverified','derived')
 def norm(s):return re.sub(r'[^\w]+',' ',unicodedata.normalize('NFKC',s).casefold()).strip()
-institutions={}; source_map={};names=defaultdict(set);country_map={}; inst_fields=defaultdict(set)
+institutions={}; source_map={}; authority_parents=defaultdict(set);names=defaultdict(set);country_map={}; inst_fields=defaultdict(set)
 for (blob,) in DB.execute('select payload from authorities'):
  receipt=json.loads(gzip.decompress(blob));m=receipt['metadata'];sid=str(m['control_number']);addrs=m.get('addresses',[])
  codes={a.get('country_code') for a in addrs if a.get('country_code')};codes.discard('')
@@ -35,6 +35,7 @@ for (blob,) in DB.execute('select payload from authorities'):
   if ror:institutions[iid]['externalIds'].append({'scheme':'ROR','value':'https://ror.org/'+ror})
  if institutions[iid]['countryId']!=cid:continue
  institutions[iid]['externalIds'].append({'scheme':'INSPIRE','value':sid});source_map[sid]=iid
+ if ror and hier:authority_parents[iid].add(hier[-1])
  for name in [label]+variants+hier+icn:
   n=norm(name)
   if len(n)>=12 and len(n.split())>=2:names[n].add(iid)
@@ -178,6 +179,9 @@ transport.MAX_UI_INDEX_BYTES=32*1024*1024
 export=sink.finish(ns)
 for kind,path,data in export.assets:(OUT/path).write_bytes(data)
 (OUT/'relationships.json').write_text(json.dumps(export.metadata,separators=(',',':')))
+# A shared ROR names the authority parent, rather than whichever department was seen first.
+canonical_names={iid:next(iter(values)) for iid,values in authority_parents.items() if iid in institutions and len(values)==1 and next(iter(values)) in institutions[iid]['aliases']}
+(OUT/'canonical-names.json').write_text(json.dumps(canonical_names,separators=(',',':'),ensure_ascii=False))
 # Repeated provenance/normalization definitions are interned for transport and restored before schema parsing.
 provs=[];prov_ids={};parameters=[];parameter_ids={}
 def intern(value,arr,lookup):
