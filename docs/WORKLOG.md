@@ -7,6 +7,22 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-08 — CI closure and production recheck
+
+- Confirmed local/remote `main` at `5a8e033`, with the previous implementation
+  `a813d3e` retained in history. Corrected
+  [CI 34008750463](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/34008750463)
+  passes all backend/PostgreSQL, frontend and container jobs; the offline-import
+  guard remains enforced. The earlier red CI record is not erased or relabeled.
+- At 01:30:59 UTC, public health/observation reads returned HTTP 200, healthy
+  API/database, expected public-origin CORS and zero exposed metric observations.
+  Web `63fc454`/source pin `21bfcdb8` and the existing release tag remain unchanged.
+- No new scientific acquisition, replay, metric calculation, deployment or local
+  build was performed in this closure pass. The prior sole scratch directory is
+  absent, with no new scientific/build leftovers. The coverage-versus-uncertainty
+  policy remains pending; source evidence and exact-five activation remain
+  insufficient. Updated current records only, not historical measurements.
+
 ## 2026-09-06 — Minimum launch integration, evidence still withheld
 
 - Added source-bound automatic date/identity admission, bounded exact-date

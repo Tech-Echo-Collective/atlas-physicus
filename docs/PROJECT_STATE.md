@@ -1,6 +1,6 @@
 # Atlas Physicus project state
 
-Last reviewed: 2026-09-06
+Last reviewed: 2026-09-08
 
 This is the canonical snapshot of the project's current operating and
 scientific state. Read it with [durable decisions](DECISIONS.md), the
@@ -17,7 +17,7 @@ scientific thresholds. PA-056 admits a declared, limited ontology branch with al
 five metrics together, without relabeling it broad Physics. The bounded candidate
 is the existing nuclear branch, exact preprint years 2018–2023, not Full Physics.
 
-The working integration supplies source-bound date/identity admission, bounded
+The committed integration supplies source-bound date/identity admission, bounded
 page receipts, conserved partial-field coverage, fractional affiliation coverage,
 source-year proofs, branch aggregation/Diversity and a fail-closed compact dataset
 export/loader. PA-057 adds strictly corroborated paper-native ROR matching;
@@ -40,14 +40,16 @@ not silently replaced by the source-year fractional-coverage repair. Separating
 observed coverage from retained uncertainty bounds requires a versioned policy
 decision; it remains pending, not an implemented relaxation.
 
-The API/database were healthy at 03:10:33 UTC on September 6, expected public-origin
+The API/database were healthy at 01:30:59 UTC on September 8, expected public-origin
 CORS was present and public metric observations were zero. Web `63fc454`/source pin
 `21bfcdb8` remain unchanged; no dataset variable or live metrics are enabled. Source
 baseline `4e203c0` passed CI 33973186186. Implementation `a813d3e` is pushed;
 CI 34008433748 exposed one offline import-boundary failure after 1,118 backend
-passes. A narrow shared-pure-function extraction fixes the reproduced failure;
-105 relevant cases and full lint/format/mypy (103 source files) pass. Follow-up CI
-status is recorded in the recent worklog, not inferred from local validation.
+passes. The shared-pure-function correction is pushed as `5a8e033`; its complete
+[CI 34008750463](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/34008750463)
+passes backend/PostgreSQL, frontend and container jobs. The 105-case local recheck
+and full lint/format/mypy (103 source files) also pass. This closes the CI failure,
+not the scientific activation gate; the coverage-policy decision remains pending.
 The final local run passes 420 focused backend cases, 139 frontend cases and seven
 pipeline cases, full lint/type checking and production build. Local cleanup is
 PASS: all **151,511,633** cumulative temporary logical bytes were removed,

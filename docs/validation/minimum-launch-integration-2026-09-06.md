@@ -350,6 +350,15 @@ launch and guard cases pass, plus full lint/format and strict mypy (103 sources)
 Frontend and container jobs passed in the first run; a corrected full CI run is
 still required, not assumed from the narrow recheck.
 
+**Closure verified September 8:** correction `5a8e033` is on local/remote `main`;
+[CI 34008750463](https://github.com/Tech-Echo-Collective/atlas-physicus/actions/runs/34008750463)
+completed successfully across backend/PostgreSQL, frontend and container jobs.
+The preceding failure remains the historical first-run result. At 01:30:59 UTC,
+fresh public health/observation checks returned HTTP 200, healthy API/database,
+expected public-origin CORS and zero observations. The sole scratch directory
+remains absent. No new acquisition, build, scientific-policy change or activation
+was performed for this closure verification.
+
 At **03:10:33 UTC**, read-only health and observation requests returned HTTP 200,
 healthy API/database, expected `https://atlas.techecho.org` CORS and **zero public
 metric observations**. Web commit/pin/configuration were not changed. No live
