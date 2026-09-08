@@ -20,6 +20,9 @@ cover unloaded-year navigation; Web tests compare every restored overview/optics
 value and provenance against the original transport. Local type/lint/build,
 175 frontend tests, seven pipeline tests and 20 Web tests pass, with category,
 year, search, institution and researcher workflows checked in the browser.
+Web `349db60` (source pin `710fffc`) passed Pages run `34227003995` and is
+public at https://atlas.techecho.org/. Public checks confirm the new map manifest,
+2025 overview, quantum-physics selection and 2018 navigation.
 
 ## 2026-09-08 — PA-065 attributed arXiv delivery
 
