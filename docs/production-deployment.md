@@ -1,4 +1,10 @@
-# Production deployment runbook
+# Historical production deployment runbook
+
+**Archived on 12 September 2026.** The public map now uses static Pages assets
+and does not require this backend. The API and worker have been stopped. Do not
+reactivate this stack as routine maintenance; see [current retirement status](ARCHIVE.md).
+The commands and operating claims below describe the former deployment.
+
 
 ## Naming and deployment compatibility
 

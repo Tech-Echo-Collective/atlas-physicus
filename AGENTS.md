@@ -23,23 +23,14 @@ Before any major implementation, architecture, deployment, or release task, read
 
 Then read the technical document directly relevant to the task. Do not infer that deployment-ready infrastructure is publicly operating: verify the backend, worker, database, API URL, update status, and frontend configuration before making a live-data claim.
 
-## Current milestone
+## Current status — archived
 
-PA-065: the owner explicitly authorized fresh acquisition across all 51 arXiv physics categories, confirmed attribution and normalized publication in the original explorer. This observed delivery path supersedes the nuclear-only homepage and does not wait for joint five-metric certification. See `pipeline/arxiv-attributed/README.md` and the current project state. Preserve truthful acquisition coverage and missing attribution.
-
-Historical PA-064: the owner explicitly authorized immediate public publication of the
-observed activity heatmap on September 8. The activity preview does not wait for
-joint five-metric certification. Keep its real source-record counts, declared
-nuclear-physics scope and missing attribution explicit; never present it as the
-certified five-metric product. Preserve the preview when continuing certification
-work. See the first section of `docs/PROJECT_STATE.md`.
-
-The active milestone is **v3.0.5-alpha Stabilization & Scientific Validation**.
-Do not begin v3.1, widen the production `hep-th-v1` scope, start a Full Physics
-load, or introduce unrelated product features while this milestone is active.
-Separately versioned staging validation scopes are allowed only when explicitly
-approved and must remain isolated from production. Candidate metric definitions
-must remain withheld until their exact live activation gates pass.
+PA-066: the owner ended active development on 12 September 2026 and authorized
+preserving the static public map and source, updating the official website,
+and retiring Railway after a verified recoverable database backup. This
+supersedes PA-065 and earlier active milestone/release instructions. Do not
+resume acquisition, certification or feature development without a new owner
+request. See `docs/PROJECT_STATE.md` and `docs/ARCHIVE.md`.
 
 ## Context maintenance
 

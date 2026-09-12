@@ -1,5 +1,13 @@
 # Atlas Physicus roadmap
 
+## Closed — 12 September 2026
+
+PA-066 ends active development. The September 8 public snapshot and source are
+preserved as an archive. No further releases, acquisition or scientific
+certification are scheduled. See [archive status](ARCHIVE.md). Everything below
+is historical direction, superseded by this closure.
+
+
 September 8 PA-065: restore the full explorer with 51 native arXiv physics categories, fresh acquired source records, verified paper-time attribution and category-normalized metrics. The bounded observed release supersedes the nuclear-only homepage preview.
 
 Previous September 8 PA-064: publish the existing observed activity heatmap immediately
@@ -41,7 +49,7 @@ This release adds:
 
 The release tag remains the architectural baseline. The follow-up Production Activation work now operates its HTTPS Railway API, managed PostgreSQL path, bounded worker, and public GitHub Pages `APIRepository` integration. Synthetic and historical pilot sources remain isolated internal reproducibility and fallback resources.
 
-## Current milestone — v3.0.5-alpha Stabilization & Scientific Validation
+## Historical milestone — v3.0.5-alpha Stabilization & Scientific Validation
 
 September 5 PA-054 removes mandatory human approval for supported evidence-derived
 automatic rules. The new record/population/normalization adapters and public

@@ -7,6 +7,19 @@ provides the compact cross-release chronology. Durable policy belongs in
 [`PROJECT_STATE.md`](PROJECT_STATE.md), and exact measurements in validation
 reports.
 
+## 2026-09-12 — Owner-directed archival and Railway retirement
+
+Active development ended (PA-066). Public archive wording and the fixed September 8
+data date are added to the Pages map and the official website in four languages.
+Web `2842657` removes the unused API variable gate; all 24 Web tests, lint, types,
+build and Pages run `34685002284` pass. Website `c5fb8f2` passes format, lint,
+types, all 105 tests and build. Railway API and worker are stopped with their
+GitHub sources disconnected. The database is preserved pending a verified
+backup/restore; subscription cancellation is pending. No database was deleted.
+Official website publication succeeded, with GitHub CI run `34685770361` green.
+The retained 73,084,928-byte public-capture SQLite snapshot passes its integrity
+check; its checksum is recorded in `ARCHIVE.md`. It is distinct from PostgreSQL.
+
 ## 2026-09-08 — NTU institution visibility
 
 INSPIRE institution 911953 already had attributed papers and normalized values,

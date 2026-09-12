@@ -12,6 +12,14 @@ milestone provenance and major architectural transitions without repeating the
 current facts in [`PROJECT_STATE.md`](PROJECT_STATE.md), durable policy in
 [`DECISIONS.md`](DECISIONS.md), or task evidence in validation reports.
 
+## Project closure — 12 September 2026
+
+PA-066 ends active development and preserves the September 8 static research
+snapshot. Web `2842657` removes the deployment's Railway API requirement and adds
+visible archive status; Pages run `34685002284` succeeded. The official website
+marks Atlas as archived in four languages. Earlier unfinished gates below remain
+historical limitations, not a current work programme.
+
 ## Alpha foundations
 
 | Milestone | Provenance | Lasting result |
