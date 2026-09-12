@@ -18,7 +18,10 @@ PA-066 ends active development and preserves the September 8 static research
 snapshot. Web `2842657` removes the deployment's Railway API requirement and adds
 visible archive status; Pages run `34685002284` succeeded. The official website
 marks Atlas as archived in four languages. Earlier unfinished gates below remain
-historical limitations, not a current work programme.
+historical limitations, not a current work programme. The separate Railway
+database has a verified full backup (30 tables, 321,539 rows); the project is
+scheduled for deletion on September 14 and subscription renewal is cancelled.
+The temporary backup SSH key was revoked.
 
 ## Alpha foundations
 

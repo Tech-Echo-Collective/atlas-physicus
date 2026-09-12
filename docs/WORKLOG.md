@@ -9,16 +9,25 @@ reports.
 
 ## 2026-09-12 — Owner-directed archival and Railway retirement
 
-Active development ended (PA-066). Public archive wording and the fixed September 8
-data date are added to the Pages map and the official website in four languages.
-Web `2842657` removes the unused API variable gate; all 24 Web tests, lint, types,
-build and Pages run `34685002284` pass. Website `c5fb8f2` passes format, lint,
-types, all 105 tests and build. Railway API and worker are stopped with their
-GitHub sources disconnected. The database is preserved pending a verified
-backup/restore; subscription cancellation is pending. No database was deleted.
-Official website publication succeeded, with GitHub CI run `34685770361` green.
-The retained 73,084,928-byte public-capture SQLite snapshot passes its integrity
-check; its checksum is recorded in `ARCHIVE.md`. It is distinct from PostgreSQL.
+Active development ended (PA-066). Web `2842657` adds archive status and removes
+the unused API variable gate; 24 Web tests, lint, types, build and Pages run
+`34685002284` pass. The official website at `c5fb8f2` marks Atlas archived in
+four languages; 105 tests, format, lint, types, build, CI `34685770361` and
+Sites publication succeeded.
+
+The PostgreSQL backup is 173,581,196 bytes. Its remote and local SHA-256 match;
+a full restore through the PostgreSQL 18 client into isolated local PostgreSQL
+17.11 succeeds without errors. All 30 table counts and 321,539 total rows match.
+The source SQLite snapshot separately passes its integrity check. Both checksums
+are recorded in `ARCHIVE.md`; backups stay in the owner's private workspace.
+
+After verification, the temporary SSH key was revoked and local key files
+removed. Railway accepted project deletion for 14 September at 10:01 UTC.
+The workspace reports zero active projects. Subscription renewal is cancelled;
+the current period ends 4 October. API/worker GitHub sources are disconnected.
+Post-cancellation inspection confirms zero active deployments for all three
+services. The volume remains in the project deletion retention window. The
+temporary restored database was stopped and removed after the proof was saved.
 
 ## 2026-09-08 — NTU institution visibility
 

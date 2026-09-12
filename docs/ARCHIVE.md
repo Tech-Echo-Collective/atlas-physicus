@@ -23,10 +23,20 @@ meaning and limitations; closure does not certify unfinished methods.
 The map uses GitHub Pages and reads same-origin static files. The main Tech Echo
 website uses its existing Sites hosting. Neither requires Railway for Atlas.
 
-The former Railway API and acquisition worker are stopped, with GitHub source
-integrations disconnected. PostgreSQL and its volume are preserved pending a
-verified database backup and restore. The paid subscription is still active;
-cancellation is pending. This document does not yet claim full retirement.
+The Railway database was backed up on 12 September 2026 and fully restored in
+an isolated local PostgreSQL instance. All 30 tables and 321,539 rows match the
+source counts. The 173,581,196-byte custom-format backup has SHA-256
+`a83697ed6857fda96374f27093fd2da12fb16c038928347ababfba43c7062f8a`.
+The owner retains the backup and restoration evidence outside GitHub.
+
+The temporary SSH key was revoked immediately after successful restore
+verification; its local key files were removed. The API and worker had already
+been stopped and disconnected from GitHub. Railway accepted project deletion,
+with final deletion scheduled for 14 September 2026 at 10:01 UTC. The workspace
+now reports zero active projects. Subscription renewal is cancelled; the current
+billing period ends on 4 October 2026. Post-cancellation inspection confirms zero active deployments for PostgreSQL,
+the API and the worker. The volume remains inside Railway's project deletion
+retention window until September 14. There is no active Atlas operation to maintain.
 
 ## Release evidence
 

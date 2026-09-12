@@ -27,13 +27,17 @@ succeeded and GitHub CI run `34685770361` passed.
 
 ## Retirement state
 
-Railway API and worker deployments are stopped and their source integrations
-are disconnected. The database and its volume are retained until a backup is
-restored and verified. Subscription cancellation remains pending.
-See [the archive record](ARCHIVE.md) for the final operating state.
+Database backup and full restore verification are complete: all 30 tables and
+321,539 rows match. The 173,581,196-byte backup remains in the owner's private
+archive. The temporary SSH key was revoked and its local files removed.
+
+API/worker source integrations are disconnected; PostgreSQL, API and worker
+all have zero active deployments. Railway accepted project
+deletion for 14 September at 10:01 UTC; the workspace reports zero active
+projects. Subscription renewal is cancelled with the existing period ending
+on 4 October. See [the archive record](ARCHIVE.md) for evidence and dates.
 
 ## Immediate next action
 
-Finish the authorized database backup and restore verification before removing
-Railway resources; then cancel the subscription. Do not resume development or
-acquisition without a new owner request.
+None. Keep the archive and backups. Do not resume development or acquisition
+without a new owner request.
